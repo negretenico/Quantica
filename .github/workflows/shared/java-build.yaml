@@ -1,0 +1,62 @@
+name: Build and Push Java (Maven) to Github Packages
+on:
+  workflow_call:
+    inputs:
+      working_directory:
+        description: 'Directory containing the Maven project'
+        required: true
+        type: string
+      java_version:
+        description: 'Java version to use'
+        required: false
+        type: string
+        default: '21'
+      skip_tests:
+        description: 'Skip tests during build'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ inputs.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ inputs.java_version }}
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles(format('{0}/pom.xml', inputs.working_directory)) }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build with Maven
+        working-directory: ${{ inputs.working_directory }}
+        run: mvn clean package ${{ inputs.skip_tests && '-DskipTests' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test with Maven
+        if: ${{ !inputs.skip_tests }}
+        working-directory: ${{ inputs.working_directory }}
+        run: mvn test
+
+      - name: Deploy JAR to GitHub Packages
+        working-directory: ${{ inputs.working_directory }}
+        run: mvn deploy -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

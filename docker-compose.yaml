@@ -1,0 +1,18 @@
+# docker-compose.yml
+version: '3.8'
+#update these
+#services:
+#  listener:
+#    build: ./listener
+#    ports:
+#      - "8080:8080"
+#
+#  ml:
+#    build: ./ml
+#    ports:
+#      - "5000:5000"
+#
+#  ledger:
+#    build: ./ledger
+#    ports:
+#      - "3000:3000"

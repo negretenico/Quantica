@@ -1,4 +1,7 @@
 name: Listener Service CI/CD
+permissions:
+  contents: read
+  packages: write  # Add this permission at the workflow level
 on:
   push:
     paths:

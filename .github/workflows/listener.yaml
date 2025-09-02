@@ -12,21 +12,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  java-build:
+    uses: ./.github/workflows/reusable-java-build.yml
+    with:
+      working_directory: ./marketListener
+      java_version: '21'
+      skip_tests: false
+    secrets: inherit
 
-      - name: Build Java application
-        uses: ./.github/actions/java-build
-        with:
-          working_directory: ./marketListener
-          java_version: '21'
-          skip_tests: false
-
-      - name: Build and push Docker image
-        uses: ./.github/actions/docker-build
-        with:
-          working_directory: ./marketListener
-          service_name: marketListener
+  docker-deploy:
+    needs: java-build  # Wait for java-build to complete
+    uses: ./.github/workflows/reusable-docker-build.yml
+    with:
+      working_directory: ./marketListener
+      service_name: marketListener  # Correct input for docker build
+      # Add other docker-specific inputs here
+    secrets: inherit

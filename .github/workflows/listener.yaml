@@ -1,7 +1,7 @@
 name: Listener Service CI/CD
 permissions:
   contents: read
-  packages: write  # Add this permission at the workflow level
+  packages: write
 on:
   push:
     paths:
@@ -21,14 +21,15 @@ jobs:
       working_directory: ./marketListener
       java_version: '21'
       skip_tests: false
+      artifact_name: marketListener-jar
     secrets: inherit
 
   docker-deploy:
-    needs: java-build  # Wait for java-build to complete
     uses: ./.github/workflows/reusable-docker-build.yaml
+    needs: java-build
     with:
       working_directory: ./marketListener
       dockerfile_path: ./Dockerfile
-      service_name: marketListener  # Correct input for docker build
-      # Add other docker-specific inputs here
+      service_name: marketListener
+      artifact_name: marketListener-jar
     secrets: inherit

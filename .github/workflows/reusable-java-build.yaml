@@ -2,6 +2,11 @@ name: Build and Push Java (Maven) to Github Packages
 on:
   workflow_call:
     inputs:
+      artifact_name:
+        description: 'Name for the uploaded artifact'
+        required: false
+        type: string
+        default: 'build-artifact'
       working_directory:
         description: 'Directory containing the Maven project'
         required: true
@@ -54,3 +59,19 @@ jobs:
         run: mvn deploy -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find built JAR
+        id: find_jar
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          JAR_PATH=$(ls target/*.jar 2>/dev/null | head -n1)
+          if [ -z "$JAR_PATH" ]; then
+          echo "No JAR found!"
+          exit 1
+          fi
+          echo "jar_path=$JAR_PATH" >> "$GITHUB_OUTPUT"
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{inputs.artifact_name}}
+          path: ${{ inputs.working_directory }}/${{ steps.find_jar.outputs.jar_path }}

@@ -27,6 +27,7 @@ public class OrderConsumer {
 	public void consumeOrder(ConsumerRecord<String, BinanceStreamResponse> record) {
 		BinanceStreamResponse order = record.value();
 		log.info("Consuming order: {}",order);
+		log.info("Producing message: OrderReceived {}",order.getId());
 		applicationEventPublisher.publishEvent(OrderReceived.of(this,order));
 	}
 }

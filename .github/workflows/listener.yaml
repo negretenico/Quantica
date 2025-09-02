@@ -3,29 +3,30 @@ on:
   push:
     paths:
       - 'marketListener/**'
-      - 'shared/**'  # if you have shared dependencies
+      - 'shared/**'
     branches: [ main, develop ]
   pull_request:
     paths:
-      - 'listener/**'
+      - 'marketListener/**'
       - 'shared/**'
   workflow_dispatch:
 
 jobs:
-  # Build and package the Java application
-  java-build:
-    uses: ./.github/actions/java-build/action.yml
-    with:
-      working_directory: ./marketListener
-      java_version: '21'
-      skip_tests: false
-    secrets: inherit
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Build and push Docker image (depends on java-build)
-  docker-build:
-    needs: java-build
-    uses: ./.github/actions/docker-build/action.yml
-    with:
-      working_directory: ./marketListener
-      service_name: marketListener
-    secrets: inherit
+      - name: Build Java application
+        uses: ./.github/actions/java-build
+        with:
+          working_directory: ./marketListener
+          java_version: '21'
+          skip_tests: false
+
+      - name: Build and push Docker image
+        uses: ./.github/actions/docker-build
+        with:
+          working_directory: ./marketListener
+          service_name: marketListener

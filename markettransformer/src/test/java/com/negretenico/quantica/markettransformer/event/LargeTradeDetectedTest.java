@@ -30,7 +30,7 @@ class LargeTradeDetectedTest {
 
 	void mockAll(String amount) {
 		Mockito.when(orderReceived.getBinanceOrder()).thenReturn(binanceStreamResponse);
-		Mockito.when(binanceStreamResponse.getQuantityAsBigDecimal()).thenReturn(new BigInteger(amount));
+		Mockito.when(binanceStreamResponse.getQuantityAsBigInteger()).thenReturn(new BigInteger(amount));
 	}
 
 	@Test

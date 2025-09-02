@@ -32,12 +32,12 @@ public record BinanceStreamResponse(
 ) {
 
 	@JsonIgnore
-	public BigInteger getPriceAsBigDecimal() {
+	public BigInteger getPriceAsBiInteger() {
 		return new BigInteger(price);
 	}
 
 	@JsonIgnore
-	public BigInteger getQuantityAsBigDecimal() {
+	public BigInteger getQuantityAsBigInteger() {
 		return new BigInteger(quantity);
 	}
 

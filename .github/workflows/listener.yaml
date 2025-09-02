@@ -1,0 +1,31 @@
+name: Listener Service CI/CD
+on:
+  push:
+    paths:
+      - 'marketListener/**'
+      - 'shared/**'  # if you have shared dependencies
+    branches: [ main, develop ]
+  pull_request:
+    paths:
+      - 'listener/**'
+      - 'shared/**'
+  workflow_dispatch:
+
+jobs:
+  # Build and package the Java application
+  java-build:
+    uses: ./.github/workflows/shared/java-build.yml
+    with:
+      working_directory: ./marketListener
+      java_version: '21'
+      skip_tests: false
+    secrets: inherit
+
+  # Build and push Docker image (depends on java-build)
+  docker-build:
+    needs: java-build
+    uses: ./.github/workflows/shared/docker-build.yml
+    with:
+      working_directory: ./marketListener
+      service_name: marketListener
+    secrets: inherit

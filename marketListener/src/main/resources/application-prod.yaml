@@ -1,0 +1,2 @@
+binance:
+  stream: wss://fstream.binance.com/ws/btcusdt@trade

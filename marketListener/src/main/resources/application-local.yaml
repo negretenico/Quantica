@@ -1,0 +1,9 @@
+binance:
+  stream: wss://stream.binancefuture.com/ws/btcusdt@trade
+
+market:
+  order:
+    topic: order
+
+kafka:
+  bootstrap: "localhost:9092"

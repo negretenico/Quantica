@@ -23,10 +23,21 @@ jobs:
       skip_tests: false
       artifact_name: marketListener-jar
     secrets: inherit
+  prepare-docker-context:
+    needs: java-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
+      - name: Download artifact from java-build
+        uses: actions/download-artifact@v4
+        with:
+          name: marketListener-jar
+          path: ./marketListener
   docker-deploy:
     uses: ./.github/workflows/reusable-docker-build.yaml
-    needs: java-build
+    needs: prepare-docker-context
     with:
       working_directory: ./marketListener
       dockerfile_path: ./Dockerfile

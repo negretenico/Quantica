@@ -28,7 +28,7 @@ jobs:
     uses: ./.github/workflows/reusable-docker-build.yaml
     with:
       working_directory: ./marketListener
-      dockerfile_path: ./marketListener/Dockerfile
+      dockerfile_path: ./Dockerfile
       service_name: marketListener  # Correct input for docker build
       # Add other docker-specific inputs here
     secrets: inherit

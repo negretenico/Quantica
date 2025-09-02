@@ -13,7 +13,7 @@ on:
 
 jobs:
   java-build:
-    uses: ./.github/workflows/reusable-java-build.yml
+    uses: ./.github/workflows/reusable-java-build.yaml
     with:
       working_directory: ./marketListener
       java_version: '21'
@@ -22,7 +22,7 @@ jobs:
 
   docker-deploy:
     needs: java-build  # Wait for java-build to complete
-    uses: ./.github/workflows/reusable-docker-build.yml
+    uses: ./.github/workflows/reusable-docker-build.yaml
     with:
       working_directory: ./marketListener
       service_name: marketListener  # Correct input for docker build

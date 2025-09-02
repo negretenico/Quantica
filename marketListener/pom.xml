@@ -8,7 +8,7 @@
         <version>3.5.5</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.negretenico.quantica</groupId>
+    <groupId>com.negretenico.quantica.marketListener</groupId>
     <artifactId>marketListener</artifactId>
     <version>0.0.1</version>
     <name>marketListener</name>

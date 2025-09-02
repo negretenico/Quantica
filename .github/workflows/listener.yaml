@@ -34,7 +34,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: marketListener-jar
-          path: ./marketListener
+          path: ./marketListener/target
   docker-deploy:
     uses: ./.github/workflows/reusable-docker-build.yaml
     needs: prepare-docker-context

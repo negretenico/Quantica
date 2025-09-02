@@ -29,14 +29,11 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
       - name: Download artifact from java-build
         uses: actions/download-artifact@v4
         with:
           name: marketListener-jar
           path: ./marketListener/target
-      - name: Flatten artifact
-        run: mv ./marketListener/target/marketListener-jar/*.jar ./marketListener/target/
   docker-deploy:
     uses: ./.github/workflows/reusable-docker-build.yaml
     needs: prepare-docker-context

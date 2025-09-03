@@ -1,16 +1,16 @@
-name: Listener Service CI/CD
+name: Market Transformer Service CI/CD
 permissions:
   contents: read
   packages: write
 on:
   push:
     paths:
-      - 'marketListener/**'
+      - 'markettransformer/**'
       - 'shared/**'
     branches: [ main, develop ]
   pull_request:
     paths:
-      - 'marketListener/**'
+      - 'markettransformer/**'
       - 'shared/**'
   workflow_dispatch:
 
@@ -18,15 +18,15 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      should-build: ${{ steps.changes.outputs.marketListener == 'true' || steps.changes.outputs.shared == 'true' }}
+      should-build: ${{ steps.changes.outputs.markettransformer == 'true' || steps.changes.outputs.shared == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
         id: changes
         with:
           filters: |
-            marketListener:
-              - 'marketListener/**'
+            markettransformer:
+              - 'markettransformer/**'
             shared:
               - 'shared/**'
 
@@ -35,10 +35,10 @@ jobs:
     if: needs.check-changes.outputs.should-build == 'true'
     uses: ./.github/workflows/reusable-java-build.yaml
     with:
-      working_directory: ./marketListener
+      working_directory: ./markettransformer
       java_version: '21'
       skip_tests: false
-      artifact_name: marketListener-jar
+      artifact_name: markettransformer-jar
     secrets: inherit
 
   prepare-docker-context:
@@ -51,16 +51,16 @@ jobs:
       - name: Download artifact from java-build
         uses: actions/download-artifact@v4
         with:
-          name: marketListener-jar
-          path: ./marketListener/
+          name: markettransformer-jar
+          path: ./markettransformer/
 
   docker-deploy:
     uses: ./.github/workflows/reusable-docker-build.yaml
     if: needs.check-changes.outputs.should-build == 'true'
     needs: prepare-docker-context
     with:
-      working_directory: ./marketListener
+      working_directory: ./markettransformer
       dockerfile_path: ./Dockerfile
-      service_name: marketListener
-      artifact_name: marketListener-jar
+      service_name: markettransformer
+      artifact_name: markettransformer-jar
     secrets: inherit

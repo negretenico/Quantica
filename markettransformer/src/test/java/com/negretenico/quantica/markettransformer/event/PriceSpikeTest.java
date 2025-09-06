@@ -1,6 +1,7 @@
 package com.negretenico.quantica.markettransformer.event;
 
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
+import com.negretenico.quantica.markettransformer.model.TradeIndicator;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
 import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,10 +57,12 @@ class PriceSpikeTest {
 	void givenPriceSpikeHasHappened_thenEventIsPublished() {
 		Mockito.when(trade1.getPriceAsBiInteger()).thenReturn(new BigInteger("100"));
 		Mockito.when(trade2.getPriceAsBiInteger()).thenReturn(new BigInteger("120")); // 20% move
-
+		Mockito.when(trade2.getTradeSide()).thenReturn(TradeIndicator.BUY);
+		Mockito.when(trade2.quantity()).thenReturn("0.00");
+		Mockito.when(trade2.price()).thenReturn("0.00");
 		priceSpike.onApplicationEvent(orderReceived1);
 		priceSpike.onApplicationEvent(orderReceived2);
 
-		Mockito.verify(kafkaPublisher, Mockito.atLeastOnce()).publish(trade2);
+		Mockito.verify(kafkaPublisher, Mockito.atLeastOnce()).publish(Mockito.any());
 	}
 }

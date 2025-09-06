@@ -1,6 +1,7 @@
 package com.negretenico.quantica.markettransformer.config;
 
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
+import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +23,7 @@ public class KafkaProducerConfig {
 	}
 
 	@Bean
-	public ProducerFactory<String, BinanceStreamResponse> producerFactory() {
+	public ProducerFactory<String, SignalEvent> producerFactory() {
 		Map<String, Object> configProps = Map.of(
 				ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress,
 				ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
@@ -38,7 +39,7 @@ public class KafkaProducerConfig {
 	}
 
 	@Bean
-	public KafkaTemplate<String, BinanceStreamResponse> kafkaTemplate() {
+	public KafkaTemplate<String, SignalEvent> kafkaTemplate() {
 		return new KafkaTemplate<>(producerFactory());
 	}
 }

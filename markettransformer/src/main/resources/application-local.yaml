@@ -2,5 +2,5 @@ kafka:
   bootstrap: localhost:9092
   groupId: market-transformer-group
 market:
-  order:
-    topic: order
+  signal:
+    topic: order-signal

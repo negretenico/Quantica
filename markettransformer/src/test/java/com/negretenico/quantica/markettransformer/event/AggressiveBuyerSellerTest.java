@@ -43,17 +43,18 @@ class AggressiveBuyerSellerTest {
 		// simulate 3 trades (< threshold 5)
 		IntStream.range(0, 3).forEach(i -> transformer.onApplicationEvent(orderReceived));
 
-		Mockito.verify(kafkaPublisher, Mockito.never()).publish(buyTrade);
+		Mockito.verify(kafkaPublisher, Mockito.never()).publish(Mockito.any());
 	}
 
 	@Test
 	void givenBuyHasMetThreshold_thenEventIsPublished() {
 		Mockito.when(buyTrade.getTradeSide()).thenReturn(TradeIndicator.BUY);
-
+		Mockito.when(buyTrade.quantity()).thenReturn("0.00");
+		Mockito.when(buyTrade.price()).thenReturn("0.00");
 		// simulate 5 trades (threshold)
 		IntStream.range(0, 5).forEach(i -> transformer.onApplicationEvent(orderReceived));
 
-		Mockito.verify(kafkaPublisher, Mockito.atLeastOnce()).publish(buyTrade);
+		Mockito.verify(kafkaPublisher, Mockito.atLeastOnce()).publish(Mockito.any());
 	}
 
 	@Test

@@ -1,0 +1,97 @@
+name: Market Append Only Service CI/CD
+permissions:
+  contents: read
+  packages: write
+on:
+  push:
+    paths:
+      - 'marketappendonly/**'
+      - 'shared/**'
+    branches: [ main, develop ]
+  pull_request:
+    paths:
+      - 'marketappendonly/**'
+      - 'shared/**'
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should-build: ${{ steps.changes.outputs.marketappendonly == 'true' || steps.changes.outputs.shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            marketappendonly:
+              - 'marketappendonly/**'
+            shared:
+              - 'shared/**'
+
+  go-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.should-build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        working-directory: ./marketappendonly
+        run: go mod download
+
+      - name: Run tests
+        working-directory: ./marketappendonly
+        run: go test -v ./...
+
+      - name: Build binary
+        working-directory: ./marketappendonly
+        run: |
+          CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o marketappendonly cmd/server/main.go
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketappendonly-binary
+          path: ./marketappendonly/marketappendonly
+
+  prepare-docker-context:
+    needs: go-build
+    if: needs.check-changes.outputs.should-build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Download artifact from go-build
+        uses: actions/download-artifact@v4
+        with:
+          name: marketappendonly-binary
+          path: ./marketappendonly/
+
+  docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.should-build == 'true'
+    needs: prepare-docker-context
+    with:
+      working_directory: ./marketappendonly
+      dockerfile_path: ./Dockerfile
+      service_name: marketappendonly
+      artifact_name: marketappendonly-binary
+    secrets: inherit

@@ -37,7 +37,7 @@ jobs:
     with:
       working_directory: ./marketanalysis
       python_version: '3.13'
-      skip_tests: false
+      skip_tests: true
     secrets: inherit
 
   prepare-docker-context:

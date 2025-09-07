@@ -1,7 +1,9 @@
 package com.negretenico.quantica.markettransformer.event;
 
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
+import com.negretenico.quantica.markettransformer.model.SignalEventType;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
+import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
 import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
@@ -12,6 +14,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.LinkedList;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -42,7 +45,17 @@ public class PriceSpike implements ApplicationListener<OrderReceived> {
 		log.info("PriceSpike: Detected change of {}",change);
 		if (change.compareTo(THRESHOLD) > 0) {
 			log.info("PriceSpike: Anomaly detected publishing event");
-			publisher.publish(order);
+			publisher.publish(new SignalEvent(
+					order.symbol(),
+					order.eventTime(),
+					SignalEventType.PRICE_SPIKE,
+					String.format("Price change %.2f%% exceeded threshold %.2f%%",
+							change.multiply(new BigDecimal("100")), THRESHOLD.multiply(new BigDecimal("100"))),
+					Double.parseDouble(order.price()),
+					Double.parseDouble(order.quantity()),
+					order.getTradeSide(),
+					Map.of("priceChange", change, "threshold", THRESHOLD)
+			));
 		}
 		recentPrices.add(price);
 		if (recentPrices.size() > 100) {

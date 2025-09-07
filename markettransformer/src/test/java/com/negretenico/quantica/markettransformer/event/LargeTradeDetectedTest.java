@@ -1,6 +1,7 @@
 package com.negretenico.quantica.markettransformer.event;
 
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
+import com.negretenico.quantica.markettransformer.model.TradeIndicator;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
 import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,9 @@ class LargeTradeDetectedTest {
 	void givenAQuantityOverAMillionIShouldPublishAnEvent() {
 		mockAll("10000000");
 		Mockito.doNothing().when(kafkaPublisher).publish(Mockito.any());
+		Mockito.when(binanceStreamResponse.getTradeSide()).thenReturn(TradeIndicator.BUY);
+		Mockito.when(binanceStreamResponse.quantity()).thenReturn("0.00");
+		Mockito.when(binanceStreamResponse.price()).thenReturn("0.00");
 		largeTradeDetected.onApplicationEvent(orderReceived);
 		Mockito.verify(kafkaPublisher,Mockito.atLeastOnce()).publish(Mockito.any());
 	}

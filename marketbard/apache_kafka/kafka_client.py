@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from app.config import Config
-from app.consumer import Consumer
+from apache_kafka.consumer import Consumer
 
 logger = logging.getLogger(__name__)
 

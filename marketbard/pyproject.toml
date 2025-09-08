@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "marketanalysis"
+name = "marketbard"
 version = "0.1.0"
-description = "Market analysis service"
+description = "Market bard service"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
     "blinker==1.9.0",

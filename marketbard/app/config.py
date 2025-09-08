@@ -7,11 +7,14 @@ load_dotenv()
 class Config:
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     KAFKA_BOOTSTRAP_SERVERS = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
-    KAFKA_CONSUMER_GROUP = os.environ.get('KAFKA_CONSUMER_GROUP', 'flask-consumer-group')
+    KAFKA_CONSUMER_GROUP = os.environ.get('KAFKA_CONSUMER_GROUP', 'flask-consumer`-group')
     KAFKA_AUTO_OFFSET_RESET = os.environ.get('KAFKA_AUTO_OFFSET_RESET', 'latest')
     KAFKA_INPUT_TOPIC = os.environ.get('KAFKA_INPUT_TOPIC', 'input-topic')
     KAFKA_OUTPUT_TOPIC = os.environ.get('KAFKA_OUTPUT_TOPIC', 'output-topic')
-
+    REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+    HF_TOKEN = os.environ.get('HF_TOKEN', 'sometokenhg')
+    GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', 'sometokengh')
+    GITHUB_REPO = os.environ.get('GITHUB_REPO', 'repo')
     def __str__(self):
         return (f"Servers:{self.KAFKA_BOOTSTRAP_SERVERS}\n"
                 f"Topics In: {self.KAFKA_INPUT_TOPIC}\n"

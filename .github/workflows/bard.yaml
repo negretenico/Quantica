@@ -1,0 +1,65 @@
+name: Market Bard Service CI/CD
+permissions:
+  contents: read
+  packages: write
+on:
+  push:
+    paths:
+      - "marketbard/**"
+      - "shared/**"
+    branches: [main, develop]
+  pull_request:
+    paths:
+      - "marketbard/**"
+      - "shared/**"
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should-build: ${{ steps.changes.outputs.marketbard == 'true' || steps.changes.outputs.shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            marketbard:
+              - 'marketbard/**'
+            shared:
+              - 'shared/**'
+
+  python-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.should-build == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketbard
+      python_version: "3.13"
+      skip_tests: true
+    secrets: inherit
+
+  prepare-docker-context:
+    needs: python-build
+    if: needs.check-changes.outputs.should-build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Download artifact from python-build
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: ./marketbard/
+
+  docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.should-build == 'true'
+    needs: prepare-docker-context
+    with:
+      working_directory: ./marketbard
+      dockerfile_path: ./Dockerfile
+      service_name: marketbard
+      artifact_name: python-dist # Fixed: matches the artifact name
+    secrets: inherit

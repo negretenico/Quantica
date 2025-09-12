@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "marketbard"
+version = "0.1.0"
+description = "Market bard service"
+authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
+dependencies = [
+    "blinker==1.9.0",
+    "click==8.2.1",
+    "colorama==0.4.6",
+    "dotenv==0.9.9",
+    "Flask==3.1.2",
+    "itsdangerous==2.2.0",
+    "Jinja2==3.1.6",
+    "joblib==1.5.2",
+    "kafka==1.3.5",
+    "kafka-python-ng==2.2.3",
+    "MarkupSafe==3.0.2",
+    "numpy==2.3.2",
+    "python-dotenv==1.1.1",
+    "scikit-learn==1.7.1",
+    "scipy==1.16.1",
+    "threadpoolctl==3.6.0",
+    "Werkzeug==3.1.3"
+
+]
+[tool.hatch.build.targets.wheel]
+packages = ["."]

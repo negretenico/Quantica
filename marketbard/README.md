@@ -1,18 +1,30 @@
-# Market Analysis
+# Market Bard
 
-    docker pull redis:latest
-docker run -p 6379:6379 redis
+## Prequirements
+
+```bash
+  docker pull redis:latest
+  docker run -p 6379:6379 redis
+```
+
 ___
 
-### Summary
+## Summary
 
-This application’s goal is to consume enriched market events (signals, anomalies, metrics) from Kafka, apply **unsupervised learning** techniques to detect patterns or anomalies, and publish insights back into Kafka topics for downstream consumers.  
+**MarketBard** is a storytelling pipeline for live market events.
+It consumes enriched events from Kafka, buffers them into Redis, transforms batches into LLM-generated **Markdown stories**, and finally commits those stories to GitHub when ready.
 
 Key features include:
 
-* **Clustering with MiniBatchKMeans:** Incrementally trains on incoming market events to discover evolving patterns in trade flow.  
-* **Anomaly Detection:** Identifies signals that fall far outside of cluster norms → emits AnomalyEvent.  
-* **Adaptive Learning:** Continuously updates clusters as new data streams in, enabling detection of regime shifts in trading behavior.  
+* **Kafka Integration:** Subscribes to upstream market event topics.
+
+* **Redis Event Buffer:** Temporarily stores incoming events for story generation.
+
+* **Prompt-Engineered Storytelling:** Aggregates events into a prompt and generates a structured Markdown story via LLM.
+
+* **Redis Story Buffer:** Holds completed stories until a batch threshold is reached.
+
+* **GitHub Writer:** Commits finalized .md files into a GitHub repository for persistence or publishing.
 
 ---
 
@@ -20,48 +32,54 @@ Key features include:
 
 This application requires:
 
-* A running Kafka cluster for consuming and producing events.  
-* Upstream services (e.g., Market Transformer) publishing enriched events into Kafka.  
+* Kafka cluster for incoming events.
 
-To run the application locally:
+* Redis for buffering both events and stories.
 
-```bash
-export FLASK_APP=app.py
-export FLASK_ENV=development
-flask run
-```
+* GitHub token with repo write permissions stored in .env.
 
-Or simply:
+* OpenAI (or compatible LLM) API key in .env.
 
 ```bash
-python app.py
+python run .py
 ```
 
 When running successfully, you should see logs indicating messages being consumed, clustered, and anomalies being flagged:
 
 ```bash
-INFO  model.mini_batch - Training on msg {'symbol': 'BTCUSDT', 'type': 'DOMINANT_SIDE', ...}
-INFO  model.cluster - Assigned cluster=2 distance=0.08
-INFO  app.producer - Publishing AnomalyEvent for symbol=BTCUSDT
+- INFO - Updated existing NEWS_UPDATE.MD
+2025-09-12 10:31:28,167 - __main__ - INFO - writer: committed new story to GitHub
+2025-09-12 10:31:28,168 - __main__ - INFO - writer: checking write_queue…
+2025-09-12 10:31:30,138 - redis_cache.redis_client - INFO - Adding events [{'event': {'symbol': 'BTCUSDT', 'eventTime': 1757547901547, 'type': 'DOMINANT_SIDE', 'reason': 'SELL side dominated 5 trades', 'price': 113785.0, 'quantity': 0.004, 'side': 'SELL', 'metadata': {'streakCount': 5}}, 'created_at': 1757682689.857355}, {'event': {'symbol': 'BTCUSDT', 'eventTime': 1757547901669, 'type': 'DOMINANT_SIDE', 'reason': 'SELL side dominated 5 trades', 'price': 113785.0, 'quantity': 0.001, 'side': 'SELL', 'metadata': {'streakCount': 5}}, 'created_at': 1757682689.87448}, {'event': {'symbol': 'BTCUSDT', 'eventTime': 1757547901669, 'type': 'DOMINANT_SIDE', 'reason': 'SELL side dominated 5 trades', 'price': 113785.0, 'quantity': 0.001, 'side': 'SELL', 'metadata': {'streakCount': 5}}, 'created_at': 1757682689.878151}] to the queue
+2025-09-12 10:31:30,213 - httpx - INFO - HTTP Request: P
 ```
+
+![Running](images/running.JPG)
 
 ---
 
 ## Architecture
 
 ```bash
-Kafka Topic (enriched market events) → Kafka Consumer → MiniBatchKMeans Model → Anomaly Detector → Kafka Producer → Kafka Topic (analysis results)
+Kafka Topic (market events) 
+    → Kafka Consumer 
+        → Redis Event Queue 
+            → Story Generator (LLM + prompt) 
+                → Redis Story Queue 
+                    → GitHub Writer 
+                        → GitHub Repo (Markdown stories)
+
 ```
 
-1. **Kafka Consumer:** Subscribes to topics like order-signal or market-events.
+1. **Kafka Consumer:** Subscribes to enriched event topics.
 
-2. **MiniBatchKMeans Model:** Incrementally fits market events into clusters to detect structure.
+2. **Redis Event Queue:** Buffers raw events until enough context is available.
 
-3. **Anomaly Detector:** Flags events that deviate significantly from learned clusters.
+3. **Story Generator:** Builds a narrative prompt from events and requests Markdown from an LLM.
 
-4. **Kafka Producer:** Publishes anomaly and cluster insight events to downstream topics.
+4. **Redis Story Queue:** Stores completed stories, batching them for commit.
 
-5. **Flask Server:** Lightweight API layer for health checks, monitoring, and optional interactive queries.
+5. **GitHub Writer:** Once the queue threshold is reached, pushes .md files to a GitHub repo.
 
 ---
 
@@ -69,15 +87,15 @@ Kafka Topic (enriched market events) → Kafka Consumer → MiniBatchKMeans Mode
 
 * **Python 3.11+ –** Modern async/typing features and high performance.
 
-* **Flask –** Lightweight web server for monitoring endpoints.
+* **Apache Kafka –** event ingestion and streaming backbone.
 
-* **scikit-learn –** MiniBatchKMeans for online unsupervised clustering.
+* **Redis –** lightweight buffer for events and stories.
 
-* **Apache Kafka –** Streaming backbone for consuming and publishing events.
+* **OpenAI API –** for narrative generation.
 
-* **kafka-python-ng –** Kafka client for fast and reliable message handling.
+* **GitHub API  –** story commits to a repo.
 
-* **logging –** Structured application logs with INFO/ERROR separation.
+* **Logging –** structured INFO/ERROR logs.
 
 ---
 
@@ -85,29 +103,35 @@ Kafka Topic (enriched market events) → Kafka Consumer → MiniBatchKMeans Mode
 
 ### Common Issues
 
-* **n_samples=1 should be >= n_clusters=4**
+* Events not reaching Redis
 
-  * This happens when too few events arrive before clustering.
+  * Confirm Kafka is producing to the expected topic.
 
-  * **Fix:** buffer multiple samples before calling partial_fit or lower n_clusters.
+  * Verify Kafka consumer group/subscription config.
 
-* **Kafka Consumer/Producer Errors**
-  * Ensure Kafka is running and reachable.
+* Stories not generating
 
-  * Verify correct topic names and authentication configs.
+  * Check that OPENAI_API_KEY is set correctly in .env.
 
-* **Model Not Updating**
+  * Ensure events are being popped from the Redis event queue.
 
-  * Confirm events are reaching the consumer (check logs).
+* Stories never written to GitHub
 
-  * Ensure partial_fit is called with valid feature vectors.
+  * Verify GITHUB_TOKEN in .env has write access.
 
-* **High CPU/Memory Usage**
+  * Check story queue threshold (may need to lower batch size for testing).
 
-  * Reduce batch_size in MiniBatchKMeans.
+* Redis connection issues
 
-  * Tune the number of clusters (n_clusters) to avoid overfitting.
+  * Ensure Redis is running:
+  should show a container with port 6379.
 
-  * Scale horizontally with more consumers in the group.
-  
-![Capture](png/Capture.JPG)
+  ```bash
+  docker ps
+  ```
+
+---
+
+## Final Output
+
+![FinalOutcome](<images/final outcome.JPG>)

@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 class KafkaClientManager:
     def __init__(self, config: Config):
-        print(f"This is the config {config}")
         self.consumer = Consumer(
             bootstrap_servers=config.KAFKA_BOOTSTRAP_SERVERS,
             offset=config.KAFKA_AUTO_OFFSET_RESET,

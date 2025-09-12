@@ -12,8 +12,8 @@ class Config:
     KAFKA_INPUT_TOPIC = os.environ.get('KAFKA_INPUT_TOPIC', 'input-topic')
     KAFKA_OUTPUT_TOPIC = os.environ.get('KAFKA_OUTPUT_TOPIC', 'output-topic')
     REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
-    HF_TOKEN = os.environ.get('HF_TOKEN', 'sometokenhg')
-    GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', 'sometokengh')
+    OPEN_AI_TOKEN = os.environ.get('OPEN_AI_TOKEN', 'sometokenhg')
+    GH_TOKEN = os.environ.get('GH_TOKEN', 'sometokengh')
     GITHUB_REPO = os.environ.get('GITHUB_REPO', 'repo')
     def __str__(self):
         return (f"Servers:{self.KAFKA_BOOTSTRAP_SERVERS}\n"

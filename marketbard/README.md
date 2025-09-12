@@ -1,5 +1,7 @@
 # Market Analysis
 
+    docker pull redis:latest
+docker run -p 6379:6379 redis
 ___
 
 ### Summary

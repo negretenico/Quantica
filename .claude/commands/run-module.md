@@ -1,0 +1,1 @@
+Print the exact commands needed to start the Quantica module specified in $ARGUMENTS, including any required prerequisites (Kafka, Redis). Use the module names: marketListener, markettransformer, marketanalysis, marketbard, marketappendonly. If no argument is given, print the full start-order for all modules.

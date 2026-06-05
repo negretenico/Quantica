@@ -5,32 +5,32 @@ import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
 import com.negretenico.quantica.markettransformer.model.SignalEventType;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
 import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
-import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
+import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 import java.util.Map;
 
 
 @Slf4j
 @Component
 public class LargeTradeDetected implements ApplicationListener<OrderReceived> {
-	private final KafkaPublisher publisher;
-	private final BigInteger MILLION = new BigInteger("1000000");
-	public LargeTradeDetected(KafkaPublisher publisher) {
+	private final SignalPublisher publisher;
+	private final BigDecimal MILLION = new BigDecimal("1000000");
+	public LargeTradeDetected(SignalPublisher publisher) {
 		this.publisher = publisher;
 	}
 
 	@Override
 	public void onApplicationEvent(OrderReceived event) {
-		log.info("LargeTradeDetected: Received event");
+		log.debug("LargeTradeDetected: Received event");
 		BinanceStreamResponse order = event.getBinanceOrder();
-		BigInteger quantity =
-				Result.of(order::getQuantityAsBigInteger).getOrElse(BigInteger.ZERO);
+		BigDecimal quantity =
+				Result.of(order::getQuantityAsBigDecimal).getOrElse(BigDecimal.ZERO);
 		if(quantity.compareTo(MILLION)<=0){
-			log.info("LargeTradeDetected: Order {}, did not meet threshold",
+			log.debug("LargeTradeDetected: Order {}, did not meet threshold",
 					order.getId());
 			return;
 		}

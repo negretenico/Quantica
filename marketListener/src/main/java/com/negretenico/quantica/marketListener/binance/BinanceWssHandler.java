@@ -33,13 +33,11 @@ public class BinanceWssHandler extends TextWebSocketHandler {
 	@Override
 	public void handleTextMessage(WebSocketSession session, TextMessage message) {
 		this.session = session;
-		log.info("Received message: {}", message.getPayload());
+		log.debug("Received message: {}", message.getPayload());
 		Result.of(() -> objectMapper.readValue(message.getPayload(), BinanceStreamResponse.class))
 				.onSuccess(bsr -> {
-					log.info("Successfully serialized msg, {}", bsr);
-					log.info("Publishing msg, {}", bsr);
+					log.debug("Publishing msg: {}", bsr.getId());
 					applicationEventPublisher.publishEvent(BinanceOrderReceived.of(this, bsr));
-					log.info("Published msg, {}", bsr);
 				})
 				.onFailure(e -> log.error("Error parsing message", e));
 	}

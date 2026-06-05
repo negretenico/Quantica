@@ -3,7 +3,7 @@ package com.negretenico.quantica.markettransformer.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 
 /**
  * Binance Trade Stream Response
@@ -32,13 +32,13 @@ public record BinanceStreamResponse(
 ) {
 
 	@JsonIgnore
-	public BigInteger getPriceAsBiInteger() {
-		return new BigInteger(price);
+	public BigDecimal getPriceAsBigDecimal() {
+		return new BigDecimal(price);
 	}
 
 	@JsonIgnore
-	public BigInteger getQuantityAsBigInteger() {
-		return new BigInteger(quantity);
+	public BigDecimal getQuantityAsBigDecimal() {
+		return new BigDecimal(quantity);
 	}
 
 	@JsonIgnore

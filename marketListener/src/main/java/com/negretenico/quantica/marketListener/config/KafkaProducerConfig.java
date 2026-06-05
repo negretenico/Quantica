@@ -1,5 +1,6 @@
 package com.negretenico.quantica.marketListener.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.negretenico.quantica.marketListener.model.BinanceStreamResponse;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -16,25 +17,29 @@ import java.util.Map;
 @Configuration
 public class KafkaProducerConfig {
 	private final String bootstrapAddress;
+	private final ObjectMapper objectMapper;
 
-	public KafkaProducerConfig(@Value("${kafka.bootstrap}") String bootstrapAddress) {
+	public KafkaProducerConfig(@Value("${kafka.bootstrap}") String bootstrapAddress, ObjectMapper objectMapper) {
 		this.bootstrapAddress = bootstrapAddress;
+		this.objectMapper = objectMapper;
 	}
 
 	@Bean
 	public ProducerFactory<String, BinanceStreamResponse> producerFactory() {
-		Map<String, Object> configProps = Map.of(
-				ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress,
-				ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
-				ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class,
-				ProducerConfig.ACKS_CONFIG, "all",
-				ProducerConfig.RETRIES_CONFIG, 0,
-				ProducerConfig.BATCH_SIZE_CONFIG, 16384,
-				ProducerConfig.LINGER_MS_CONFIG, 1,
-				JsonSerializer.ADD_TYPE_INFO_HEADERS, false,
-				ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432
+		JsonSerializer<BinanceStreamResponse> valueSerializer = new JsonSerializer<>(objectMapper);
+		valueSerializer.setAddTypeInfo(false);
+		return new DefaultKafkaProducerFactory<>(
+				Map.of(
+						ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress,
+						ProducerConfig.ACKS_CONFIG, "all",
+						ProducerConfig.RETRIES_CONFIG, 0,
+						ProducerConfig.BATCH_SIZE_CONFIG, 16384,
+						ProducerConfig.LINGER_MS_CONFIG, 1,
+						ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432
+				),
+				new StringSerializer(),
+				valueSerializer
 		);
-		return new DefaultKafkaProducerFactory<>(configProps);
 	}
 
 	@Bean

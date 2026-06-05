@@ -1,9 +1,8 @@
 from flask import Flask
-
 from app import config
-from app.kafka_client import KafkaClientManager
+from app.rabbit_client import RabbitClientManager
 
-kafka_manager = KafkaClientManager(config=config.Config)
+rabbit_manager = RabbitClientManager(config=config.Config)
 
 
 def create_app():

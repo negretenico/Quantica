@@ -1,18 +1,122 @@
-# docker-compose.yml
-version: '3.8'
-#update these
-#services:
-#  listener:
-#    build: ./listener
-#    ports:
-#      - "8080:8080"
-#
-#  ml:
-#    build: ./ml
-#    ports:
-#      - "5000:5000"
-#
-#  ledger:
-#    build: ./ledger
-#    ports:
-#      - "3000:3000"
+services:
+  kafka:
+    image: apache/kafka-native:4.0.0
+    container_name: quantica-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://quantica-kafka:29092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: quantica-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: quantica-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  marketlistener:
+    build:
+      context: ./marketListener
+      args:
+        GITHUB_TOKEN: ${GITHUB_TOKEN}
+    container_name: quantica-marketlistener
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP: quantica-kafka:29092
+    ports:
+      - "8080:8080"
+
+  markettransformer:
+    build:
+      context: ./markettransformer
+      args:
+        GITHUB_TOKEN: ${GITHUB_TOKEN}
+    container_name: quantica-markettransformer
+    depends_on:
+      kafka:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      KAFKA_BOOTSTRAP: quantica-kafka:29092
+      SPRING_RABBITMQ_HOST: quantica-rabbitmq
+    ports:
+      - "8081:8080"
+
+  marketanalysis:
+    build:
+      context: ./marketanalysis
+    container_name: quantica-marketanalysis
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
+      REDIS_HOST: quantica-redis
+    ports:
+      - "5000:5000"
+
+  marketbard:
+    build:
+      context: ./marketbard
+    container_name: quantica-marketbard
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
+      REDIS_HOST: quantica-redis
+
+  marketappendonly:
+    build:
+      context: ./marketappendonly
+    container_name: quantica-marketappendonly
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP: quantica-kafka:29092

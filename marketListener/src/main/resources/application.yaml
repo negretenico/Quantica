@@ -1,0 +1,6 @@
+market:
+  order:
+    topic: order
+
+kafka:
+  bootstrap: "localhost:9092"

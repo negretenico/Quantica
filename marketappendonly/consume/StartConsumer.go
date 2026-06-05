@@ -21,7 +21,11 @@ func NewConsumer() (*Consumer, error) {
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.Return.Errors = true
 
-	consumer, err := sarama.NewConsumerGroup([]string{"localhost:9092"}, "ledger", config)
+	bootstrap := os.Getenv("KAFKA_BOOTSTRAP")
+	if bootstrap == "" {
+		bootstrap = "localhost:9092"
+	}
+	consumer, err := sarama.NewConsumerGroup([]string{bootstrap}, "ledger", config)
 	if err != nil {
 		return nil, err
 	}

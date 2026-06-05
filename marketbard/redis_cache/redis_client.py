@@ -16,8 +16,13 @@ class RedisClient:
         self._BATCH_SIZE = batch_size
         self._MAX_WAIT = max_wait
 
+    def get_enrichment(self, symbol: str, event_time) -> dict | None:
+        key = f"enrichment:{symbol}:{event_time}"
+        item = self.client.get(key)
+        return json.loads(item) if item else None
+
     def add_to_gen_queue(self, events):
-        logger.info(f"Adding events {events} to the queue")
+        logger.debug(f"Adding {len(events)} events to gen_queue")
         self.client.rpush(
             self._GEN_QUEUE_KEY,
             json.dumps({"events": events, "created_at": time.time()})
@@ -28,7 +33,7 @@ class RedisClient:
         return json.loads(item) if item else None
 
     def add_story(self, story):
-        logger.info(f"Adding story {story} to the queue")
+        logger.debug("Adding story to write_queue")
         self.client.rpush(self._WRITE_QUEUE_KEY, json.dumps(story))
 
     def get_latest_story(self):
@@ -36,7 +41,7 @@ class RedisClient:
         return json.loads(item) if item else None
 
     def add_to_buffer(self, event):
-        logger.info(f"Adding event {event} to the buffer")
+        logger.debug("Adding event to buffer")
         self.client.rpush(
             self._BUFFER_KEY,
             json.dumps({"event": event, "created_at": time.time()})
@@ -47,7 +52,7 @@ class RedisClient:
         return json.loads(item) if item else None
 
     def try_become_leader(self):
-        logger.info("Trying to become the leader")
+        logger.debug("Trying to become the leader")
         return self.client.set(self._LOCK_KEY, "1", nx=True, ex=self._LOCK_TTL)
 
     def flush_buffer_if_ready(self):

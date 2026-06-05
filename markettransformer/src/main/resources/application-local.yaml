@@ -1,6 +1,10 @@
 kafka:
   bootstrap: localhost:9092
   groupId: market-transformer-group
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
 market:
   signal:
-    topic: order-signal
+    exchange: signal

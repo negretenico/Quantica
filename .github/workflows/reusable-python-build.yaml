@@ -39,6 +39,11 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
 
+      - name: Set release version on main
+        if: github.ref_name == 'main'
+        working-directory: ${{ inputs.working_directory }}
+        run: sed -i 's/\.dev0//' pyproject.toml
+
       - name: Install build deps
         working-directory: ${{ inputs.working_directory }}
         run: |

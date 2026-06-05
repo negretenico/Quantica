@@ -4,7 +4,7 @@ import logging
 
 from app.config import Config
 from gh.github_client import GithubClient
-from apache_kafka.kafka_client import KafkaClientManager
+from rabbitmq.rabbit_client import RabbitClientManager
 from redis_cache.redis_client import RedisClient
 from model.openai_client import OpenAIClient
 from model.build_prompt import build_prompt
@@ -20,67 +20,71 @@ openai_client = OpenAIClient(Config.OPEN_AI_TOKEN)
 github_client = GithubClient(token=Config.GH_TOKEN,repo_name= Config.GITHUB_REPO)
 
 
-def kafka_event_handler(event, key):
-    """Handler called by Kafka consumer for each new event"""
-    logger.info(f"Received event from Kafka: {event}")
+def signal_event_handler(event):
+    enrichment = redis_client.get_enrichment(event.get("symbol"), event.get("eventTime"))
+    if enrichment:
+        event = {**event, "cluster_id": enrichment.get("cluster_id"), "anomaly_score": enrichment.get("anomaly_score")}
+        logger.info(f"Enriched signal: symbol={event.get('symbol')} cluster={enrichment.get('cluster_id')} anomaly={enrichment.get('anomaly_score'):.4f}")
     redis_client.add_to_buffer(event)
 
 
 def buffer_flusher():
-    """Thread that moves batches from buffer → gen_queue"""
     while True:
-        redis_client.flush_buffer_if_ready()
+        try:
+            redis_client.flush_buffer_if_ready()
+        except Exception:
+            logger.exception("buffer_flusher: error flushing buffer")
         time.sleep(2)
 
 def story_worker():
     while True:
-        logger.info("story_worker: checking gen_queue…")
-        batch = redis_client.get_latest_gen_queue()
-        if not batch:
-            logger.debug("story_worker: no batch found")
-            time.sleep(2)
-            continue
+        try:
+            batch = redis_client.get_latest_gen_queue()
+            if not batch:
+                time.sleep(2)
+                continue
 
-        logger.info(f"story_worker: got batch with {len(batch['events'])} events")
-        events = batch["events"]
-        prompt = build_prompt(events)
-        story =  openai_client.create_story(prompt, len(events))
-        redis_client.add_story(story)
-        logger.info("story_worker: added story to write_queue")
+            events = batch["events"]
+            logger.info(f"story_worker: generating story for {len(events)} events")
+            prompt = build_prompt(events)
+            story = openai_client.create_story(prompt, len(events))
+            redis_client.add_story(story)
+            logger.info("story_worker: story queued for writing")
+        except Exception:
+            logger.exception("story_worker: error generating story")
+            time.sleep(5)
 
 
 def writer():
     while True:
-        logger.info("writer: checking write_queue…")
-        story = redis_client.get_latest_story()
-        if not story:
-            logger.debug("writer: no story found")
-            time.sleep(2)
-            continue
+        try:
+            story = redis_client.get_latest_story()
+            if not story:
+                time.sleep(2)
+                continue
 
-        story_md = story["story_md"].replace("\\n", "\n")
-        github_client.write_story(story_md)
-        logger.info("writer: committed new story to GitHub")
+            story_md = story["story_md"].replace("\\n", "\n")
+            github_client.write_story(story_md)
+            logger.info("writer: committed new story to GitHub")
+        except Exception:
+            logger.exception("writer: error writing story to GitHub")
+            time.sleep(5)
 
 
 
 def main():
     logger.info("Starting MarketBard")
-    kafka_manager = KafkaClientManager(config=Config)
-    kafka_manager.subscribe(
-        topic=Config.KAFKA_INPUT_TOPIC,
-        handler=kafka_event_handler
-    )
+    rabbit_manager = RabbitClientManager(config=Config)
+    rabbit_manager.subscribe(handler=signal_event_handler)
     threading.Thread(target=buffer_flusher, daemon=True).start()
     threading.Thread(target=story_worker, daemon=True).start()
     threading.Thread(target=writer, daemon=True).start()
 
-    kafka_manager.start_consuming()
+    rabbit_manager.start_consuming()
 
     # Block forever to keep the main thread alive
     try:
-        while True:
-            time.sleep(60)
+        threading.Event().wait()
     except KeyboardInterrupt:
         logger.info("Shutting down cleanly…")
 

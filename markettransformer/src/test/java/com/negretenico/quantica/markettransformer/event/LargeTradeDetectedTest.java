@@ -3,7 +3,7 @@ package com.negretenico.quantica.markettransformer.event;
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
 import com.negretenico.quantica.markettransformer.model.TradeIndicator;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
-import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
+import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,12 +11,12 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 
 @ExtendWith(MockitoExtension.class)
 class LargeTradeDetectedTest {
 	@Mock
-	KafkaPublisher kafkaPublisher;
+	SignalPublisher kafkaPublisher;
 	@Mock
 	OrderReceived orderReceived;
 	@Mock
@@ -31,7 +31,7 @@ class LargeTradeDetectedTest {
 
 	void mockAll(String amount) {
 		Mockito.when(orderReceived.getBinanceOrder()).thenReturn(binanceStreamResponse);
-		Mockito.when(binanceStreamResponse.getQuantityAsBigInteger()).thenReturn(new BigInteger(amount));
+		Mockito.when(binanceStreamResponse.getQuantityAsBigDecimal()).thenReturn(new BigDecimal(amount));
 	}
 
 	@Test

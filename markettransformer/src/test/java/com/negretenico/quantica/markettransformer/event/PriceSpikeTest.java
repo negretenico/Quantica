@@ -3,7 +3,7 @@ package com.negretenico.quantica.markettransformer.event;
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
 import com.negretenico.quantica.markettransformer.model.TradeIndicator;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
-import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
+import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,13 +11,13 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 
 @ExtendWith(MockitoExtension.class)
 class PriceSpikeTest {
 
 	@Mock
-	KafkaPublisher kafkaPublisher;
+	SignalPublisher kafkaPublisher;
 
 	@Mock
 	OrderReceived orderReceived1;
@@ -44,8 +44,8 @@ class PriceSpikeTest {
 
 	@Test
 	void givenPriceSpikeHasNotHappened_thenNoEventIsPublished() {
-		Mockito.when(trade1.getPriceAsBiInteger()).thenReturn(new BigInteger("100"));
-		Mockito.when(trade2.getPriceAsBiInteger()).thenReturn(new BigInteger("101")); // 1% move
+		Mockito.when(trade1.getPriceAsBigDecimal()).thenReturn(new BigDecimal("100"));
+		Mockito.when(trade2.getPriceAsBigDecimal()).thenReturn(new BigDecimal("101")); // 1% move
 
 		priceSpike.onApplicationEvent(orderReceived1);
 		priceSpike.onApplicationEvent(orderReceived2);
@@ -55,8 +55,8 @@ class PriceSpikeTest {
 
 	@Test
 	void givenPriceSpikeHasHappened_thenEventIsPublished() {
-		Mockito.when(trade1.getPriceAsBiInteger()).thenReturn(new BigInteger("100"));
-		Mockito.when(trade2.getPriceAsBiInteger()).thenReturn(new BigInteger("120")); // 20% move
+		Mockito.when(trade1.getPriceAsBigDecimal()).thenReturn(new BigDecimal("100"));
+		Mockito.when(trade2.getPriceAsBigDecimal()).thenReturn(new BigDecimal("120")); // 20% move
 		Mockito.when(trade2.getTradeSide()).thenReturn(TradeIndicator.BUY);
 		Mockito.when(trade2.quantity()).thenReturn("0.00");
 		Mockito.when(trade2.price()).thenReturn("0.00");

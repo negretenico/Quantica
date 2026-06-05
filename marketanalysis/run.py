@@ -1,7 +1,6 @@
 import logging
 
-from app import create_app, kafka_manager
-from app.config import Config
+from app import create_app, rabbit_manager
 from model.mini_batch import mini_batch
 from analysis.outbound import send_msg
 
@@ -12,11 +11,12 @@ logging.basicConfig(
 )
 
 app = create_app()
-kafka_manager.subscribe(topic=Config.KAFKA_INPUT_TOPIC, handler=lambda x,y: send_msg(prediction=mini_batch(x)))
+rabbit_manager.subscribe(handler=lambda event: send_msg(prediction=mini_batch(event)))
+
 if __name__ == '__main__':
-    kafka_manager.start_consuming()
+    rabbit_manager.start_consuming()
 
     try:
         app.run(host='0.0.0.0', port=5000, debug=app.config['DEBUG'])
     finally:
-        kafka_manager.stop_consuming()
+        pass

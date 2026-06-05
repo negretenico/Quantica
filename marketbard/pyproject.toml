@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marketbard"
-version = "0.2.0.dev0"
+version = "1.0.0.dev0"
 description = "Market bard service"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [

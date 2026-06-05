@@ -78,7 +78,7 @@
 		<dependency>
 			<groupId>com.common</groupId>
 			<artifactId>functionico</artifactId>
-			<version>0.0.2-SNAPSHOT</version>
+			<version>0.0.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -137,9 +137,6 @@
 			<id>github-functionico</id>
 			<name>GitHub Packages - Functionico</name>
 			<url>https://maven.pkg.github.com/negretenico/functionico</url>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
 		</repository>
 	</repositories>
 	<distributionManagement>

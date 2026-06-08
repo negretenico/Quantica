@@ -8,15 +8,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
-    && rm -rf /var/lib/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-COPY shared/ /shared/
+COPY --from=shared . /shared/
 RUN pip install --no-cache-dir /shared/
 
-COPY marketbard/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY marketbard/ .
+COPY . .
 
 RUN useradd --create-home --shell /bin/bash app && \
     chown -R app:app /app

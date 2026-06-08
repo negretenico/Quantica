@@ -73,8 +73,9 @@ services:
 
   marketanalysis:
     build:
-      context: .
-      dockerfile: marketanalysis/Dockerfile
+      context: ./marketanalysis
+      additional_contexts:
+        shared: ./shared
     container_name: quantica-marketanalysis
     depends_on:
       rabbitmq:
@@ -87,8 +88,9 @@ services:
 
   marketbard:
     build:
-      context: .
-      dockerfile: marketbard/Dockerfile
+      context: ./marketbard
+      additional_contexts:
+        shared: ./shared
     container_name: quantica-marketbard
     depends_on:
       rabbitmq:

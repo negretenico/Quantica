@@ -11,7 +11,7 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `marketListener` | Java 21 / Spring Boot 3.5 | Binance WSS → Kafka | → `order` |
 | `markettransformer` | Java 21 / Spring Boot 3.x | Raw trades → enriched signals | `order` → `signal` |
 | `marketanalysis` | Python 3.11 / Flask | Clustering + anomaly detection | `signal` → anomaly events |
-| `marketbard` | Python 3.11 | LLM storytelling → GitHub commits | `signal` → Redis → GitHub |
+| `marketbard` | Python 3.11 | LLM storytelling → GitHub commits | `signal` + `analytics` → GitHub |
 | `marketappendonly` | Go 1.24 / Sarama | Append-only audit ledger | `order` → `history.log` |
 
 ### Start Order
@@ -20,13 +20,10 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 # 1. Kafka
 docker run -p 9092:9092 apache/kafka-native:4.0.0
 
-# 2. Redis (marketbard only)
-docker run -p 6379:6379 redis
-
-# 3. marketListener (must be first — it seeds the `order` topic)
+# 2. marketListener (must be first — it seeds the `order` topic)
 cd marketListener && mvn spring-boot:run -Dspring-boot.run.profiles=local
 
-# 4. Any downstream module
+# 3. Any downstream module
 cd markettransformer && mvn spring-boot:run -Dspring-boot.run.profiles=local
 cd marketanalysis   && python run.py
 cd marketbard       && python run.py

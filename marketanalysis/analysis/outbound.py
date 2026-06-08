@@ -1,11 +1,10 @@
-import json
 import logging
-import redis
 from app.config import Config
+from rabbitmq.publisher import RabbitPublisher
 
 logger = logging.getLogger(__name__)
 
-_redis = redis.Redis(host=Config.REDIS_HOST, port=6379, db=0, decode_responses=True)
+_publisher = RabbitPublisher(url=Config.RABBITMQ_URL, exchange=Config.ANALYTICS_EXCHANGE)
 
 
 def send_msg(prediction):
@@ -17,8 +16,5 @@ def send_msg(prediction):
     event["anomaly_score"] = float(anomaly_score)
 
     symbol = event.get("symbol", "unknown")
-    event_time = event.get("eventTime", "unknown")
-    key = f"enrichment:{symbol}:{event_time}"
-
-    _redis.setex(key, Config.REDIS_ENRICHMENT_TTL, json.dumps(event))
-    logger.debug(f"Wrote enrichment to Redis key '{key}'")
+    _publisher.publish(routing_key=f"signal.analytics.{symbol}", payload=event)
+    logger.debug(f"Published enriched event for symbol='{symbol}'")

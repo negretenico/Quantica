@@ -8,7 +8,7 @@ class Config:
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     RABBITMQ_URL = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@localhost/')
     RABBITMQ_QUEUE = os.environ.get('RABBITMQ_QUEUE', 'signal.bard')
-    REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+    ANALYTICS_EXCHANGE = os.environ.get('ANALYTICS_EXCHANGE', 'analytics')
     OPEN_AI_TOKEN = os.environ.get('OPEN_AI_TOKEN', 'sometokenhg')
     GH_TOKEN = os.environ.get('GH_TOKEN', 'sometokengh')
     GITHUB_REPO = os.environ.get('GITHUB_REPO', 'repo')

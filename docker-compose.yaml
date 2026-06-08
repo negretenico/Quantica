@@ -38,17 +38,6 @@ services:
       timeout: 10s
       retries: 5
 
-  redis:
-    image: redis:7
-    container_name: quantica-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   marketlistener:
     build:
       context: ./marketListener
@@ -85,31 +74,31 @@ services:
   marketanalysis:
     build:
       context: ./marketanalysis
+      additional_contexts:
+        shared: ./shared
     container_name: quantica-marketanalysis
     depends_on:
       rabbitmq:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
-      REDIS_HOST: quantica-redis
+      ANALYTICS_EXCHANGE: analytics
     ports:
       - "5000:5000"
 
   marketbard:
     build:
       context: ./marketbard
+      additional_contexts:
+        shared: ./shared
     container_name: quantica-marketbard
     depends_on:
       rabbitmq:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     env_file: .env
     environment:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
-      REDIS_HOST: quantica-redis
+      ANALYTICS_EXCHANGE: analytics
 
   marketappendonly:
     build:

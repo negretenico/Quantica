@@ -5,7 +5,7 @@ def build_prompt(events):
         events = events[0]
 
     event_lines = "\n".join([
-        f"- {e['event']['symbol']} {e['event']['type']} {e['event']['quantity']} @ {e['event']['price']}"
+        f"- {e['symbol']} {e.get('type', '')} {e.get('quantity', '')} @ {e.get('price', '')}"
         for e in events
     ])
     return header + event_lines

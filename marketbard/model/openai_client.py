@@ -36,6 +36,7 @@ class OpenAIClient:
                 ],
                 max_tokens=max_new_tokens,
                 temperature=temperature,
+                timeout=60,
             )
 
         story_md = response.choices[0].message.content.strip()

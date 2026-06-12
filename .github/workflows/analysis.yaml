@@ -61,5 +61,6 @@ jobs:
       working_directory: ./marketanalysis
       dockerfile_path: ./Dockerfile
       service_name: marketanalysis
-      artifact_name: python-dist  # Fixed: matches the artifact name
+      artifact_name: python-dist
+      build_contexts: shared=./shared
     secrets: inherit

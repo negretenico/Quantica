@@ -23,12 +23,9 @@ public class KafkaPublisher {
 	@EventListener(BinanceOrderReceived.class)
 	public void publishToKafka(BinanceOrderReceived binanceOrderReceived) {
 		BinanceStreamResponse order = binanceOrderReceived.getBinanceOrder();
-		log.info("Publishing message to kafka, {}", order.getId());
+		log.debug("Publishing to kafka: {}", order.getId());
 		template.send(topicName, order)
-				.thenAccept(result -> {
-					log.info("Success on thread: {}", Thread.currentThread().getName());
-					log.info("Success produced: {}", result.getProducerRecord().value());
-				})
+				.thenAccept(result -> log.debug("Produced: {}", result.getProducerRecord().value().getId()))
 				.exceptionally(throwable -> {
 					log.error("Error on thread: {}", Thread.currentThread().getName());
 					log.error("Error: {} ", throwable.getLocalizedMessage());

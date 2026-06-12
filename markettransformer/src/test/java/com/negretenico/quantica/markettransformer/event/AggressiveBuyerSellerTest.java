@@ -3,7 +3,7 @@ package com.negretenico.quantica.markettransformer.event;
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
 import com.negretenico.quantica.markettransformer.model.TradeIndicator;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
-import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
+import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,7 +17,7 @@ import java.util.stream.IntStream;
 class AggressiveBuyerSellerTest {
 
 	@Mock
-	KafkaPublisher kafkaPublisher;
+	SignalPublisher kafkaPublisher;
 
 	@Mock
 	OrderReceived orderReceived;

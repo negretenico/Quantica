@@ -4,14 +4,13 @@ import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
 import com.negretenico.quantica.markettransformer.model.SignalEventType;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
 import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
-import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
+import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.Map;
@@ -19,30 +18,32 @@ import java.util.Map;
 @Service
 @Slf4j
 public class PriceSpike implements ApplicationListener<OrderReceived> {
-	private final KafkaPublisher publisher;
+	private final SignalPublisher publisher;
 	private final BigDecimal THRESHOLD = new BigDecimal("0.02"); // 2% move
-	private final LinkedList<BigInteger> recentPrices = new LinkedList<>();
+	private final LinkedList<BigDecimal> recentPrices = new LinkedList<>();
 
-	public PriceSpike(KafkaPublisher publisher) {
+	public PriceSpike(SignalPublisher publisher) {
 		this.publisher = publisher;
 	}
 
 	@Override
 	public void onApplicationEvent(OrderReceived event) {
-		log.info("PriceSpike: Received event");
+		log.debug("PriceSpike: Received event");
 		BinanceStreamResponse order = event.getBinanceOrder();
-		BigInteger price = order.getPriceAsBiInteger();
+		BigDecimal price = order.getPriceAsBigDecimal();
 		if (recentPrices.isEmpty()) {
 			recentPrices.add(price);
 			return;
 		}
-		BigInteger lastPrice = recentPrices.getLast();
-		BigDecimal priceDecimal = new BigDecimal(price);
-		BigDecimal lastPriceDecimal = new BigDecimal(lastPrice);
-		BigDecimal change = priceDecimal.subtract(lastPriceDecimal)
+		BigDecimal lastPrice = recentPrices.getLast();
+		if (lastPrice.compareTo(BigDecimal.ZERO) == 0) {
+			recentPrices.add(price);
+			return;
+		}
+		BigDecimal change = price.subtract(lastPrice)
 				.abs()
-				.divide(lastPriceDecimal, 4, RoundingMode.DOWN);
-		log.info("PriceSpike: Detected change of {}",change);
+				.divide(lastPrice, 4, RoundingMode.DOWN);
+		log.debug("PriceSpike: Detected change of {}",change);
 		if (change.compareTo(THRESHOLD) > 0) {
 			log.info("PriceSpike: Anomaly detected publishing event");
 			publisher.publish(new SignalEvent(

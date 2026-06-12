@@ -5,7 +5,7 @@ import com.negretenico.quantica.markettransformer.model.SignalEventType;
 import com.negretenico.quantica.markettransformer.model.TradeIndicator;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
 import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
-import com.negretenico.quantica.markettransformer.stream.producer.KafkaPublisher;
+import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Service;
@@ -18,17 +18,17 @@ import java.util.Objects;
 @Service
 @Slf4j
 public class AggressiveBuyerSeller  implements ApplicationListener<OrderReceived> {
-	private final KafkaPublisher publisher;
+	private final SignalPublisher publisher;
 	private  TradeIndicator lastSide=null;
 	private final List<TradeIndicator> recentSides = new LinkedList<>();
 	private  int streakCount=0;
-	public AggressiveBuyerSeller(KafkaPublisher publisher) {
+	public AggressiveBuyerSeller(SignalPublisher publisher) {
 		this.publisher = publisher;
 	}
 
 	@Override
 	public void onApplicationEvent(OrderReceived event) {
-		log.info("AggressiveBuyerSeller: Received event");
+		log.debug("AggressiveBuyerSeller: Received event");
 		BinanceStreamResponse binanceStreamResponse = event.getBinanceOrder();
 		TradeIndicator side=binanceStreamResponse.getTradeSide();
 		if (Objects.isNull(lastSide) || !lastSide.equals(side)) {
@@ -43,7 +43,7 @@ public class AggressiveBuyerSeller  implements ApplicationListener<OrderReceived
 			recentSides.removeFirst();
 		}
 		if (streakCount < STREAK_THRESHOLD) {
-			log.info("DominantSideDetected: No side is dominating");
+			log.debug("DominantSideDetected: No side is dominating");
 			return;
 		}
 

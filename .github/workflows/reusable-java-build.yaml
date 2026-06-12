@@ -43,6 +43,11 @@ jobs:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
+      - name: Set release version on main
+        if: github.ref_name == 'main'
+        working-directory: ${{ inputs.working_directory }}
+        run: mvn versions:set -DremoveSnapshot -DgenerateBackupPoms=false
+
       - name: Build with Maven
         run: mvn clean package -DskipTests
         working-directory: ${{ inputs.working_directory }}

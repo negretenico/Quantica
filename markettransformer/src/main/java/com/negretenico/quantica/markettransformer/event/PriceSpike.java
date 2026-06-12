@@ -36,6 +36,10 @@ public class PriceSpike implements ApplicationListener<OrderReceived> {
 			return;
 		}
 		BigDecimal lastPrice = recentPrices.getLast();
+		if (lastPrice.compareTo(BigDecimal.ZERO) == 0) {
+			recentPrices.add(price);
+			return;
+		}
 		BigDecimal change = price.subtract(lastPrice)
 				.abs()
 				.divide(lastPrice, 4, RoundingMode.DOWN);

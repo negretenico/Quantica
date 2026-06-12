@@ -21,6 +21,8 @@ jobs:
       should-build: ${{ steps.changes.outputs.markettransformer == 'true' || steps.changes.outputs.shared == 'true' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: dorny/paths-filter@v2
         id: changes
         with:

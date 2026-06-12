@@ -1,23 +1,36 @@
+from collections import deque
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.feature_extraction import FeatureHasher
-from scipy.sparse import vstack  # <- important: stack sparse rows correctly
-import numpy as np
+from scipy.sparse import vstack
+import threading
+import datetime
 import logging
+from zoneinfo import ZoneInfo
+
+from app.config import Config
 
 logger = logging.getLogger(__name__)
 
-# Vectorizer & model
+_ET = ZoneInfo("America/New_York")
+
 vectorizer = FeatureHasher(input_type='dict', n_features=64)
 
 model = MiniBatchKMeans(
     n_clusters=4,
     random_state=0,
-    batch_size=1,      # per-message update (you said you don't like batching)
+    batch_size=1,
     n_init="auto"
 )
 
-# Warm-up buffer for the first n_clusters samples (sparse rows)
-_init_rows = []
+# Warmup buffer — sparse rows accumulated until WARMUP_SAMPLES reached
+_warmup_rows: list = []
+_warmed_up: bool = False
+
+# Rolling retrain buffer — bounded at RETRAIN_BUFFER_SIZE; holds sparse rows
+_retrain_buffer: deque = deque(maxlen=Config.RETRAIN_BUFFER_SIZE)
+
+_lock = threading.Lock()
+
 
 def flatten_event(event: dict) -> dict:
     flat = {}
@@ -29,43 +42,61 @@ def flatten_event(event: dict) -> dict:
             flat[k] = v
     return flat
 
+
+def _do_retrain():
+    global model
+    with _lock:
+        if not _retrain_buffer:
+            logger.info("retrain: buffer empty, skipping")
+            return
+        X = vstack(list(_retrain_buffer))
+        model = MiniBatchKMeans(n_clusters=4, random_state=0, batch_size=1, n_init="auto")
+        model.partial_fit(X)
+        logger.info(f"retrain: completed on {len(_retrain_buffer)} samples")
+
+
+def _schedule_retrain():
+    while True:
+        now = datetime.datetime.now(_ET)
+        target = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        if now >= target:
+            target += datetime.timedelta(days=1)
+        sleep_secs = (target - now).total_seconds()
+        logger.info(f"retrain: next scheduled in {sleep_secs / 3600:.1f}h at 09:30 ET")
+        threading.Event().wait(timeout=sleep_secs)
+        _do_retrain()
+
+
+threading.Thread(target=_schedule_retrain, daemon=True).start()
+
+
 def mini_batch(data_point):
     """
-    - Before the model is initialized: buffer rows until we have >= n_clusters.
-    - Initialize with a single partial_fit on the stacked warm-up.
-    - Then, for each message: partial_fit + predict + anomaly score.
-    Returns:
-        None until initialized,
-        or (event, label, anomaly_score) thereafter.
+    Warmup phase: buffer the first WARMUP_SAMPLES events and run partial_fit once to seed clusters.
+    Post-warmup: predict + anomaly score only — no per-message partial_fit.
+    Retrain buffer is updated on every post-warmup call for the 09:30 ET daily retrain.
+
+    Returns None during warmup, or (event, label, anomaly_score) once warmed up.
     """
-    global _init_rows, model, vectorizer
+    global _warmup_rows, _warmed_up
 
-    logger.info(f"Training on msg {data_point}")
+    with _lock:
+        clean_point = flatten_event(data_point)
+        X = vectorizer.transform([clean_point])
 
-    clean_point = flatten_event(data_point)
-    X = vectorizer.transform([clean_point])  # CSR (1, n_features)
+        if not _warmed_up:
+            _warmup_rows.append(X)
+            if len(_warmup_rows) < Config.WARMUP_SAMPLES:
+                return None
+            X0 = vstack(_warmup_rows)
+            model.partial_fit(X0)
+            _warmup_rows.clear()
+            _warmed_up = True
+            logger.info(f"Warmup complete after {Config.WARMUP_SAMPLES} samples")
 
-    # If not initialized yet, buffer rows
-    if not hasattr(model, "cluster_centers_"):
-        _init_rows.append(X)
-        if len(_init_rows) < model.n_clusters:
-            # Not enough samples yet; don't train/predict
-            return None
+        _retrain_buffer.append(X)
 
-        # Initialize clusters with >= n_clusters samples
-        X0 = vstack(_init_rows)          # <- key fix (use scipy.sparse.vstack)
-        model.partial_fit(X0)            # seeds cluster centers
-        _init_rows.clear()               # free buffer
-
-        # Now we can predict for the current X as well
         label = model.predict(X)[0]
-        dist = model.transform(X)[0]     # distances to each centroid (1D)
-        score = float(dist.min())        # anomaly score
+        dist = model.transform(X)[0]
+        score = float(dist.min())
         return (data_point, label, score)
-
-    # Normal streaming path: update + predict
-    model.partial_fit(X)
-    label = model.predict(X)[0]
-    dist = model.transform(X)[0]
-    score = float(dist.min())
-    return (data_point, label, score)

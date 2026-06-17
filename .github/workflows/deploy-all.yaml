@@ -9,9 +9,9 @@ jobs:
     steps:
       - name: Trigger all service deployments
         run: |
-          gh workflow run listener.yaml --ref main
-          gh workflow run transformer.yaml --ref main
-          gh workflow run analysis.yaml --ref main
-          gh workflow run bard.yaml --ref main
+          gh workflow run listener.yaml --ref main --repo ${{ github.repository }}
+          gh workflow run transformer.yaml --ref main --repo ${{ github.repository }}
+          gh workflow run analysis.yaml --ref main --repo ${{ github.repository }}
+          gh workflow run bard.yaml --ref main --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

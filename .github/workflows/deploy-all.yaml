@@ -3,6 +3,9 @@ name: Deploy All Services
 on:
   workflow_dispatch:
 
+permissions:
+  actions: write
+
 jobs:
   trigger:
     runs-on: ubuntu-latest

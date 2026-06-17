@@ -2,6 +2,7 @@ name: Market Bard Service CI/CD
 permissions:
   contents: read
   packages: write
+  id-token: write
 on:
   push:
     paths:

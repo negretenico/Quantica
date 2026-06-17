@@ -66,3 +66,14 @@ jobs:
       service_name: markettransformer
       artifact_name: markettransformer-jar
     secrets: inherit
+
+  ecs-deploy:
+    uses: ./.github/workflows/reusable-ecs-deploy.yaml
+    needs: [check-changes, docker-deploy]
+    if: github.ref == 'refs/heads/main' && needs.check-changes.outputs.should-build == 'true'
+    with:
+      service_name: markettransformer
+      container_name: markettransformer
+      task_definition_path: .aws/task-definitions/markettransformer.json
+      image_uri: ghcr.io/negretenico/quantica/markettransformer:markettransformer-latest
+    secrets: inherit

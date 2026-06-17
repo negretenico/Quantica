@@ -1,0 +1,66 @@
+name: Reusable ECS Deploy
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      container_name:
+        required: true
+        type: string
+      task_definition_path:
+        required: true
+        type: string
+      image_uri:
+        required: true
+        type: string
+      ecs_cluster:
+        required: false
+        type: string
+        default: quantica
+      aws_region:
+        required: false
+        type: string
+        default: us-east-1
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+      AWS_ACCOUNT_ID:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Substitute placeholders in task definition
+        run: |
+          sed -i "s/{{ACCOUNT_ID}}/${{ secrets.AWS_ACCOUNT_ID }}/g" ${{ inputs.task_definition_path }}
+          sed -i "s/{{AWS_REGION}}/${{ inputs.aws_region }}/g" ${{ inputs.task_definition_path }}
+
+      - name: Render ECS task definition
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ inputs.task_definition_path }}
+          container-name: ${{ inputs.container_name }}
+          image: ${{ inputs.image_uri }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: ${{ inputs.service_name }}
+          cluster: ${{ inputs.ecs_cluster }}
+          wait-for-service-stability: true

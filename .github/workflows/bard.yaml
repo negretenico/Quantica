@@ -66,3 +66,14 @@ jobs:
       artifact_name: python-dist
       build_contexts: shared=./shared
     secrets: inherit
+
+  ecs-deploy:
+    uses: ./.github/workflows/reusable-ecs-deploy.yaml
+    needs: [check-changes, docker-deploy]
+    if: github.ref == 'refs/heads/main' && needs.check-changes.outputs.should-build == 'true'
+    with:
+      service_name: marketbard
+      container_name: marketbard
+      task_definition_path: .aws/task-definitions/marketbard.json
+      image_uri: ghcr.io/negretenico/quantica/marketbard:marketbard-latest
+    secrets: inherit

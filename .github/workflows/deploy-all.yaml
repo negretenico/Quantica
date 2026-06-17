@@ -1,0 +1,17 @@
+name: Deploy All Services
+
+on:
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger all service deployments
+        run: |
+          gh workflow run listener.yaml --ref main
+          gh workflow run transformer.yaml --ref main
+          gh workflow run analysis.yaml --ref main
+          gh workflow run bard.yaml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -18,7 +18,7 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      should-build: ${{ steps.changes.outputs.marketListener == 'true' || steps.changes.outputs.shared == 'true' }}
+      should-build: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketListener == 'true' || steps.changes.outputs.shared == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:

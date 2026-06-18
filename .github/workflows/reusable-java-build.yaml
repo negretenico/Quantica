@@ -60,6 +60,7 @@ jobs:
         run: mvn test
 
       - name: Deploy JAR to GitHub Packages
+        if: github.ref_name == 'main'
         working-directory: ${{ inputs.working_directory }}
         run: mvn deploy -DskipTests
         env:

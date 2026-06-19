@@ -1,0 +1,5 @@
+kafka:
+  groupId: market-transformer-group
+spring:
+  rabbitmq:
+    addresses: ${RABBITMQ_URL}

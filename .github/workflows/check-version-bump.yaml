@@ -1,0 +1,60 @@
+name: Check Version Bump
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'marketListener/pom.xml'
+      - 'markettransformer/pom.xml'
+      - 'marketanalysis/pyproject.toml'
+      - 'marketbard/pyproject.toml'
+      - '**/*.java'
+      - '**/*.py'
+      - '**/*.go'
+
+jobs:
+  check-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get base branch versions
+        id: base
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          JAVA_BASE=$(git show origin/${{ github.base_ref }}:marketListener/pom.xml | grep -m1 '<version>' | grep -v '3\.' | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
+          PYTHON_BASE=$(git show origin/${{ github.base_ref }}:marketanalysis/pyproject.toml | grep '^version = ' | sed 's/version = "//;s/"//')
+          echo "java=$JAVA_BASE" >> $GITHUB_OUTPUT
+          echo "python=$PYTHON_BASE" >> $GITHUB_OUTPUT
+
+      - name: Get PR branch versions
+        id: pr
+        run: |
+          JAVA_PR=$(grep -m1 '<version>' marketListener/pom.xml | grep -v '3\.' | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
+          PYTHON_PR=$(grep '^version = ' marketanalysis/pyproject.toml | sed 's/version = "//;s/"//')
+          echo "java=$JAVA_PR" >> $GITHUB_OUTPUT
+          echo "python=$PYTHON_PR" >> $GITHUB_OUTPUT
+
+      - name: Verify versions were bumped
+        run: |
+          JAVA_BASE="${{ steps.base.outputs.java }}"
+          JAVA_PR="${{ steps.pr.outputs.java }}"
+          PYTHON_BASE="${{ steps.base.outputs.python }}"
+          PYTHON_PR="${{ steps.pr.outputs.python }}"
+
+          echo "Java:   $JAVA_BASE → $JAVA_PR"
+          echo "Python: $PYTHON_BASE → $PYTHON_PR"
+
+          if [[ "$JAVA_PR" == "$JAVA_BASE" ]]; then
+            echo "::error::Java version not bumped ($JAVA_BASE). Run ./bump.sh patch|minor|major before merging."
+            exit 1
+          fi
+
+          if [[ "$PYTHON_PR" == "$PYTHON_BASE" ]]; then
+            echo "::error::Python version not bumped ($PYTHON_BASE). Run ./bump.sh patch|minor|major before merging."
+            exit 1
+          fi
+
+          echo "Version bump detected. Java: $JAVA_BASE → $JAVA_PR | Python: $PYTHON_BASE → $PYTHON_PR"

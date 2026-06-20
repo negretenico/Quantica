@@ -83,6 +83,7 @@ def _compute_metrics(events: list, window_start: str) -> dict:
     anomaly_count = sum(1 for e in events if e.get("anomaly_score") is not None)
     return {
         "window_start": window_start,
+        "event_count": len(events),
         "volume": sum(quantities),
         "price_movement": (max(prices) - min(prices)) if len(prices) >= 2 else 0.0,
         "anomaly_count": anomaly_count,

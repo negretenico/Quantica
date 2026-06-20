@@ -1,4 +1,5 @@
 kafka:
+  bootstrap: ${KAFKA_BOOTSTRAP}
   groupId: market-transformer-group
 spring:
   rabbitmq:

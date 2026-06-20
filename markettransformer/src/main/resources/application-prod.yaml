@@ -3,4 +3,7 @@ kafka:
   groupId: market-transformer-group
 spring:
   rabbitmq:
-    addresses: ${RABBITMQ_URL}
+    host: ${RABBITMQ_HOST}
+    port: 5672
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}

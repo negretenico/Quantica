@@ -40,10 +40,13 @@ def build_synthesis_prompt(summaries: list) -> str:
     accumulated in SummaryBuffer and asks the model to produce a cohesive
     all-day narrative. Context size is bounded by MAX_SUMMARY_BUFFER upstream.
     """
+    total_events = sum(s["metrics"].get("event_count", 0) for s in summaries)
+    total_anomalies = sum(s["metrics"]["anomaly_count"] for s in summaries)
     header = (
         "You are a financial market analyst. "
         "Using the 10-minute window summaries below from today's trading session, "
         "write a cohesive all-day market narrative in Markdown. Be serious and professional.\n\n"
+        f"Session totals: {total_events} raw events processed, {total_anomalies} anomalies detected.\n\n"
     )
     summary_lines = "\n\n".join([
         f"**{s['window_start']}** [{s['category']}]\n"

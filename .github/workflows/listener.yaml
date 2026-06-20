@@ -42,6 +42,7 @@ jobs:
       java_version: '21'
       skip_tests: false
       artifact_name: marketListener-jar
+      publish: ${{ github.event_name != 'pull_request' }}
     secrets: inherit
 
   prepare-docker-context:

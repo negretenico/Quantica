@@ -21,6 +21,11 @@ on:
         required: false
         type: boolean
         default: false
+      publish:
+        description: 'Publish JAR to GitHub Packages'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-and-package:
@@ -44,7 +49,7 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
       - name: Set release version on main
-        if: github.ref_name == 'main'
+        if: inputs.publish
         working-directory: ${{ inputs.working_directory }}
         run: mvn versions:set -DremoveSnapshot -DgenerateBackupPoms=false
 
@@ -60,7 +65,7 @@ jobs:
         run: mvn test
 
       - name: Deploy JAR to GitHub Packages
-        if: github.ref_name == 'main'
+        if: inputs.publish
         working-directory: ${{ inputs.working_directory }}
         run: mvn deploy -DskipTests
         env:

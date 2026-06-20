@@ -24,7 +24,7 @@ jobs:
         id: base
         run: |
           git fetch origin ${{ github.base_ref }}
-          JAVA_BASE=$(git show origin/${{ github.base_ref }}:marketListener/pom.xml | grep -m1 '<version>' | grep -v '3\.' | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
+          JAVA_BASE=$(git show origin/${{ github.base_ref }}:marketListener/pom.xml | grep '<version>' | grep -v '3\.' | head -1 | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
           PYTHON_BASE=$(git show origin/${{ github.base_ref }}:marketanalysis/pyproject.toml | grep '^version = ' | sed 's/version = "//;s/"//')
           echo "java=$JAVA_BASE" >> $GITHUB_OUTPUT
           echo "python=$PYTHON_BASE" >> $GITHUB_OUTPUT
@@ -32,7 +32,7 @@ jobs:
       - name: Get PR branch versions
         id: pr
         run: |
-          JAVA_PR=$(grep -m1 '<version>' marketListener/pom.xml | grep -v '3\.' | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
+          JAVA_PR=$(grep '<version>' marketListener/pom.xml | grep -v '3\.' | head -1 | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
           PYTHON_PR=$(grep '^version = ' marketanalysis/pyproject.toml | sed 's/version = "//;s/"//')
           echo "java=$JAVA_PR" >> $GITHUB_OUTPUT
           echo "python=$PYTHON_PR" >> $GITHUB_OUTPUT

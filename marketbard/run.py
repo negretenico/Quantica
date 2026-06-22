@@ -161,6 +161,7 @@ def writer():
 
 def main():
     logger.info("Starting MarketBard")
+    github_client.check_connection()
     rabbit_manager = RabbitClientManager(config=Config)
     rabbit_manager.subscribe(handler=signal_event_handler)
     threading.Thread(target=window_trigger, daemon=True).start()

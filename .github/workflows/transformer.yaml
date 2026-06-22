@@ -10,9 +10,6 @@ on:
       - 'shared/**'
     branches: [ main, develop ]
   pull_request:
-    paths:
-      - 'markettransformer/**'
-      - 'shared/**'
   workflow_dispatch:
 
 jobs:
@@ -68,6 +65,21 @@ jobs:
       service_name: markettransformer
       artifact_name: markettransformer-jar
     secrets: inherit
+
+  build-gate:
+    needs: [check-changes, java-build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build result
+        run: |
+          BUILD_NEEDED="${{ needs.check-changes.outputs.should-build }}"
+          BUILD_RESULT="${{ needs.java-build.result }}"
+          if [[ "$BUILD_NEEDED" == "true" && "$BUILD_RESULT" != "success" ]]; then
+            echo "Build failed or was cancelled"
+            exit 1
+          fi
+          echo "OK (build needed: $BUILD_NEEDED, result: $BUILD_RESULT)"
 
   ecs-deploy:
     uses: ./.github/workflows/reusable-ecs-deploy.yaml

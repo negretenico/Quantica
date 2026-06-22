@@ -52,6 +52,19 @@ class GithubClient:
             logger.error(f"Failed to update/create file {path}: {resp.status_code}, {resp.text}")
             resp.raise_for_status()
 
+    def check_connection(self):
+        """Verify GitHub token and repo are reachable. Raises on failure."""
+        url = f"{GITHUB_API}/repos/{self.repo}"
+        resp = requests.get(url, headers=self.headers)
+        if resp.status_code == 200:
+            logger.info(f"check_connection: GitHub connection OK — repo={self.repo}")
+        elif resp.status_code == 401:
+            raise RuntimeError(f"check_connection: GitHub token is invalid or expired (401)")
+        elif resp.status_code == 404:
+            raise RuntimeError(f"check_connection: repo '{self.repo}' not found or token lacks access (404)")
+        else:
+            resp.raise_for_status()
+
     def write_story(self, story: str):
         """
         Append a story to NEWS_UPDATE.MD. Creates the file if it doesn't exist.

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 event_buffer = EventBuffer()
 summary_buffer = SummaryBuffer(maxlen=Config.MAX_SUMMARY_BUFFER)
 openai_client = OpenAIClient(Config.OPEN_AI_TOKEN)
-github_client = GithubClient(token=Config.GH_TOKEN, repo_name=Config.GITHUB_REPO)
+github_client = GithubClient(token=Config.GH_TOKEN, repo_name=Config.GITHUB_REPO, branch=Config.GITHUB_BRANCH)
 
 # window_queue: (window_start: str, events: list) tuples from window_trigger
 # write_queue: final narrative strings ready for GitHub commit
@@ -108,7 +108,7 @@ def synthesis_trigger():
     """Fires at 4:00 PM ET, drains summary_buffer, runs synthesis, queues narrative for GitHub."""
     while True:
         now = datetime.datetime.now(_ET)
-        target = now.replace(hour=20, minute=45, second=0, microsecond=0)
+        target = now.replace(hour=2, minute=45, second=0, microsecond=0)
         if now >= target:
             target += datetime.timedelta(days=1)
         sleep_secs = (target - now).total_seconds()

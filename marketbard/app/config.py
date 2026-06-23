@@ -12,6 +12,7 @@ class Config:
     OPEN_AI_TOKEN = os.environ.get('OPEN_AI_TOKEN', 'sometokenhg')
     GH_TOKEN = os.environ.get('GH_TOKEN', 'sometokengh')
     GITHUB_REPO = os.environ.get('GITHUB_REPO', 'repo')
+    GITHUB_BRANCH = os.environ.get('GITHUB_BRANCH', 'bard-updates')
     WINDOW_MINUTES = int(os.environ.get('WINDOW_MINUTES', '10'))
     MAX_SUMMARY_BUFFER = int(os.environ.get('MAX_SUMMARY_BUFFER', '50'))
     WINDOW_SUMMARY_MAX_TOKENS = int(os.environ.get('WINDOW_SUMMARY_MAX_TOKENS', '150'))

@@ -15,6 +15,7 @@ on:
 jobs:
   check-version-bump:
     runs-on: ubuntu-latest
+    if: github.head_ref != 'bard-updates'
     steps:
       - uses: actions/checkout@v4
         with:

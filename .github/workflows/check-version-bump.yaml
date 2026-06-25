@@ -3,14 +3,6 @@ name: Check Version Bump
 on:
   pull_request:
     branches: [main, develop]
-    paths:
-      - 'marketListener/pom.xml'
-      - 'markettransformer/pom.xml'
-      - 'marketanalysis/pyproject.toml'
-      - 'marketbard/pyproject.toml'
-      - '**/*.java'
-      - '**/*.py'
-      - '**/*.go'
 
 jobs:
   check-version-bump:

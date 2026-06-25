@@ -1,38 +1,42 @@
 # Market Analysis
 
-___
+---
 
 ### Summary
 
-This application’s goal is to consume enriched market events (signals, anomalies, metrics) from Kafka, apply **unsupervised learning** techniques to detect patterns or anomalies, and publish insights back into Kafka topics for downstream consumers.  
+This application’s goal is to consume enriched market events (signals, anomalies, metrics) from Kafka, apply **unsupervised learning** techniques to detect patterns or anomalies, and publish insights back into Kafka topics for downstream consumers.
 
 Key features include:
 
-* **Clustering with MiniBatchKMeans:** Incrementally trains on incoming market events to discover evolving patterns in trade flow.  
-* **Anomaly Detection:** Identifies signals that fall far outside of cluster norms → emits AnomalyEvent.  
-* **Adaptive Learning:** Continuously updates clusters as new data streams in, enabling detection of regime shifts in trading behavior.  
+- **Clustering with MiniBatchKMeans:** Incrementally trains on incoming market events to discover evolving patterns in trade flow.
+- **Anomaly Detection:** Identifies signals that fall far outside of cluster norms → emits AnomalyEvent.
+- **Adaptive Learning:** Continuously updates clusters as new data streams in, enabling detection of regime shifts in trading behavior.
 
 ---
 
 ## Running the application
 
-This application requires:
+Prerequisites
 
-* A running Kafka cluster for consuming and producing events.  
-* Upstream services (e.g., Market Transformer) publishing enriched events into Kafka.  
-
-To run the application locally:
+- Python 3.11+
+- A running Kafka cluster accessible at `localhost:9092`.
+- Enriched events being published by upstream services such as Market Transformer.
+- Python dependencies installed:
 
 ```bash
-export FLASK_APP=app.py
-export FLASK_ENV=development
-flask run
+python -m pip install -r requirements.txt
 ```
 
-Or simply:
+Run locally
 
 ```bash
-python app.py
+python run.py
+```
+
+On Windows PowerShell, if `python` is not available:
+
+```powershell
+py run.py
 ```
 
 When running successfully, you should see logs indicating messages being consumed, clustered, and anomalies being flagged:
@@ -65,17 +69,17 @@ Kafka Topic (enriched market events) → Kafka Consumer → MiniBatchKMeans Mode
 
 ## Tech Stack
 
-* **Python 3.11+ –** Modern async/typing features and high performance.
+- **Python 3.11+ –** Modern async/typing features and high performance.
 
-* **Flask –** Lightweight web server for monitoring endpoints.
+- **Flask –** Lightweight web server for monitoring endpoints.
 
-* **scikit-learn –** MiniBatchKMeans for online unsupervised clustering.
+- **scikit-learn –** MiniBatchKMeans for online unsupervised clustering.
 
-* **Apache Kafka –** Streaming backbone for consuming and publishing events.
+- **Apache Kafka –** Streaming backbone for consuming and publishing events.
 
-* **kafka-python-ng –** Kafka client for fast and reliable message handling.
+- **kafka-python-ng –** Kafka client for fast and reliable message handling.
 
-* **logging –** Structured application logs with INFO/ERROR separation.
+- **logging –** Structured application logs with INFO/ERROR separation.
 
 ---
 
@@ -83,29 +87,26 @@ Kafka Topic (enriched market events) → Kafka Consumer → MiniBatchKMeans Mode
 
 ### Common Issues
 
-* **n_samples=1 should be >= n_clusters=4**
+- **n_samples=1 should be >= n_clusters=4**
+  - This happens when too few events arrive before clustering.
 
-  * This happens when too few events arrive before clustering.
+  - **Fix:** buffer multiple samples before calling partial_fit or lower n_clusters.
 
-  * **Fix:** buffer multiple samples before calling partial_fit or lower n_clusters.
+- **Kafka Consumer/Producer Errors**
+  - Ensure Kafka is running and reachable.
 
-* **Kafka Consumer/Producer Errors**
-  * Ensure Kafka is running and reachable.
+  - Verify correct topic names and authentication configs.
 
-  * Verify correct topic names and authentication configs.
+- **Model Not Updating**
+  - Confirm events are reaching the consumer (check logs).
 
-* **Model Not Updating**
+  - Ensure partial_fit is called with valid feature vectors.
 
-  * Confirm events are reaching the consumer (check logs).
+- **High CPU/Memory Usage**
+  - Reduce batch_size in MiniBatchKMeans.
 
-  * Ensure partial_fit is called with valid feature vectors.
+  - Tune the number of clusters (n_clusters) to avoid overfitting.
 
-* **High CPU/Memory Usage**
+  - Scale horizontally with more consumers in the group.
 
-  * Reduce batch_size in MiniBatchKMeans.
-
-  * Tune the number of clusters (n_clusters) to avoid overfitting.
-
-  * Scale horizontally with more consumers in the group.
-  
 ![Capture](png/Capture.JPG)

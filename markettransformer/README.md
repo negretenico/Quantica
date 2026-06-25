@@ -1,38 +1,51 @@
 # Market Transformer
-___
+
+---
+
 ### Summary
 
 This application's goal is to consume raw market data from the Market Listener, transform it into meaningful events (signals, anomalies, metrics), and publish them to Kafka topics for modular consumption.
 
 Key transformations include:
 
-* **Large trade detected:** If a trade’s quantity is above a certain threshold → emit LargeTradeEvent. 
-* **Aggressive buyer/seller:** If the same side dominates for N trades in a row → emit DominantSideEvent. 
-* **Price spike/dip**: If price moves more than X% in a short period → emit PriceSpikeEvent or PriceDipEvent.
+- **Large trade detected:** If a trade’s quantity is above a certain threshold → emit LargeTradeEvent.
+- **Aggressive buyer/seller:** If the same side dominates for N trades in a row → emit DominantSideEvent.
+- **Price spike/dip**: If price moves more than X% in a short period → emit PriceSpikeEvent or PriceDipEvent.
 
 ---
+
 ## Running the application
 
-This application requires:
+Prerequisites
 
-A running Kafka cluster for publishing events. Follow Kafka Quickstart
-if needed.
+- A running Kafka cluster accessible at `localhost:9092`.
+- The Market Listener producing raw trade data into the configured Kafka topic.
+- Java 21 and Maven installed, or use the included Maven wrapper.
 
-The Market Listener producing raw trade data to Kafka topics.
+Run locally
 
-To run the application locally:
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=local
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
-![start.JPG](images/start.JPG)
+
+On Windows PowerShell:
+
+```powershell
+./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
+```
+
 When running successfully, you should see logs indicating events being processed and published:
+
 ```bash
 INFO  ... LargeTradeDetected: Anomaly detected publishing event
 INFO  ... AggressiveBuyerSeller: BUY side dominated 5 trades in a row
 INFO  ... PriceSpikeDetected: Price moved 5% from 100 to 10
 ```
+
 ---
-## Architecture 
+
+## Architecture
+
 ```bash
 Kafka Topic (raw market data) → Spring Event Listener → Transformer → Kafka Producer → Kafka Topic (events)
 
@@ -44,40 +57,42 @@ Kafka Topic (raw market data) → Spring Event Listener → Transformer → Kafk
 4. **Kafka Producer:** Publishes standardized events for downstream services or analytics pipelines.
 
 ---
+
 ## Tech Stack
-* **Java 21 –** Latest LTS version for optimal performance and modern language features
-* **Spring Boot 3.x –** Application framework with auto-configuration and production-ready features
 
-* **Spring Events –** Decoupled event-driven architecture for internal messaging
+- **Java 21 –** Latest LTS version for optimal performance and modern language features
+- **Spring Boot 3.x –** Application framework with auto-configuration and production-ready features
 
-* **Apache Kafka –** Distributed streaming platform for reliable message queuing
+- **Spring Events –** Decoupled event-driven architecture for internal messaging
 
-* **Maven 3.6.5+ –** Dependency management and build automation
+- **Apache Kafka –** Distributed streaming platform for reliable message queuing
 
-* **Jackson –** JSON serialization/deserialization
-* **SLF4J + Logback –** Structured logging framework
+- **Maven 3.6.5+ –** Dependency management and build automation
+
+- **Jackson –** JSON serialization/deserialization
+- **SLF4J + Logback –** Structured logging framework
+
 ---
+
 ## Troubleshooting
+
 ### Common Issues
 
-* Kafka Consumer/Producer Fails
+- Kafka Consumer/Producer Fails
+  - Ensure Kafka cluster is running and accessible
 
-  * Ensure Kafka cluster is running and accessible
+  - Verify topics exist and have proper permissions
 
-  * Verify topics exist and have proper permissions
+  - Check serialization configuration matches the consumer/producer
 
-  * Check serialization configuration matches the consumer/producer
+- Transformer Logic Not Triggering
+  - Ensure raw trades meet threshold conditions for each event type
 
-* Transformer Logic Not Triggering
+  - Review logs for stateful transformer behavior (streak counters, recent prices, etc.)
 
-  * Ensure raw trades meet threshold conditions for each event type
+- High Memory Usage
+  - Tune JVM heap settings: -Xmx2g -Xms1g
 
-  * Review logs for stateful transformer behavior (streak counters, recent prices, etc.)
+  - Review internal lists (e.g., LinkedList for recent prices or sides) to ensure they do not grow unbounded
 
-* High Memory Usage
-
-  * Tune JVM heap settings: -Xmx2g -Xms1g
-
-  * Review internal lists (e.g., LinkedList for recent prices or sides) to ensure they do not grow unbounded
-
-  * Monitor event throughput and batch processing intervals
+  - Monitor event throughput and batch processing intervals

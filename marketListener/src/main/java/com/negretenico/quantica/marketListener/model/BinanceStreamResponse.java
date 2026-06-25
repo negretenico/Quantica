@@ -1,6 +1,7 @@
 package com.negretenico.quantica.marketListener.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
@@ -17,8 +18,10 @@ import java.math.BigDecimal;
  * "q": "0.010",           // Quantity
  * "X": "MARKET",          // Order type
  * "m": true               // Is buyer market maker (true=sell, false=buy)
+ * "st": "PREVENT_MATCH"   // Self-trade prevention mode (added by Binance ~2026-06; ignored)
  * }
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record BinanceStreamResponse(
 		@JsonProperty("e") String eventType,
 		@JsonProperty("E") long eventTime,

@@ -15,7 +15,7 @@ on:
 jobs:
   check-version-bump:
     runs-on: ubuntu-latest
-    if: github.head_ref != 'bard-updates'
+    if: github.head_ref != 'bard-updates' && github.head_ref != 'write-up'
     steps:
       - uses: actions/checkout@v4
         with:

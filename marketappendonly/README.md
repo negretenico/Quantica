@@ -18,9 +18,8 @@ It is designed to be a durable ledger of all received market events for downstre
 
 ### Requirements
 
-A running Kafka cluster (for consuming events).
-
-Topics must exist and contain trade messages (e.g., produced by the Market Listener).
+* A running Kafka cluster accessible at `localhost:9092`.
+* A Kafka topic with trade messages produced by the Market Listener.
 
 ## Run locally
 
@@ -44,8 +43,17 @@ go build -o marketappendonly ./cmd/server
 
 ### Run the binary
 
+On Linux/macOS:
+
 ```bash
 ./marketappendonly
+```
+
+On Windows PowerShell:
+
+```powershell
+.
+marketappendonly.exe
 ```
 
 ### Build Docker image

@@ -1,9 +1,5 @@
-market:
-  order:
-    topic: order
-
 kafka:
-  bootstrap: "localhost:9092"
+  groupId: market-transformer-group
 
 management:
   endpoints:

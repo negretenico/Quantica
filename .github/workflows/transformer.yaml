@@ -81,13 +81,13 @@ jobs:
           fi
           echo "OK (build needed: $BUILD_NEEDED, result: $BUILD_RESULT)"
 
-  ecs-deploy:
-    uses: ./.github/workflows/reusable-ecs-deploy.yaml
-    needs: [check-changes, docker-deploy]
-    if: github.ref == 'refs/heads/main' && needs.check-changes.outputs.should-build == 'true'
-    with:
-      service_name: markettransformer
-      container_name: markettransformer
-      task_definition_path: .aws/task-definitions/markettransformer.json
-      image_uri: ghcr.io/negretenico/quantica/markettransformer:markettransformer-latest
-    secrets: inherit
+# ecs-deploy:
+#   uses: ./.github/workflows/reusable-ecs-deploy.yaml
+#   needs: [check-changes, docker-deploy]
+#   if: github.ref == 'refs/heads/main' && needs.check-changes.outputs.should-build == 'true'
+#   with:
+#     service_name: markettransformer
+#     container_name: markettransformer
+#     task_definition_path: .aws/task-definitions/markettransformer.json
+#     image_uri: ghcr.io/negretenico/quantica/markettransformer:markettransformer-latest
+#   secrets: inherit

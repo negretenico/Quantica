@@ -2,6 +2,8 @@ package com.negretenico.quantica.marketListener.stream;
 
 import com.negretenico.quantica.marketListener.model.BinanceStreamResponse;
 import com.negretenico.quantica.marketListener.model.events.BinanceOrderReceived;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +14,7 @@ import org.springframework.kafka.support.SendResult;
 
 import java.util.concurrent.CompletableFuture;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
@@ -31,54 +34,54 @@ class KafkaPublisherTest {
 	@Mock
 	SendResult<String, BinanceStreamResponse> sendResult;
 
+	@Mock
+	ProducerRecord<String, BinanceStreamResponse> producerRecord;
+
+	SimpleMeterRegistry registry = new SimpleMeterRegistry();
 	KafkaPublisher publisher;
 
 	@BeforeEach
 	void setup() {
-		publisher = new KafkaPublisher(template, "topicName");
+		publisher = new KafkaPublisher(template, "topicName", registry);
 	}
 
 	@Test
 	void success() {
-		// Setup the mock chain
 		when(binanceOrderReceived.getBinanceOrder()).thenReturn(binanceStreamResponse);
 		when(binanceStreamResponse.getId()).thenReturn("test-id");
+		when(binanceStreamResponse.symbol()).thenReturn("BTCUSDT");
+		when(sendResult.getProducerRecord()).thenReturn(producerRecord);
+		when(producerRecord.value()).thenReturn(binanceStreamResponse);
 
-		// Mock the KafkaTemplate.send() to return a successful CompletableFuture
 		when(template.send(anyString(), any(BinanceStreamResponse.class)))
 				.thenReturn(CompletableFuture.completedFuture(sendResult));
 
-		// Execute the method under test
 		publisher.publishToKafka(binanceOrderReceived);
 
-		// Verify interactions
 		verify(binanceOrderReceived).getBinanceOrder();
 		verify(template).send("topicName", binanceStreamResponse);
+		assertEquals(1.0, registry.counter("quantica.messages.produced", "topic", "topicName", "symbol", "BTCUSDT").count());
 	}
 
 	@Test
 	void failure() {
-		// Setup the mock chain
 		when(binanceOrderReceived.getBinanceOrder()).thenReturn(binanceStreamResponse);
 		when(binanceStreamResponse.getId()).thenReturn("test-id");
 
-		// Mock the KafkaTemplate.send() to return a failed CompletableFuture
 		CompletableFuture<SendResult<String, BinanceStreamResponse>> failedFuture =
 				CompletableFuture.failedFuture(new RuntimeException("Kafka send failed"));
 		when(template.send(anyString(), any(BinanceStreamResponse.class)))
 				.thenReturn(failedFuture);
 
-		// Execute the method under test
 		publisher.publishToKafka(binanceOrderReceived);
 
-		// Verify interactions
 		verify(binanceOrderReceived).getBinanceOrder();
 		verify(template).send("topicName", binanceStreamResponse);
+		assertEquals(0.0, registry.counter("quantica.messages.produced", "topic", "topicName", "symbol", "BTCUSDT").count());
 	}
 
 	@Test
 	void successWithRealBinanceStreamResponse() {
-		// Create a real BinanceStreamResponse for more realistic testing
 		BinanceStreamResponse realResponse = new BinanceStreamResponse(
 				"trade",
 				System.currentTimeMillis(),
@@ -92,6 +95,8 @@ class KafkaPublisherTest {
 		);
 
 		when(binanceOrderReceived.getBinanceOrder()).thenReturn(realResponse);
+		when(sendResult.getProducerRecord()).thenReturn(producerRecord);
+		when(producerRecord.value()).thenReturn(realResponse);
 		when(template.send(anyString(), any(BinanceStreamResponse.class)))
 				.thenReturn(CompletableFuture.completedFuture(sendResult));
 
@@ -99,5 +104,6 @@ class KafkaPublisherTest {
 
 		verify(binanceOrderReceived).getBinanceOrder();
 		verify(template).send("topicName", realResponse);
+		assertEquals(1.0, registry.counter("quantica.messages.produced", "topic", "topicName", "symbol", "BTCUSDT").count());
 	}
 }

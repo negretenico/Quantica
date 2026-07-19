@@ -7,3 +7,6 @@ spring:
 market:
   signal:
     exchange: signal
+rabbitmq:
+  management:
+    url: http://guest:guest@localhost:15672

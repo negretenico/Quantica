@@ -7,6 +7,12 @@
 # BlueJ files
 *.ctxt
 .claude/settings.local.json
+.claude/skills/teach/lessons/
+.claude/skills/teach/learning-records/
+.claude/skills/teach/assets/
+.claude/skills/teach/MISSION.md
+.claude/skills/teach/RESOURCES.md
+.claude/skills/teach/NOTES.md
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 

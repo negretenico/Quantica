@@ -2,6 +2,7 @@ package com.negretenico.quantica.markettransformer.stream.producer;
 
 import com.negretenico.quantica.markettransformer.config.RabbitConfig;
 import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
+import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ public class SignalPublisher {
 		this.meterRegistry = meterRegistry;
 	}
 
+	@Timed("quantica.stage.rabbit.publish")
 	public void publish(SignalEvent signal) {
 		rabbitTemplate.convertAndSend(RabbitConfig.EXCHANGE, "", signal);
 		log.info("Published signal: {}", signal);

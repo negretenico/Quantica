@@ -9,4 +9,4 @@ management:
   metrics:
     distribution:
       percentiles:
-        "[quantica.]": 0.5, 0.95, 0.99
+        "[quantica]": 0.5, 0.95, 0.99

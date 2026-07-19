@@ -6,6 +6,7 @@ import com.negretenico.quantica.markettransformer.model.TradeIndicator;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
 import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
 import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
+import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Service;
@@ -17,20 +18,22 @@ import java.util.Objects;
 
 @Service
 @Slf4j
-public class AggressiveBuyerSeller  implements ApplicationListener<OrderReceived> {
+public class AggressiveBuyerSeller implements ApplicationListener<OrderReceived> {
 	private final SignalPublisher publisher;
-	private  TradeIndicator lastSide=null;
+	private TradeIndicator lastSide = null;
 	private final List<TradeIndicator> recentSides = new LinkedList<>();
-	private  int streakCount=0;
+	private int streakCount = 0;
+
 	public AggressiveBuyerSeller(SignalPublisher publisher) {
 		this.publisher = publisher;
 	}
 
 	@Override
+	@Timed(value = "quantica.stage.detector", extraTags = {"detector", "aggressive_buyer_seller"})
 	public void onApplicationEvent(OrderReceived event) {
 		log.debug("AggressiveBuyerSeller: Received event");
 		BinanceStreamResponse binanceStreamResponse = event.getBinanceOrder();
-		TradeIndicator side=binanceStreamResponse.getTradeSide();
+		TradeIndicator side = binanceStreamResponse.getTradeSide();
 		if (Objects.isNull(lastSide) || !lastSide.equals(side)) {
 			lastSide = side;
 			streakCount = 1;
@@ -46,7 +49,6 @@ public class AggressiveBuyerSeller  implements ApplicationListener<OrderReceived
 			log.debug("DominantSideDetected: No side is dominating");
 			return;
 		}
-
 		SignalEvent signalEvent = new SignalEvent(
 				binanceStreamResponse.symbol(),
 				binanceStreamResponse.eventTime(),
@@ -57,7 +59,6 @@ public class AggressiveBuyerSeller  implements ApplicationListener<OrderReceived
 				side,
 				Map.of("streakCount", streakCount)
 		);
-
 		log.info("DominantSideDetected: {} side dominated {} trades in a row", side, streakCount);
 		publisher.publish(signalEvent);
 		streakCount = 0;

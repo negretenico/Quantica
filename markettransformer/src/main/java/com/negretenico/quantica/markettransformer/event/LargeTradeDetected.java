@@ -6,6 +6,7 @@ import com.negretenico.quantica.markettransformer.model.SignalEventType;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
 import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
 import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
+import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
@@ -19,11 +20,13 @@ import java.util.Map;
 public class LargeTradeDetected implements ApplicationListener<OrderReceived> {
 	private final SignalPublisher publisher;
 	private final BigDecimal MILLION = new BigDecimal("1000000");
+
 	public LargeTradeDetected(SignalPublisher publisher) {
 		this.publisher = publisher;
 	}
 
 	@Override
+	@Timed(value = "quantica.stage.detector", extraTags = {"detector", "large_trade_detected"})
 	public void onApplicationEvent(OrderReceived event) {
 		log.debug("LargeTradeDetected: Received event");
 		BinanceStreamResponse order = event.getBinanceOrder();

@@ -1,14 +1,13 @@
 package com.negretenico.quantica.markettransformer.stream.consumer;
 
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
-import com.negretenico.quantica.markettransformer.model.TradeIndicator;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
+import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.annotation.Order;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +25,7 @@ public class OrderConsumer {
 		this.meterRegistry = meterRegistry;
 	}
 
+	@Timed(value = "quantica.stage.kafka.consume", extraTags = {"topic", "order"})
 	@KafkaListener(
 			topics = "order",
 			groupId = "market-transformer-group",

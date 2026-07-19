@@ -3,6 +3,7 @@ package com.negretenico.quantica.marketListener.binance;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.negretenico.quantica.marketListener.model.BinanceStreamResponse;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +31,7 @@ class BinanceWssHandlerTest {
 
 	@BeforeEach
 	void setup() {
-		binanceWssHandler = new BinanceWssHandler(mapper, publisher);
+		binanceWssHandler = new BinanceWssHandler(mapper, publisher, new SimpleMeterRegistry());
 	}
 
 

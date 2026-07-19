@@ -5,9 +5,9 @@ import com.negretenico.quantica.markettransformer.model.SignalEventType;
 import com.negretenico.quantica.markettransformer.model.events.OrderReceived;
 import com.negretenico.quantica.markettransformer.model.events.SignalEvent;
 import com.negretenico.quantica.markettransformer.stream.producer.SignalPublisher;
+import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -27,6 +27,7 @@ public class PriceSpike implements ApplicationListener<OrderReceived> {
 	}
 
 	@Override
+	@Timed(value = "quantica.stage.detector", extraTags = {"detector", "price_spike"})
 	public void onApplicationEvent(OrderReceived event) {
 		log.debug("PriceSpike: Received event");
 		BinanceStreamResponse order = event.getBinanceOrder();
@@ -64,5 +65,4 @@ public class PriceSpike implements ApplicationListener<OrderReceived> {
 			recentPrices.removeFirst();
 		}
 	}
-
 }

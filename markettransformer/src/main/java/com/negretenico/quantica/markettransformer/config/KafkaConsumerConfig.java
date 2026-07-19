@@ -3,6 +3,7 @@ package com.negretenico.quantica.markettransformer.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
 import com.negretenico.quantica.markettransformer.model.KafkaProperties;
+import io.micrometer.core.aop.TimedAspect;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -29,6 +30,11 @@ public class KafkaConsumerConfig {
 	}
 
 	@Bean
+	public TimedAspect timedAspect() {
+		return new TimedAspect(meterRegistry);
+	}
+
+	@Bean
 	public ConsumerFactory<String, BinanceStreamResponse> consumerFactory() {
 		JsonDeserializer<BinanceStreamResponse> deserializer = new JsonDeserializer<>(BinanceStreamResponse.class, objectMapper);
 		deserializer.setRemoveTypeHeaders(true);
@@ -41,7 +47,6 @@ public class KafkaConsumerConfig {
 				new StringDeserializer(),
 				deserializer
 		);
-		// Alert: kafka.consumer.records-lag > 500 for this consumer group indicates transformer cannot keep up with Binance tick rate
 		factory.addListener(new MicrometerConsumerListener<>(meterRegistry));
 		return factory;
 	}

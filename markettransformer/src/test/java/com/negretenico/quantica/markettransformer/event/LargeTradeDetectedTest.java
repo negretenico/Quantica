@@ -42,12 +42,13 @@ class LargeTradeDetectedTest {
 		Mockito.when(binanceStreamResponse.quantity()).thenReturn("0.00");
 		Mockito.when(binanceStreamResponse.price()).thenReturn("0.00");
 		largeTradeDetected.onApplicationEvent(orderReceived);
-		Mockito.verify(kafkaPublisher,Mockito.atLeastOnce()).publish(Mockito.any());
+		Mockito.verify(kafkaPublisher, Mockito.atLeastOnce()).publish(Mockito.any());
 	}
+
 	@Test
-	void givenAQuantityLessThanAMillionIShouldNotPublishAnEvent(){
+	void givenAQuantityLessThanAMillionIShouldNotPublishAnEvent() {
 		mockAll("1");
 		largeTradeDetected.onApplicationEvent(orderReceived);
-		Mockito.verify(kafkaPublisher,Mockito.never()).publish(Mockito.any());
+		Mockito.verify(kafkaPublisher, Mockito.never()).publish(Mockito.any());
 	}
 }

@@ -68,6 +68,7 @@ services:
       SPRING_PROFILES_ACTIVE: local
       KAFKA_BOOTSTRAP: quantica-kafka:29092
       SPRING_RABBITMQ_HOST: quantica-rabbitmq
+      RABBITMQ_MANAGEMENT_URL: http://guest:guest@quantica-rabbitmq:15672
     ports:
       - "8081:8080"
 

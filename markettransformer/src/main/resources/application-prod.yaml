@@ -6,3 +6,6 @@ spring:
     port: 5672
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
+rabbitmq:
+  management:
+    url: ${RABBITMQ_MANAGEMENT_URL}

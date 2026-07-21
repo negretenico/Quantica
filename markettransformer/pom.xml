@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.negretenico.quantica</groupId>
 	<artifactId>markettransformer</artifactId>
-	<version>2.0.11-SNAPSHOT</version>
+	<version>2.0.12-SNAPSHOT</version>
 	<name>Market Transformer</name>
 	<description>Transform events</description>
 	<licenses>

@@ -3,7 +3,7 @@ package com.negretenico.quantica.marketListener.config;
 import com.negretenico.quantica.marketListener.binance.BinanceWssHandler;
 import io.micrometer.core.aop.TimedAspect;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.client.WebSocketClient;
@@ -13,6 +13,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 
 @Configuration
 @EnableWebSocket
+@EnableConfigurationProperties(BinanceStreamProperties.class)
 public class WebsocketConfig {
 
 	@Bean
@@ -21,8 +22,9 @@ public class WebsocketConfig {
 	}
 
 	@Bean
-	public WebSocketConnectionManager webSocketConnectionManager(@Value("${binance.stream}") String streamUrl,
-																															 BinanceWssHandler binanceWssHandler) {
+	public WebSocketConnectionManager webSocketConnectionManager(BinanceStreamProperties streamProperties,
+																 BinanceWssHandler binanceWssHandler) {
+		String streamUrl = streamProperties.base() + "/" + streamProperties.symbols().replace(",", "/");
 		WebSocketConnectionManager manager = new WebSocketConnectionManager(
 				client(),
 				binanceWssHandler,

@@ -1,9 +1,8 @@
-market:
-  order:
-    topic: order
-
 kafka:
   bootstrap: "localhost:9092"
+  order-topic: order
+  order-topic-partitions: 4
+  order-topic-replication-factor: 1
 
 management:
   endpoints:

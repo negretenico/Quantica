@@ -58,7 +58,6 @@ services:
       context: ./markettransformer
       args:
         GITHUB_TOKEN: ${GITHUB_TOKEN}
-    container_name: quantica-markettransformer
     depends_on:
       kafka:
         condition: service_healthy
@@ -70,7 +69,7 @@ services:
       SPRING_RABBITMQ_HOST: quantica-rabbitmq
       RABBITMQ_MANAGEMENT_URL: http://guest:guest@quantica-rabbitmq:15672
     ports:
-      - "8081:8080"
+      - "8080"
 
   marketanalysis:
     build:

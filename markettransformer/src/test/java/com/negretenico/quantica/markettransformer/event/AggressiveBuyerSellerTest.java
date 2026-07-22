@@ -34,6 +34,7 @@ class AggressiveBuyerSellerTest {
 	void setup() {
 		transformer = new AggressiveBuyerSeller(kafkaPublisher);
 		Mockito.when(orderReceived.getBinanceOrder()).thenReturn(buyTrade);
+		Mockito.when(buyTrade.symbol()).thenReturn("BTCUSDT");
 	}
 
 	@Test
@@ -61,6 +62,7 @@ class AggressiveBuyerSellerTest {
 	void givenSideFlipsBeforeThreshold_thenNoEventIsPublished() {
 		Mockito.when(buyTrade.getTradeSide()).thenReturn(TradeIndicator.BUY);
 		Mockito.when(sellTrade.getTradeSide()).thenReturn(TradeIndicator.SELL);
+		Mockito.when(sellTrade.symbol()).thenReturn("BTCUSDT");
 
 		IntStream.range(0, 2).forEach(i -> transformer.onApplicationEvent(orderReceived));
 

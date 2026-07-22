@@ -1,5 +1,6 @@
 package com.negretenico.quantica.marketListener.stream;
 
+import com.negretenico.quantica.marketListener.config.KafkaProperties;
 import com.negretenico.quantica.marketListener.model.BinanceStreamResponse;
 import com.negretenico.quantica.marketListener.model.events.BinanceOrderReceived;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -42,7 +43,7 @@ class KafkaPublisherTest {
 
 	@BeforeEach
 	void setup() {
-		publisher = new KafkaPublisher(template, "topicName", registry);
+		publisher = new KafkaPublisher(template, new KafkaProperties("localhost:9092", "topicName", 4, (short) 1), registry);
 	}
 
 	@Test
@@ -53,13 +54,13 @@ class KafkaPublisherTest {
 		when(sendResult.getProducerRecord()).thenReturn(producerRecord);
 		when(producerRecord.value()).thenReturn(binanceStreamResponse);
 
-		when(template.send(anyString(), any(BinanceStreamResponse.class)))
+		when(template.send(anyString(), anyString(), any(BinanceStreamResponse.class)))
 				.thenReturn(CompletableFuture.completedFuture(sendResult));
 
 		publisher.publishToKafka(binanceOrderReceived);
 
 		verify(binanceOrderReceived).getBinanceOrder();
-		verify(template).send("topicName", binanceStreamResponse);
+		verify(template).send("topicName", "BTCUSDT", binanceStreamResponse);
 		assertEquals(1.0, registry.counter("quantica.messages.produced", "topic", "topicName", "symbol", "BTCUSDT").count());
 	}
 
@@ -67,16 +68,17 @@ class KafkaPublisherTest {
 	void failure() {
 		when(binanceOrderReceived.getBinanceOrder()).thenReturn(binanceStreamResponse);
 		when(binanceStreamResponse.getId()).thenReturn("test-id");
+		when(binanceStreamResponse.symbol()).thenReturn("BTCUSDT");
 
 		CompletableFuture<SendResult<String, BinanceStreamResponse>> failedFuture =
 				CompletableFuture.failedFuture(new RuntimeException("Kafka send failed"));
-		when(template.send(anyString(), any(BinanceStreamResponse.class)))
+		when(template.send(anyString(), anyString(), any(BinanceStreamResponse.class)))
 				.thenReturn(failedFuture);
 
 		publisher.publishToKafka(binanceOrderReceived);
 
 		verify(binanceOrderReceived).getBinanceOrder();
-		verify(template).send("topicName", binanceStreamResponse);
+		verify(template).send("topicName", "BTCUSDT", binanceStreamResponse);
 		assertEquals(0.0, registry.counter("quantica.messages.produced", "topic", "topicName", "symbol", "BTCUSDT").count());
 	}
 
@@ -97,13 +99,13 @@ class KafkaPublisherTest {
 		when(binanceOrderReceived.getBinanceOrder()).thenReturn(realResponse);
 		when(sendResult.getProducerRecord()).thenReturn(producerRecord);
 		when(producerRecord.value()).thenReturn(realResponse);
-		when(template.send(anyString(), any(BinanceStreamResponse.class)))
+		when(template.send(anyString(), anyString(), any(BinanceStreamResponse.class)))
 				.thenReturn(CompletableFuture.completedFuture(sendResult));
 
 		publisher.publishToKafka(binanceOrderReceived);
 
 		verify(binanceOrderReceived).getBinanceOrder();
-		verify(template).send("topicName", realResponse);
+		verify(template).send("topicName", "BTCUSDT", realResponse);
 		assertEquals(1.0, registry.counter("quantica.messages.produced", "topic", "topicName", "symbol", "BTCUSDT").count());
 	}
 }

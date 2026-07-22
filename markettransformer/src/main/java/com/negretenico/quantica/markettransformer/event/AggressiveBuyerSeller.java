@@ -15,14 +15,15 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
 public class AggressiveBuyerSeller implements ApplicationListener<OrderReceived> {
 	private final SignalPublisher publisher;
-	private TradeIndicator lastSide = null;
-	private final List<TradeIndicator> recentSides = new LinkedList<>();
-	private int streakCount = 0;
+	private final ConcurrentHashMap<String, TradeIndicator> lastSideBySymbol = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<String, List<TradeIndicator>> recentSidesBySymbol = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<String, Integer> streakCountBySymbol = new ConcurrentHashMap<>();
 
 	public AggressiveBuyerSeller(SignalPublisher publisher) {
 		this.publisher = publisher;
@@ -33,13 +34,18 @@ public class AggressiveBuyerSeller implements ApplicationListener<OrderReceived>
 	public void onApplicationEvent(OrderReceived event) {
 		log.debug("AggressiveBuyerSeller: Received event");
 		BinanceStreamResponse binanceStreamResponse = event.getBinanceOrder();
+		String symbol = binanceStreamResponse.symbol();
 		TradeIndicator side = binanceStreamResponse.getTradeSide();
+		TradeIndicator lastSide = lastSideBySymbol.get(symbol);
+		List<TradeIndicator> recentSides = recentSidesBySymbol.computeIfAbsent(symbol, k -> new LinkedList<>());
+		int streakCount = streakCountBySymbol.getOrDefault(symbol, 0);
 		if (Objects.isNull(lastSide) || !lastSide.equals(side)) {
-			lastSide = side;
+			lastSideBySymbol.put(symbol, side);
 			streakCount = 1;
 		} else {
 			streakCount++;
 		}
+		streakCountBySymbol.put(symbol, streakCount);
 		recentSides.add(side);
 		int STREAK_THRESHOLD = 5;
 		if (recentSides.size() > STREAK_THRESHOLD) {
@@ -61,6 +67,6 @@ public class AggressiveBuyerSeller implements ApplicationListener<OrderReceived>
 		);
 		log.info("DominantSideDetected: {} side dominated {} trades in a row", side, streakCount);
 		publisher.publish(signalEvent);
-		streakCount = 0;
+		streakCountBySymbol.put(symbol, 0);
 	}
 }

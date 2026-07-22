@@ -2,9 +2,10 @@ package com.negretenico.quantica.marketListener.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.negretenico.quantica.marketListener.model.BinanceStreamResponse;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -15,12 +16,13 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import java.util.Map;
 
 @Configuration
+@EnableConfigurationProperties(KafkaProperties.class)
 public class KafkaProducerConfig {
-	private final String bootstrapAddress;
+	private final KafkaProperties kafkaProperties;
 	private final ObjectMapper objectMapper;
 
-	public KafkaProducerConfig(@Value("${kafka.bootstrap}") String bootstrapAddress, ObjectMapper objectMapper) {
-		this.bootstrapAddress = bootstrapAddress;
+	public KafkaProducerConfig(KafkaProperties kafkaProperties, ObjectMapper objectMapper) {
+		this.kafkaProperties = kafkaProperties;
 		this.objectMapper = objectMapper;
 	}
 
@@ -30,7 +32,7 @@ public class KafkaProducerConfig {
 		valueSerializer.setAddTypeInfo(false);
 		return new DefaultKafkaProducerFactory<>(
 				Map.of(
-						ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress,
+						ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.bootstrap(),
 						ProducerConfig.ACKS_CONFIG, "all",
 						ProducerConfig.RETRIES_CONFIG, 0,
 						ProducerConfig.BATCH_SIZE_CONFIG, 16384,
@@ -45,5 +47,10 @@ public class KafkaProducerConfig {
 	@Bean
 	public KafkaTemplate<String, BinanceStreamResponse> kafkaTemplate() {
 		return new KafkaTemplate<>(producerFactory());
+	}
+
+	@Bean
+	public NewTopic orderTopic() {
+		return new NewTopic(kafkaProperties.orderTopic(), kafkaProperties.orderTopicPartitions(), kafkaProperties.orderTopicReplicationFactor());
 	}
 }

@@ -42,7 +42,8 @@ public class KafkaConsumerConfig {
 		DefaultKafkaConsumerFactory<String, BinanceStreamResponse> factory = new DefaultKafkaConsumerFactory<>(
 				Map.of(
 						ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.bootstrap(),
-						ConsumerConfig.GROUP_ID_CONFIG, kafkaProperties.groupId()
+						ConsumerConfig.GROUP_ID_CONFIG, kafkaProperties.groupId(),
+						ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, false
 				),
 				new StringDeserializer(),
 				deserializer

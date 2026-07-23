@@ -1,12 +1,12 @@
 package com.negretenico.quantica.marketListener.stream;
 
+import com.negretenico.quantica.marketListener.config.KafkaProperties;
 import com.negretenico.quantica.marketListener.model.BinanceStreamResponse;
 import com.negretenico.quantica.marketListener.model.events.BinanceOrderReceived;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -23,10 +23,10 @@ public class KafkaPublisher {
 	private final ConcurrentHashMap<String, Counter> producedCounters = new ConcurrentHashMap<>();
 
 	public KafkaPublisher(KafkaTemplate<String, BinanceStreamResponse> template,
-			@Value("${market.order.topic}") String topicName,
+			KafkaProperties kafkaProperties,
 			MeterRegistry meterRegistry) {
 		this.template = template;
-		this.topicName = topicName;
+		this.topicName = kafkaProperties.orderTopic();
 		this.meterRegistry = meterRegistry;
 		this.produceTimer = Timer.builder("quantica.stage.kafka.produce")
 				.tag("topic", topicName)
@@ -38,7 +38,7 @@ public class KafkaPublisher {
 		BinanceStreamResponse order = binanceOrderReceived.getBinanceOrder();
 		log.debug("Publishing to kafka: {}", order.getId());
 		Timer.Sample sample = Timer.start(meterRegistry);
-		template.send(topicName, order)
+		template.send(topicName, order.symbol(), order)
 				.thenAccept(result -> {
 					log.debug("Produced: {}", result.getProducerRecord().value().getId());
 					sample.stop(produceTimer);

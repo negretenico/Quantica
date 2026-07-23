@@ -40,6 +40,8 @@ class PriceSpikeTest {
 		// connect trades to OrderReceived events
 		Mockito.when(orderReceived1.getBinanceOrder()).thenReturn(trade1);
 		Mockito.when(orderReceived2.getBinanceOrder()).thenReturn(trade2);
+		Mockito.when(trade1.symbol()).thenReturn("BTCUSDT");
+		Mockito.when(trade2.symbol()).thenReturn("BTCUSDT");
 	}
 
 	@Test

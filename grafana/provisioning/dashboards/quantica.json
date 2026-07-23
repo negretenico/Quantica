@@ -362,6 +362,24 @@
           "legendFormat": "p99"
         }
       ]
+    },
+    {
+      "id": 14,
+      "title": "Messages Produced / sec by Symbol",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(quantica_messages_produced_total[1m])",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
     }
   ]
 }

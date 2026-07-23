@@ -1,2 +1,4 @@
 binance:
-  stream: wss://fstream.binance.com/ws/btcusdt@trade
+  stream:
+    base: wss://fstream.binance.com/ws
+    symbols: ${BINANCE_SYMBOLS:btcusdt@trade}

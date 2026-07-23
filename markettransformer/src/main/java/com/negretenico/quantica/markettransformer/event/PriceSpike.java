@@ -14,13 +14,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
 public class PriceSpike implements ApplicationListener<OrderReceived> {
 	private final SignalPublisher publisher;
 	private final BigDecimal THRESHOLD = new BigDecimal("0.02"); // 2% move
-	private final LinkedList<BigDecimal> recentPrices = new LinkedList<>();
+	private final ConcurrentHashMap<String, LinkedList<BigDecimal>> recentPricesBySymbol = new ConcurrentHashMap<>();
 
 	public PriceSpike(SignalPublisher publisher) {
 		this.publisher = publisher;
@@ -32,6 +33,7 @@ public class PriceSpike implements ApplicationListener<OrderReceived> {
 		log.debug("PriceSpike: Received event");
 		BinanceStreamResponse order = event.getBinanceOrder();
 		BigDecimal price = order.getPriceAsBigDecimal();
+		LinkedList<BigDecimal> recentPrices = recentPricesBySymbol.computeIfAbsent(order.symbol(), k -> new LinkedList<>());
 		if (recentPrices.isEmpty()) {
 			recentPrices.add(price);
 			return;

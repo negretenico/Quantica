@@ -31,7 +31,6 @@ public class WebsocketConfig {
 				streamUrl
 		);
 		manager.setAutoStartup(true);
-		manager.setAutoReconnect(true);
 		return manager;
 	}
 

@@ -4,11 +4,13 @@ import com.common.functionico.evaluation.Result;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.negretenico.quantica.marketListener.model.BinanceStreamResponse;
 import com.negretenico.quantica.marketListener.model.events.BinanceOrderReceived;
+import com.negretenico.quantica.marketListener.model.events.WssDisconnected;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -49,6 +51,12 @@ public class BinanceWssHandler extends TextWebSocketHandler {
 				})
 				.onFailure(e -> log.error("Error parsing message", e));
 		sample.stop(receiveTimer);
+	}
+
+	@Override
+	public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+		log.warn("WebSocket connection closed: {}", status);
+		applicationEventPublisher.publishEvent(new WssDisconnected(this));
 	}
 
 	@Override

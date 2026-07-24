@@ -7,14 +7,30 @@ on:
 jobs:
   check-version-bump:
     runs-on: ubuntu-latest
-    if: github.head_ref != 'bard-updates' && github.head_ref != 'write-up'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Check if source files changed
+        id: changed
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- \
+            'marketListener/**' 'markettransformer/**' \
+            'marketanalysis/**' 'marketbard/**' \
+            'marketappendonly/**' \
+            ':!docs/**' ':!*.md' ':!**/README*')
+          if [[ -z "$CHANGED" ]]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "No source files changed — skipping version bump check."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Get base branch versions
         id: base
+        if: steps.changed.outputs.skip == 'false'
         run: |
           git fetch origin ${{ github.base_ref }}
           JAVA_BASE=$(git show origin/${{ github.base_ref }}:marketListener/pom.xml | grep '<version>' | grep -v '3\.' | head -1 | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
@@ -24,6 +40,7 @@ jobs:
 
       - name: Get PR branch versions
         id: pr
+        if: steps.changed.outputs.skip == 'false'
         run: |
           JAVA_PR=$(grep '<version>' marketListener/pom.xml | grep -v '3\.' | head -1 | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
           PYTHON_PR=$(grep '^version = ' marketanalysis/pyproject.toml | sed 's/version = "//;s/"//')
@@ -31,6 +48,7 @@ jobs:
           echo "python=$PYTHON_PR" >> $GITHUB_OUTPUT
 
       - name: Verify versions were bumped
+        if: steps.changed.outputs.skip == 'false'
         run: |
           JAVA_BASE="${{ steps.base.outputs.java }}"
           JAVA_PR="${{ steps.pr.outputs.java }}"

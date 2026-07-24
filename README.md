@@ -12,7 +12,13 @@ This README captures the design decisions, tradeoffs, and deployment lessons I e
 - Why a ledger?
 - Avoiding context bloat
 - What was needed to deploy
-- [Signal detectors](DETECTORS.md)
+
+### Docs
+
+- [Running the application](docs/RUNNING.md)
+- [Signal detectors](docs/DETECTORS.md)
+- [Performance baselines](docs/PERFORMANCE.md)
+- [Research](docs/research-binance-multi-symbol-websocket.md)
 
 ## Architecture diagram
 

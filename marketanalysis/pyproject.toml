@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marketanalysis"
-version = "2.1.1.dev0"
+version = "2.1.2.dev0"
 description = "Market analysis service"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [

@@ -38,27 +38,29 @@ public class PriceSpike implements ApplicationListener<OrderReceived> {
 			recentPrices.add(price);
 			return;
 		}
-		BigDecimal lastPrice = recentPrices.getLast();
-		if (lastPrice.compareTo(BigDecimal.ZERO) == 0) {
+		BigDecimal movingAverage = recentPrices.stream()
+				.reduce(BigDecimal.ZERO, BigDecimal::add)
+				.divide(new BigDecimal(recentPrices.size()), 4, RoundingMode.DOWN);
+		if (movingAverage.compareTo(BigDecimal.ZERO) == 0) {
 			recentPrices.add(price);
 			return;
 		}
-		BigDecimal change = price.subtract(lastPrice)
+		BigDecimal change = price.subtract(movingAverage)
 				.abs()
-				.divide(lastPrice, 4, RoundingMode.DOWN);
-		log.debug("PriceSpike: Detected change of {}",change);
+				.divide(movingAverage, 4, RoundingMode.DOWN);
+		log.debug("PriceSpike: Detected change of {} from moving average of {}", change, movingAverage);
 		if (change.compareTo(THRESHOLD) > 0) {
 			log.info("PriceSpike: Anomaly detected publishing event");
 			publisher.publish(new SignalEvent(
 					order.symbol(),
 					order.eventTime(),
 					SignalEventType.PRICE_SPIKE,
-					String.format("Price change %.2f%% exceeded threshold %.2f%%",
-							change.multiply(new BigDecimal("100")), THRESHOLD.multiply(new BigDecimal("100"))),
+					String.format("Price %.2f%% from moving average %.4f exceeded threshold %.2f%%",
+							change.multiply(new BigDecimal("100")), movingAverage, THRESHOLD.multiply(new BigDecimal("100"))),
 					Double.parseDouble(order.price()),
 					Double.parseDouble(order.quantity()),
 					order.getTradeSide(),
-					Map.of("priceChange", change, "threshold", THRESHOLD)
+					Map.of("priceChange", change, "movingAverage", movingAverage, "threshold", THRESHOLD)
 			));
 		}
 		recentPrices.add(price);

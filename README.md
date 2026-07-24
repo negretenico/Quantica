@@ -12,6 +12,7 @@ This README captures the design decisions, tradeoffs, and deployment lessons I e
 - Why a ledger?
 - Avoiding context bloat
 - What was needed to deploy
+- [Signal detectors](DETECTORS.md)
 
 ## Architecture diagram
 

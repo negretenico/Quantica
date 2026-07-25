@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "marketrisk"
+version = "2.1.2.dev0"
+description = "Market risk service"
+authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]

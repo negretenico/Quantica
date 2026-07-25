@@ -67,14 +67,16 @@ class GithubClient:
 
     def write_story(self, story: str):
         """
-        Append a story to NEWS_UPDATE.md. Creates the file if it doesn't exist.
+        Append a story to NEWS_UPDATE.MD. Creates the file if it doesn't exist.
         """
         current_file = self._get_file(NEWS_UPDATE)
         if current_file:
+            # decode content
             decoded = base64.b64decode(current_file["content"]).decode()
             new_content = f"{decoded}\n\n{story}"
             self._update_file(NEWS_UPDATE, new_content, sha=current_file["sha"])
-            logger.info("Updated existing NEWS_UPDATE.md")
+            logger.info("Updated existing NEWS_UPDATE.MD")
         else:
+            # file does not exist → create
             self._update_file(NEWS_UPDATE, story)
-            logger.info("Created new NEWS_UPDATE.md")
+            logger.info("Created new NEWS_UPDATE.MD")

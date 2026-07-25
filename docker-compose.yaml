@@ -150,6 +150,22 @@ services:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
       ANALYTICS_EXCHANGE: analytics
 
+  markettrade:
+    build:
+      context: ./markettrade
+      additional_contexts:
+        shared: ./shared
+    container_name: quantica-markettrade
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
+      RABBITMQ_QUEUE: signal.trade
+      ANALYTICS_EXCHANGE: analytics
+      BLOB_STORE_PATH: ./decisions
+      BLOB_STORE_BACKEND: disk
+
   marketappendonly:
     build:
       context: ./marketappendonly

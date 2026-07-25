@@ -1,4 +1,4 @@
-.PHONY: up down build test build-listener build-transformer build-risk test-listener test-transformer test-risk
+.PHONY: up down build test build-listener build-transformer build-risk build-trade test-listener test-transformer test-risk test-trade
 
 up:
 	docker compose up -d --build
@@ -6,7 +6,7 @@ up:
 down:
 	docker compose down -v
 
-build: build-listener build-transformer build-risk
+build: build-listener build-transformer build-risk build-trade
 
 build-listener:
 	cd marketListener && mvn clean package -DskipTests
@@ -17,7 +17,10 @@ build-transformer:
 build-risk:
 	cd marketrisk && pip install -e .
 
-test: test-listener test-transformer test-risk
+build-trade:
+	cd markettrade && pip install -e .
+
+test: test-listener test-transformer test-risk test-trade
 
 test-listener:
 	cd marketListener && mvn test
@@ -27,3 +30,6 @@ test-transformer:
 
 test-risk:
 	cd marketrisk && pytest tests/
+
+test-trade:
+	cd markettrade && pytest tests/

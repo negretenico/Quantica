@@ -13,6 +13,7 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `marketanalysis` | Python 3.11 / Flask | Clustering + anomaly detection | `signal` → anomaly events |
 | `marketbard` | Python 3.11 | LLM storytelling → GitHub commits | `signal` + `analytics` → GitHub |
 | `marketappendonly` | Go 1.24 / Sarama | Append-only audit ledger | `order` → `history.log` |
+| `markettrade` | Python 3.13 | Trade execution worker (skeleton) | RabbitMQ `signal.trade` → blob store |
 
 ### Start Order
 

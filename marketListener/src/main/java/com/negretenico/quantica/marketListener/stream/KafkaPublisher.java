@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
-public class KafkaPublisher implements Publisher<BinanceStreamResponse> {
+public class KafkaPublisher {
 	private final KafkaTemplate<String, BinanceStreamResponse> template;
 	private final String topicName;
 	private final MeterRegistry meterRegistry;
@@ -35,11 +35,7 @@ public class KafkaPublisher implements Publisher<BinanceStreamResponse> {
 
 	@EventListener(BinanceOrderReceived.class)
 	public void publishToKafka(BinanceOrderReceived binanceOrderReceived) {
-		publish(binanceOrderReceived.getBinanceOrder());
-	}
-
-	@Override
-	public void publish(BinanceStreamResponse order) {
+		BinanceStreamResponse order = binanceOrderReceived.getBinanceOrder();
 		log.debug("Publishing to kafka: {}", order.getId());
 		Timer.Sample sample = Timer.start(meterRegistry);
 		template.send(topicName, order.symbol(), order)

@@ -12,11 +12,12 @@ _RETRY_DELAY = 5
 
 
 class RabbitConsumer:
-    def __init__(self, url: str, queue: str, exchange: str = None, exchange_type: str = "fanout"):
+    def __init__(self, url: str, queue: str, exchange: str = None, exchange_type: str = "fanout", routing_key: str = None):
         self._url = url
         self._queue = queue
         self._exchange = exchange
         self._exchange_type = exchange_type
+        self._routing_key = routing_key
         self._handler: Callable | None = None
         self._thread: threading.Thread | None = None
 
@@ -49,7 +50,7 @@ class RabbitConsumer:
         channel.queue_declare(queue=self._queue, durable=True)
 
         if self._exchange:
-            channel.queue_bind(queue=self._queue, exchange=self._exchange)
+            channel.queue_bind(queue=self._queue, exchange=self._exchange, routing_key=self._routing_key)
 
         def on_message(ch, method, properties, body):
             try:

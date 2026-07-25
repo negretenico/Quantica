@@ -1,0 +1,44 @@
+name: Market Risk Service CI/CD
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+on:
+  push:
+    paths:
+      - 'marketrisk/**'
+      - 'shared/**'
+    branches: [ main, develop ]
+  pull_request:
+    paths:
+      - 'marketrisk/**'
+      - 'shared/**'
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should-build: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketrisk == 'true' || steps.changes.outputs.shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            marketrisk:
+              - 'marketrisk/**'
+            shared:
+              - 'shared/**'
+
+  python-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.should-build == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketrisk
+      python_version: '3.13'
+      test_command: 'pytest tests/'
+    secrets: inherit

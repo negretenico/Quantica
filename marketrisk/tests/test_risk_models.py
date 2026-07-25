@@ -1,5 +1,5 @@
 import pytest
-from markettrade.risk.models import ProposedAction, RiskDecision
+from marketrisk.risk.models import ProposedAction, RiskDecision
 
 
 class TestProposedAction:

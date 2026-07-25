@@ -18,7 +18,7 @@ jobs:
           git fetch origin ${{ github.base_ref }}
           CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- \
             'marketListener/**' 'markettransformer/**' \
-            'marketanalysis/**' 'marketbard/**' \
+            'marketanalysis/**' 'marketbard/**' 'markettrade/**' \
             'marketappendonly/**' \
             ':!docs/**' ':!*.md' ':!**/README*')
           if [[ -z "$CHANGED" ]]; then

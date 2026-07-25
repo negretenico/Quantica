@@ -1,3 +1,4 @@
+boto3
 annotated-types==0.7.0
 anyio==4.10.0
 certifi==2025.8.3

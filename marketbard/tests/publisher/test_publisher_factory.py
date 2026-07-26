@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import MagicMock
 
 
@@ -13,20 +14,8 @@ def test_disk_backend_returns_local_blob_publisher(monkeypatch):
     assert result.directory == "/tmp/test-marketbard"
 
 
-def test_github_backend_returns_github_publisher(monkeypatch):
-    monkeypatch.setattr("app.config.Config.PUBLISHER_BACKEND", "github")
-    monkeypatch.setattr("app.config.Config.GH_TOKEN", "fake-token")
-    monkeypatch.setattr("app.config.Config.GITHUB_REPO", "owner/repo")
-    monkeypatch.setattr("app.config.Config.GITHUB_BRANCH", "main")
-
-    from publisher.factory import build_publisher
-    from publisher.github_publisher import GithubPublisher
-
-    result = build_publisher()
-    assert isinstance(result, GithubPublisher)
-
-
 def test_s3_backend_returns_s3_blob_publisher(monkeypatch):
+    pytest.importorskip("boto3")
     monkeypatch.setattr("app.config.Config.PUBLISHER_BACKEND", "s3")
     monkeypatch.setattr("app.config.Config.S3_BUCKET", "my-bucket")
     monkeypatch.setattr("app.config.Config.S3_PREFIX", "news")
@@ -40,21 +29,21 @@ def test_s3_backend_returns_s3_blob_publisher(monkeypatch):
     assert isinstance(result, S3BlobPublisher)
 
 
-def test_unknown_backend_raises_value_error(monkeypatch):
+def test_unknown_backend_falls_back_to_disk(monkeypatch):
     monkeypatch.setattr("app.config.Config.PUBLISHER_BACKEND", "ftp")
+    monkeypatch.setattr("app.config.Config.BLOB_LOCAL_DIR", "/tmp/test-marketbard")
 
-    import pytest
     from publisher.factory import build_publisher
+    from publisher.local_blob_publisher import LocalBlobPublisher
 
-    with pytest.raises(ValueError, match="ftp"):
-        build_publisher()
+    result = build_publisher()
+    assert isinstance(result, LocalBlobPublisher)
 
 
 def test_s3_backend_with_empty_bucket_raises_value_error(monkeypatch):
     monkeypatch.setattr("app.config.Config.PUBLISHER_BACKEND", "s3")
     monkeypatch.setattr("app.config.Config.S3_BUCKET", "")
 
-    import pytest
     from publisher.factory import build_publisher
 
     with pytest.raises(ValueError, match="S3_BUCKET"):

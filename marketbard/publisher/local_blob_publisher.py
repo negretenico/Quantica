@@ -29,7 +29,7 @@ class LocalBlobPublisher(BlobPublisher):
         with open(path, "w", encoding="utf-8") as f:
             f.write(story)
         logger.info(f"LocalBlobPublisher: wrote {path}")
-        self._update_index(make_entry(filename, story))
+        self._update_index(make_entry(filename))
 
     def _update_index(self, entry: BlobEntry) -> None:
         index_path = os.path.join(self.directory, _INDEX_FILENAME)

@@ -10,6 +10,6 @@ class BlobEntry:
     anomaly_count: int = 0
 
 
-def make_entry(filename: str, story: str) -> BlobEntry:
+def make_entry(filename: str) -> BlobEntry:
     written_at = datetime.now(timezone.utc).isoformat()
     return BlobEntry(filename=filename, written_at=written_at)

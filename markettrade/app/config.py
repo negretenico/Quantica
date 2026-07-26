@@ -12,6 +12,7 @@ class Config:
     SIGNAL_EXCHANGE = os.environ.get('SIGNAL_EXCHANGE', 'signal')
     BLOB_STORE_PATH = os.environ.get('BLOB_STORE_PATH', './decisions')
     BLOB_STORE_BACKEND = os.environ.get('BLOB_STORE_BACKEND', 'disk')
+    ANOMALY_SCORE_THRESHOLD = float(os.environ.get('ANOMALY_SCORE_THRESHOLD', '0.7'))
 
     def __str__(self):
         return (

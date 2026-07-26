@@ -11,7 +11,7 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `marketListener` | Java 21 / Spring Boot 3.5 | Binance WSS → Kafka | → Kafka `order` topic |
 | `markettransformer` | Java 21 / Spring Boot 3.x | Raw trades → enriched signals | Kafka `order` → RabbitMQ `signal` fanout exchange |
 | `marketanalysis` | Python 3.11 / Flask | Clustering + anomaly detection | RabbitMQ `signal.analysis` queue → RabbitMQ `analytics` topic exchange |
-| `marketbard` | Python 3.11 | LLM storytelling → GitHub commits | RabbitMQ `signal.bard` queue + `analytics.bard` queue → GitHub |
+| `marketbard` | Python 3.11 | LLM storytelling → disk | RabbitMQ `signal.bard` queue + `analytics.bard` queue → `decisions/bard/` |
 | `marketappendonly` | Go 1.24 / Sarama | Append-only audit ledger | Kafka `order` → `history.log` |
 | `markettrade` | Python 3.13 | Trade execution worker | RabbitMQ `signal.trade` queue → blob store |
 | `marketrisk` | Python 3.13 | **Internal library** — risk cap evaluation | consumed by `markettrade` (not a runnable binary) |

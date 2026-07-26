@@ -1,3 +1,9 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
 # Compiled class file
 *.class
 .env*

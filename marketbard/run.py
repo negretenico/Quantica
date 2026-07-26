@@ -5,8 +5,8 @@ import logging
 from zoneinfo import ZoneInfo
 
 from app.config import Config
-from gh.github_client import GithubClient
 from rabbitmq.consumer import RabbitConsumer
+from publisher.factory import build_publisher
 from rabbitmq.rabbit_client import RabbitClientManager
 from accumulator.event_buffer import EventBuffer
 from accumulator.summary_buffer import SummaryBuffer
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 event_buffer = EventBuffer()
 summary_buffer = SummaryBuffer(maxlen=Config.MAX_SUMMARY_BUFFER)
 openai_client = OpenAIClient(Config.OPEN_AI_TOKEN)
-github_client = GithubClient(token=Config.GH_TOKEN, repo_name=Config.GITHUB_REPO, branch=Config.GITHUB_BRANCH)
+publisher = build_publisher()
 
 # window_queue: (window_start: str, events: list) tuples from window_trigger
 # write_queue: final narrative strings ready for GitHub commit
@@ -123,19 +123,19 @@ def window_worker():
 
 
 def writer():
-    """Commits narratives from write_queue to GitHub."""
+    """Publishes narratives from write_queue via the configured publisher."""
     while True:
         try:
             narrative = write_queue.get()
-            github_client.write_story(narrative)
-            logger.info("writer: committed daily narrative to GitHub")
+            publisher.publish(narrative)
+            logger.info("writer: published daily narrative")
         except Exception:
             logger.exception("writer: error writing narrative to GitHub")
 
 
 def main():
     logger.info("Starting MarketBard")
-    github_client.check_connection()
+    publisher.check_connection()
 
     analytics_consumer = RabbitConsumer(
         url=Config.RABBITMQ_URL,

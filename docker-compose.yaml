@@ -149,6 +149,8 @@ services:
     environment:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
       ANALYTICS_EXCHANGE: analytics
+    volumes:
+      - ./decisions/bard:/tmp/marketbard
 
   markettrade:
     build:

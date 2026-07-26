@@ -37,10 +37,10 @@ cd marketListener && mvn spring-boot:run -Dspring-boot.run.profiles=local
 
 # 3. Any downstream module
 cd markettransformer && mvn spring-boot:run -Dspring-boot.run.profiles=local
-cd marketanalysis   && python run.py
-cd marketbard       && python run.py
+cd marketanalysis   && py run.py
+cd marketbard       && py run.py
 cd marketappendonly && go run cmd/server/main.go
-cd markettrade      && python run.py
+cd markettrade      && py run.py
 ```
 
 ---
@@ -113,6 +113,7 @@ make down  # stop and remove volumes
 - **kafka-python-ng** as the Kafka client.
 - **No Flask for marketbard** — it's a pure worker process; Flask is only in marketanalysis for health/monitoring endpoints.
 - **Shared RabbitMQ primitives** live in `shared/rabbitmq/` — `RabbitConsumer` and `RabbitPublisher`. Consumers declare their own exchange + queue + binding on startup.
+- **Python command on Windows** — always use `py` (Windows Launcher), never bare `python` or `python3`. MSYS2 puts its own `python` first on PATH and it lacks project dependencies. `py` always resolves to the correct registered Python. Use `py run.py`, `py -m pytest`, `py -m pip`.
 
 ## Go Conventions (marketappendonly)
 

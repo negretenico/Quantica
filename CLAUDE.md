@@ -6,14 +6,22 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 
 ## Module Map
 
-| Module | Language | Role | Kafka (in → out) |
+| Module | Language | Role | Transport (in → out) |
 |---|---|---|---|
-| `marketListener` | Java 21 / Spring Boot 3.5 | Binance WSS → Kafka | → `order` |
-| `markettransformer` | Java 21 / Spring Boot 3.x | Raw trades → enriched signals | `order` → `signal` |
-| `marketanalysis` | Python 3.11 / Flask | Clustering + anomaly detection | `signal` → anomaly events |
-| `marketbard` | Python 3.11 | LLM storytelling → GitHub commits | `signal` + `analytics` → GitHub |
-| `marketappendonly` | Go 1.24 / Sarama | Append-only audit ledger | `order` → `history.log` |
+| `marketListener` | Java 21 / Spring Boot 3.5 | Binance WSS → Kafka | → Kafka `order` topic |
+| `markettransformer` | Java 21 / Spring Boot 3.x | Raw trades → enriched signals | Kafka `order` → RabbitMQ `signal` fanout exchange |
+| `marketanalysis` | Python 3.11 / Flask | Clustering + anomaly detection | RabbitMQ `signal.analysis` queue → RabbitMQ `analytics` topic exchange |
+| `marketbard` | Python 3.11 | LLM storytelling → GitHub commits | RabbitMQ `signal.bard` queue + polls `analytics.bard.{symbol}` queues → GitHub |
+| `marketappendonly` | Go 1.24 / Sarama | Append-only audit ledger | Kafka `order` → `history.log` |
 | `markettrade` | Python 3.13 | Trade execution worker (skeleton) | RabbitMQ `signal.trade` → blob store |
+
+### Fanout Architecture
+
+`markettransformer` publishes `SignalEvent`s to a RabbitMQ **fanout exchange** (`signal`), which fans out to two durable queues:
+- `signal.analysis` → consumed by `marketanalysis`
+- `signal.bard` → consumed by `marketbard` (raw signal context)
+
+`marketanalysis` publishes ML-enriched events (with `cluster_id` + `anomaly_score`) to a RabbitMQ **topic exchange** (`analytics`) using routing key `signal.analytics.{symbol}`. `marketbard` declares per-symbol queues (`analytics.bard.{symbol}`) bound to this exchange and polls them to enrich each raw signal before narrating.
 
 ### Start Order
 
@@ -33,17 +41,24 @@ cd marketappendonly && go run cmd/server/main.go
 
 ---
 
-## Kafka Topics & Schemas
+## Transport Schemas
 
-| Topic name | Config key | Schema |
+### Kafka Topics
+
+| Topic | Config key | Schema |
 |---|---|---|
-| `order` | hardcoded in `@KafkaListener` | `BinanceStreamResponse` JSON |
-| configurable | `market.signal.topic` | `SignalEvent` JSON |
-| configurable | `market.order.topic` | `QuanticaEventIngestedEvent<BinanceStreamResponse>` JSON |
+| `order` | hardcoded in `@KafkaListener` | `QuanticaEventIngestedEvent<BinanceStreamResponse>` JSON |
+
+**Schema changes ripple downstream.** Changing a Kafka message type requires updating all consumers of that topic.
+
+### RabbitMQ
+
+| Exchange | Type | Queues / routing keys | Schema |
+|---|---|---|---|
+| `signal` | fanout | `signal.analysis`, `signal.bard` | `SignalEvent` JSON |
+| `analytics` | topic | `signal.analytics.{symbol}` → `analytics.bard.{symbol}` | `SignalEvent` + `cluster_id`, `anomaly_score` |
 
 **`SignalEvent`** (markettransformer) — `symbol, eventTime, type (SignalEventType), reason, price, quantity, side, metadata`
-
-**Schema changes ripple downstream.** Changing a Kafka message type in one module requires updating all consumers of that topic.
 
 ---
 

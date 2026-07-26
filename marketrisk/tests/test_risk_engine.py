@@ -15,11 +15,60 @@ def _make_action(symbol: str = "AAPL", raw_quantity: float = 100.0) -> ProposedA
     )
 
 
-def _make_engine(max_trade: float = 500.0, max_symbol: float = 1000.0) -> RiskEngine:
+def _make_engine(max_trade: float = 500.0, max_symbol: float = 1000.0, max_drawdown: float = 0.20) -> RiskEngine:
     config = Config()
     config.MAX_TRADE_QUANTITY = max_trade
     config.MAX_SYMBOL_EXPOSURE = max_symbol
+    config.MAX_DRAWDOWN_PCT = max_drawdown
     return RiskEngine(config)
+
+
+class TestDrawdownHalt:
+    def test_no_halt_below_threshold(self):
+        engine = _make_engine(max_drawdown=0.50)
+        # peak = 2000, current = 1500 → drawdown = 25% < 50%
+        engine.evaluate(_make_action(), portfolio_pnl=2000.0)
+        decision = engine.evaluate(_make_action(), portfolio_pnl=1500.0)
+
+        assert decision.approved is True
+        assert decision.rejection_reason is None
+
+    def test_halt_triggered_at_threshold(self):
+        engine = _make_engine(max_drawdown=0.20)
+        # peak = 1000, current = 700 → drawdown = 30% > 20%
+        engine.evaluate(_make_action(), portfolio_pnl=1000.0)
+        decision = engine.evaluate(_make_action(), portfolio_pnl=700.0)
+
+        assert decision.approved is False
+        assert decision.sized_quantity is None
+        assert decision.rejection_reason == "PORTFOLIO_DRAWDOWN_HALT"
+
+    def test_halt_clears_when_pnl_recovers_above_peak(self):
+        engine = _make_engine(max_drawdown=0.20)
+        # trigger halt
+        engine.evaluate(_make_action(), portfolio_pnl=1000.0)
+        engine.evaluate(_make_action(), portfolio_pnl=700.0)
+        # recover above old peak → drawdown = 0%
+        decision = engine.evaluate(_make_action(), portfolio_pnl=1500.0)
+
+        assert decision.approved is True
+        assert decision.rejection_reason is None
+
+    def test_zero_peak_no_halt(self):
+        engine = _make_engine(max_drawdown=0.20)
+        # first call ever, pnl negative — peak stays 0, drawdown guard returns 0
+        decision = engine.evaluate(_make_action(), portfolio_pnl=-500.0)
+
+        assert decision.approved is True
+
+    def test_drawdown_check_before_trade_cap(self):
+        """A halted portfolio rejects even a trade that would otherwise pass all caps."""
+        engine = _make_engine(max_trade=500.0, max_drawdown=0.20)
+        engine.evaluate(_make_action(), portfolio_pnl=1000.0)
+        # trigger drawdown
+        decision = engine.evaluate(_make_action(raw_quantity=100.0), portfolio_pnl=700.0)
+
+        assert decision.rejection_reason == "PORTFOLIO_DRAWDOWN_HALT"
 
 
 class TestRiskEngineApproved:

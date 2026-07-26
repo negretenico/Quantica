@@ -14,8 +14,23 @@ class RiskEngine:
     def __init__(self, config: Config) -> None:
         self._config = config
         self._symbol_exposure: dict[str, float] = {}
+        self._peak_pnl: float = 0.0
 
-    def evaluate(self, action: ProposedAction) -> RiskDecision:
+    def _drawdown(self, portfolio_pnl: float) -> float:
+        if self._peak_pnl == 0:
+            return 0.0
+        return (self._peak_pnl - portfolio_pnl) / abs(self._peak_pnl)
+
+    def evaluate(self, action: ProposedAction, portfolio_pnl: float = 0.0) -> RiskDecision:
+        self._peak_pnl = max(self._peak_pnl, portfolio_pnl)
+
+        if self._drawdown(portfolio_pnl) > self._config.MAX_DRAWDOWN_PCT:
+            return RiskDecision(
+                approved=False,
+                sized_quantity=None,
+                rejection_reason="PORTFOLIO_DRAWDOWN_HALT",
+            )
+
         if action.raw_quantity > self._config.MAX_TRADE_QUANTITY:
             return RiskDecision(
                 approved=False,

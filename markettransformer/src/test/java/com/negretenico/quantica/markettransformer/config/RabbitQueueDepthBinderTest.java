@@ -40,7 +40,7 @@ class RabbitQueueDepthBinderTest {
 				.addHeader("Content-Type", "application/json"));
 
 		double depth = registry.get("rabbitmq.queue.messages")
-				.tag("queue", RabbitConfig.ANALYSIS_QUEUE)
+				.tag("queue", "signal.analysis")
 				.gauge().value();
 
 		assertThat(depth).isEqualTo(42.0);
@@ -51,7 +51,7 @@ class RabbitQueueDepthBinderTest {
 		mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
 		double depth = registry.get("rabbitmq.queue.messages")
-				.tag("queue", RabbitConfig.ANALYSIS_QUEUE)
+				.tag("queue", "signal.analysis")
 				.gauge().value();
 
 		assertThat(depth).isEqualTo(0.0);
@@ -62,7 +62,7 @@ class RabbitQueueDepthBinderTest {
 		mockWebServer.shutdown();
 
 		double depth = registry.get("rabbitmq.queue.messages")
-				.tag("queue", RabbitConfig.ANALYSIS_QUEUE)
+				.tag("queue", "signal.analysis")
 				.gauge().value();
 
 		assertThat(depth).isEqualTo(0.0);

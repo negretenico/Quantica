@@ -15,13 +15,13 @@ build-transformer:
 	cd markettransformer && mvn clean package -DskipTests
 
 build-bard:
-	cd marketbard && pip install -r requirements.txt
+	cd marketbard && py -m pip install -r requirements.txt
 
 build-risk:
-	cd marketrisk && pip install -e .
+	cd marketrisk && py -m pip install -e .
 
 build-trade:
-	cd markettrade && pip install -e .
+	cd markettrade && py -m pip install -e .
 
 test: test-listener test-transformer test-bard test-risk test-trade
 
@@ -32,10 +32,10 @@ test-transformer:
 	cd markettransformer && mvn test
 
 test-bard:
-	cd marketbard && python -m pytest tests/ -v
+	cd marketbard && py -m pytest tests/ -v
 
 test-risk:
-	cd marketrisk && pytest tests/
+	cd marketrisk && py -m pytest tests/
 
 test-trade:
-	cd markettrade && pytest tests/
+	cd markettrade && py -m pytest tests/

@@ -33,7 +33,7 @@ jobs:
         if: steps.changed.outputs.skip == 'false'
         run: |
           git fetch origin ${{ github.base_ref }}
-          JAVA_BASE=$(git show origin/${{ github.base_ref }}:marketListener/pom.xml | grep '<version>' | grep -v '3\.' | head -1 | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
+          JAVA_BASE=$(git show origin/${{ github.base_ref }}:marketListener/pom.xml | grep '<version>' | grep 'SNAPSHOT' | head -1 | tr -d ' \t' | sed 's/<version>//;s/<\/version>//')
           PYTHON_BASE=$(git show origin/${{ github.base_ref }}:marketanalysis/pyproject.toml | grep '^version = ' | sed 's/version = "//;s/"//')
           echo "java=$JAVA_BASE" >> $GITHUB_OUTPUT
           echo "python=$PYTHON_BASE" >> $GITHUB_OUTPUT

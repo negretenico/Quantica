@@ -1,14 +1,12 @@
-import json
 import queue
 import threading
 import datetime
 import logging
 from zoneinfo import ZoneInfo
 
-import pika
-
 from app.config import Config
-from gh.github_client import GithubClient
+from rabbitmq.consumer import RabbitConsumer
+from publisher.factory import build_publisher
 from rabbitmq.rabbit_client import RabbitClientManager
 from accumulator.event_buffer import EventBuffer
 from accumulator.summary_buffer import SummaryBuffer
@@ -24,7 +22,7 @@ logger = logging.getLogger(__name__)
 event_buffer = EventBuffer()
 summary_buffer = SummaryBuffer(maxlen=Config.MAX_SUMMARY_BUFFER)
 openai_client = OpenAIClient(Config.OPEN_AI_TOKEN)
-github_client = GithubClient(token=Config.GH_TOKEN, repo_name=Config.GITHUB_REPO, branch=Config.GITHUB_BRANCH)
+publisher = build_publisher()
 
 # window_queue: (window_start: str, events: list) tuples from window_trigger
 # write_queue: final narrative strings ready for GitHub commit
@@ -32,45 +30,21 @@ window_queue: queue.Queue = queue.Queue()
 write_queue: queue.Queue = queue.Queue()
 
 _ET = ZoneInfo("America/New_York")
-_analytics_channel = None
-_declared_queues: set = set()
+
+# Latest enrichment (cluster_id, anomaly_score) per symbol, populated by analytics consumer
+_enrichment_cache: dict = {}
 
 
-def _analytics_channel_get():
-    global _analytics_channel
-    if _analytics_channel is None or _analytics_channel.is_closed:
-        conn = pika.BlockingConnection(pika.URLParameters(Config.RABBITMQ_URL))
-        _analytics_channel = conn.channel()
-        _analytics_channel.exchange_declare(
-            exchange=Config.ANALYTICS_EXCHANGE,
-            exchange_type="topic",
-            durable=True,
-        )
-    return _analytics_channel
-
-
-def _pop_analytics(symbol: str) -> dict | None:
-    try:
-        ch = _analytics_channel_get()
-        queue_name = f"analytics.bard.{symbol}"
-        if queue_name not in _declared_queues:
-            ch.queue_declare(queue=queue_name, durable=True)
-            ch.queue_bind(
-                queue=queue_name,
-                exchange=Config.ANALYTICS_EXCHANGE,
-                routing_key=f"signal.analytics.{symbol}",
-            )
-            _declared_queues.add(queue_name)
-        method, _, body = ch.basic_get(queue=queue_name, auto_ack=True)
-        return json.loads(body) if body else None
-    except Exception:
-        logger.exception("_pop_analytics: failed, continuing without enrichment")
-        return None
+def analytics_handler(payload):
+    symbol = payload.get("symbol")
+    if symbol:
+        _enrichment_cache[symbol] = payload
+        logger.debug("analytics_handler: cached enrichment symbol=%s anomaly_score=%s", symbol, payload.get("anomaly_score"))
 
 
 def signal_event_handler(event):
     symbol = event.get("symbol")
-    enriched = _pop_analytics(symbol)
+    enriched = _enrichment_cache.get(symbol)
     if enriched:
         event = {**event, "cluster_id": enriched.get("cluster_id"), "anomaly_score": enriched.get("anomaly_score")}
         logger.info(f"Enriched signal: symbol={symbol} cluster={enriched.get('cluster_id')} anomaly={enriched.get('anomaly_score'):.4f}")
@@ -149,19 +123,30 @@ def window_worker():
 
 
 def writer():
-    """Commits narratives from write_queue to GitHub."""
+    """Publishes narratives from write_queue via the configured publisher."""
     while True:
         try:
             narrative = write_queue.get()
-            github_client.write_story(narrative)
-            logger.info("writer: committed daily narrative to GitHub")
+            publisher.publish(narrative)
+            logger.info("writer: published daily narrative")
         except Exception:
             logger.exception("writer: error writing narrative to GitHub")
 
 
 def main():
     logger.info("Starting MarketBard")
-    github_client.check_connection()
+    publisher.check_connection()
+
+    analytics_consumer = RabbitConsumer(
+        url=Config.RABBITMQ_URL,
+        queue=Config.ANALYTICS_QUEUE,
+        exchange=Config.ANALYTICS_EXCHANGE,
+        exchange_type="topic",
+        routing_key="signal.analytics.#",
+    )
+    analytics_consumer.register_handler(analytics_handler)
+    analytics_consumer.start_consuming()
+
     rabbit_manager = RabbitClientManager(config=Config)
     rabbit_manager.subscribe(handler=signal_event_handler)
     threading.Thread(target=window_trigger, daemon=True).start()

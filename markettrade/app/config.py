@@ -9,7 +9,7 @@ load_dotenv()
 class Config:
     RABBITMQ_URL = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@localhost/')
     RABBITMQ_QUEUE = os.environ.get('RABBITMQ_QUEUE', 'signal.trade')
-    ANALYTICS_EXCHANGE = os.environ.get('ANALYTICS_EXCHANGE', 'analytics')
+    SIGNAL_EXCHANGE = os.environ.get('SIGNAL_EXCHANGE', 'signal')
     BLOB_STORE_PATH = os.environ.get('BLOB_STORE_PATH', './decisions')
     BLOB_STORE_BACKEND = os.environ.get('BLOB_STORE_BACKEND', 'disk')
 
@@ -17,7 +17,7 @@ class Config:
         return (
             f"RabbitMQ: {self.RABBITMQ_URL}\n"
             f"Queue: {self.RABBITMQ_QUEUE}\n"
-            f"Analytics Exchange: {self.ANALYTICS_EXCHANGE}\n"
+            f"Signal Exchange: {self.SIGNAL_EXCHANGE}\n"
             f"Blob Store Path: {self.BLOB_STORE_PATH}\n"
             f"Blob Store Backend: {self.BLOB_STORE_BACKEND}"
         )

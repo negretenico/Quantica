@@ -8,11 +8,13 @@ on:
     paths:
       - "markettrade/**"
       - "shared/**"
+      - "marketrisk/**"
     branches: [main, develop]
   pull_request:
     paths:
       - "markettrade/**"
       - "shared/**"
+      - "marketrisk/**"
   workflow_dispatch:
 
 jobs:
@@ -65,5 +67,7 @@ jobs:
       dockerfile_path: ./Dockerfile
       service_name: markettrade
       artifact_name: python-dist
-      build_contexts: shared=./shared
+      build_contexts: |
+        shared=./shared
+        marketrisk=./marketrisk
     secrets: inherit

@@ -4,14 +4,13 @@ from shared.rabbitmq.consumer import RabbitConsumer
 from app.config import Config
 
 
-class AnalyticsRabbitClient:
+class SignalRabbitClient:
     def __init__(self, config: Config):
         self._consumer = RabbitConsumer(
             url=config.RABBITMQ_URL,
             queue=config.RABBITMQ_QUEUE,
-            exchange=config.ANALYTICS_EXCHANGE,
-            exchange_type="topic",
-            routing_key="signal.analytics.#",
+            exchange=config.SIGNAL_EXCHANGE,
+            exchange_type="fanout",
         )
 
     def subscribe(self, handler: Callable):

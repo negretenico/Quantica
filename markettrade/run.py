@@ -2,7 +2,7 @@ import logging
 import threading
 
 from app.config import Config
-from app.rabbit_client import AnalyticsRabbitClient
+from app.rabbit_client import SignalRabbitClient
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 def main():
     config = Config()
-    client = AnalyticsRabbitClient(config)
+    client = SignalRabbitClient(config)
 
     def handle_message(payload):
         logger.debug(
-            "Received message — symbol=%s anomaly_score=%s",
+            "Received signal — symbol=%s type=%s",
             payload.get("symbol"),
-            payload.get("anomaly_score"),
+            payload.get("type"),
         )
 
     client.subscribe(handle_message)

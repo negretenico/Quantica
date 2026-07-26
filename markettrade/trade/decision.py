@@ -18,15 +18,13 @@ def decide(event: dict, config: Config = None) -> dict:
     anomaly_score = float(event["anomaly_score"])
     signal_type = event["type"]
 
-    if anomaly_score > config.ANOMALY_SCORE_THRESHOLD:
-        if signal_type in _BUY_SIGNALS:
+    match (anomaly_score > config.ANOMALY_SCORE_THRESHOLD, signal_type):
+        case (True, s) if s in _BUY_SIGNALS:
             action = "BUY"
-        elif signal_type in _SELL_SIGNALS:
+        case (True, s) if s in _SELL_SIGNALS:
             action = "SELL"
-        else:
+        case _:
             action = "HOLD"
-    else:
-        action = "HOLD"
 
     return {
         "symbol": event["symbol"],

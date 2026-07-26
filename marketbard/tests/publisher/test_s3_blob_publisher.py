@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+boto3 = pytest.importorskip("boto3")
 from publisher.s3_blob_publisher import S3BlobPublisher
 
 

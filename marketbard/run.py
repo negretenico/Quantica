@@ -79,10 +79,10 @@ def window_trigger():
 
 
 def synthesis_trigger():
-    """Fires at 4:00 PM ET, drains summary_buffer, runs synthesis, queues narrative for GitHub."""
+    """Fires at 9:00 PM ET, drains summary_buffer, runs synthesis, queues narrative for GitHub."""
     while True:
         now = datetime.datetime.now(_ET)
-        target = now.replace(hour=2, minute=45, second=0, microsecond=0)
+        target = now.replace(hour=21, minute=0, second=0, microsecond=0)
         if now >= target:
             target += datetime.timedelta(days=1)
         sleep_secs = (target - now).total_seconds()

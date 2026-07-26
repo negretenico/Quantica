@@ -25,15 +25,20 @@ public class ReconnectService implements ApplicationListener<WssDisconnected> {
 
 	@Override
 	public void onApplicationEvent(WssDisconnected event) {
-		log.info("WssDisconnected received — reconnecting in {}s", reconnectDelaySeconds);
+		scheduleReconnect(reconnectDelaySeconds);
+	}
+
+	private void scheduleReconnect(long delaySeconds) {
+		log.info("Scheduling reconnect in {}s", delaySeconds);
 		scheduler.schedule(() -> {
 			try {
 				manager.stop();
 				manager.start();
 				log.info("Reconnect initiated");
 			} catch (Exception e) {
-				log.error("Reconnect failed", e);
+				log.error("Reconnect attempt failed — retrying in {}s", delaySeconds, e);
+				scheduleReconnect(delaySeconds);
 			}
-		}, reconnectDelaySeconds, TimeUnit.SECONDS);
+		}, delaySeconds, TimeUnit.SECONDS);
 	}
 }

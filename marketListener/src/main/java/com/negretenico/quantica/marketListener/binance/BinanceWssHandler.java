@@ -61,6 +61,7 @@ public class BinanceWssHandler extends TextWebSocketHandler {
 
 	@Override
 	public void handleTransportError(WebSocketSession session, Throwable exception) {
-		log.error("WebSocket transport error", exception);
+		log.error("WebSocket transport error — triggering reconnect", exception);
+		applicationEventPublisher.publishEvent(new WssDisconnected(this));
 	}
 }

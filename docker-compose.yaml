@@ -162,7 +162,7 @@ services:
     environment:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
       RABBITMQ_QUEUE: signal.trade
-      ANALYTICS_EXCHANGE: analytics
+      SIGNAL_EXCHANGE: signal
       BLOB_STORE_PATH: ./decisions
       BLOB_STORE_BACKEND: disk
 

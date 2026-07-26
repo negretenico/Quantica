@@ -14,6 +14,7 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `marketbard` | Python 3.11 | LLM storytelling → GitHub commits | RabbitMQ `signal.bard` queue + `analytics.bard` queue → GitHub |
 | `marketappendonly` | Go 1.24 / Sarama | Append-only audit ledger | Kafka `order` → `history.log` |
 | `markettrade` | Python 3.13 | Trade execution worker | RabbitMQ `signal.trade` queue → blob store |
+| `marketrisk` | Python 3.13 | **Internal library** — risk cap evaluation | consumed by `markettrade` (not a runnable binary) |
 
 ### RabbitMQ Architecture
 
@@ -71,6 +72,10 @@ cd markettrade      && python run.py
 ## Building and Testing
 
 **Always use `make` targets** — do not run raw `mvn`, `pytest`, or `pip` commands directly.
+
+### Versioning (`bump.sh patch|minor|major`)
+
+`bump.sh` versions the **runnable binaries only** — Java services and Python workers. `marketrisk` is an internal library consumed by `markettrade`; it is **not bumped by `bump.sh`** and has no independent release. Do not add it to the bump script.
 
 ```bash
 # Build all modules

@@ -9,6 +9,7 @@ class Config:
     RABBITMQ_URL = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@localhost/')
     RABBITMQ_QUEUE = os.environ.get('RABBITMQ_QUEUE', 'signal.bard')
     ANALYTICS_EXCHANGE = os.environ.get('ANALYTICS_EXCHANGE', 'analytics')
+    ANALYTICS_QUEUE = os.environ.get('ANALYTICS_QUEUE', 'analytics.bard')
     OPEN_AI_TOKEN = os.environ.get('OPEN_AI_TOKEN', 'sometokenhg')
     WINDOW_MINUTES = int(os.environ.get('WINDOW_MINUTES', '10'))
     MAX_SUMMARY_BUFFER = int(os.environ.get('MAX_SUMMARY_BUFFER', '50'))

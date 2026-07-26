@@ -380,6 +380,64 @@
           "legendFormat": "{{symbol}}"
         }
       ]
+    },
+    {
+      "id": 15,
+      "title": "RabbitMQ Signal Queue Depth",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 52,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rabbitmq_queue_messages{queue=\"signal.analysis\"}",
+          "legendFormat": "signal.analysis"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "rabbitmq_queue_messages{queue=\"signal.bard\"}",
+          "legendFormat": "signal.bard"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "rabbitmq_queue_messages{queue=\"signal.trade\"}",
+          "legendFormat": "signal.trade"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "RabbitMQ Analytics Queue Depth",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 52,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rabbitmq_queue_messages{queue=\"analytics.bard\"}",
+          "legendFormat": "analytics.bard"
+        }
+      ]
     }
   ]
 }

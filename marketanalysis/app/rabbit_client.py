@@ -10,6 +10,8 @@ class RabbitClientManager:
         self.consumer = RabbitConsumer(
             url=config.RABBITMQ_URL,
             queue=config.RABBITMQ_QUEUE,
+            exchange=config.SIGNAL_EXCHANGE,
+            exchange_type="fanout",
         )
 
     def subscribe(self, handler):

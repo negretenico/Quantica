@@ -13,32 +13,10 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitConfig {
 
 	public static final String EXCHANGE = "signal";
-	public static final String ANALYSIS_QUEUE = "signal.analysis";
-	public static final String BARD_QUEUE = "signal.bard";
 
 	@Bean
 	public FanoutExchange signalExchange() {
 		return new FanoutExchange(EXCHANGE);
-	}
-
-	@Bean
-	public Queue analysisQueue() {
-		return new Queue(ANALYSIS_QUEUE, true);
-	}
-
-	@Bean
-	public Queue bardQueue() {
-		return new Queue(BARD_QUEUE, true);
-	}
-
-	@Bean
-	public Binding analysisBinding() {
-		return BindingBuilder.bind(analysisQueue()).to(signalExchange());
-	}
-
-	@Bean
-	public Binding bardBinding() {
-		return BindingBuilder.bind(bardQueue()).to(signalExchange());
 	}
 
 	@Bean

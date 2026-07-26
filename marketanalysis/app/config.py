@@ -8,6 +8,7 @@ class Config:
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     RABBITMQ_URL = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@localhost/')
     RABBITMQ_QUEUE = os.environ.get('RABBITMQ_QUEUE', 'signal.analysis')
+    SIGNAL_EXCHANGE = os.environ.get('SIGNAL_EXCHANGE', 'signal')
     ANALYTICS_EXCHANGE = os.environ.get('ANALYTICS_EXCHANGE', 'analytics')
     WARMUP_SAMPLES = int(os.environ.get('WARMUP_SAMPLES', '100'))
     RETRAIN_BUFFER_SIZE = int(os.environ.get('RETRAIN_BUFFER_SIZE', '500'))

@@ -1,4 +1,4 @@
-.PHONY: up down build test build-listener build-transformer build-bard build-risk build-trade test-listener test-transformer test-bard test-risk test-trade
+.PHONY: up down build test build-listener build-transformer build-bard build-risk build-trade test-listener test-transformer test-bard test-risk test-trade test-backtest
 
 up:
 	docker compose up -d --build
@@ -39,3 +39,6 @@ test-risk:
 
 test-trade:
 	cd markettrade && py -m pytest tests/
+
+test-backtest:
+	py -m pytest scripts/backtest/tests/ -v

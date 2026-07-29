@@ -43,3 +43,21 @@ Instrumented with `@Timed(value = "quantica.stage.detector", extraTags = {"detec
 | p99 | 278 µs |
 
 Higher than `LargeTradeDetected` due to the moving average computation over the window on every tick. Pipeline-level lag is documented in [`docs/PERFORMANCE.md`](../PERFORMANCE.md).
+
+## Backtest
+
+**Dump:** `dump/order_20260723_1Hours.jsonl` (362,129 trades, 2026-07-23, 1 hour)
+**Sweep script:** `scripts/backtest/evaluate.py`
+**Results:** `scripts/backtest/results/threshold_sweep.csv`
+
+| Threshold (% deviation) | Fire count | Fire rate / 1k trades |
+|---|---|---|
+| 0.5% | 74,022 | 204.41 |
+| 1.0% | 71,084 | 196.29 |
+| 1.5% | 23,029 | 63.59 |
+| 2.0% _(current)_ | 23,029 | 63.59 |
+| 3.0% | 7,013 | 19.37 |
+| 5.0% | 1,404 | 3.88 |
+| 10.0% | 1,036 | 2.86 |
+
+The 1.5% and 2.0% thresholds produced identical fire counts — no events in this dump fell in the 1.5%–2.0% deviation band. The largest sensitivity cliff is between 1.0% (196/1k) and 1.5% (64/1k).

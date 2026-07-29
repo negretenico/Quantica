@@ -35,3 +35,21 @@ Instrumented with `@Timed(value = "quantica.stage.detector", extraTags = {"detec
 | p99 | 15 µs |
 
 In-process only. Pipeline-level lag under load is documented in [`docs/PERFORMANCE.md`](../PERFORMANCE.md) — at 10x replay rate, peak consumer lag was ~270 messages and drained to 0.
+
+## Backtest
+
+**Dump:** `dump/order_20260723_1Hours.jsonl` (362,129 trades, 2026-07-23, 1 hour)
+**Sweep script:** `scripts/backtest/evaluate.py`
+**Results:** `scripts/backtest/results/threshold_sweep.csv`
+
+| Threshold (base units) | Fire count | Fire rate / 1k trades |
+|---|---|---|
+| 100,000 | 0 | 0.0 |
+| 250,000 | 0 | 0.0 |
+| 500,000 | 0 | 0.0 |
+| 750,000 | 0 | 0.0 |
+| 1,000,000 _(current)_ | 0 | 0.0 |
+| 2,000,000 | 0 | 0.0 |
+| 5,000,000 | 0 | 0.0 |
+
+Zero fires across all thresholds. The dump is a BTC-range dataset — no single trade quantity exceeded 100,000 base units, which is consistent with the threshold rationale above. **This sweep does not validate the detector for its primary use case (high-supply tokens).** A dump from a SHIB, DOGE, or similar high-supply pair is required to observe fires and calibrate the threshold.

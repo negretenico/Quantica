@@ -157,6 +157,7 @@ services:
       context: ./markettrade
       additional_contexts:
         shared: ./shared
+        marketrisk: ./marketrisk
     container_name: quantica-markettrade
     depends_on:
       rabbitmq:

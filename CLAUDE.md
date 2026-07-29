@@ -69,6 +69,10 @@ cd markettrade      && py run.py
 
 ---
 
+## Git Workflow
+
+- **Do not use worktree isolation** when already on a feature branch. Make changes directly on the current branch. Worktrees are only appropriate when starting from `main` with no active branch.
+
 ## Building and Testing
 
 **Always use `make` targets** — do not run raw `mvn`, `pytest`, or `pip` commands directly.

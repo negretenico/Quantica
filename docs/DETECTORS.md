@@ -10,7 +10,9 @@ Signal detectors live in `markettransformer` and fire as Spring `ApplicationList
 
 Fires when a single trade's raw quantity exceeds one million base units. The threshold is an outlier detection boundary — not normalized. For BTC it almost never fires (only tens of units trade at a time); for meme coins and high-supply tokens it is the primary pump detection mechanism. The same threshold deliberately asks a different question of each symbol.
 
-**Latency:** p50 1 µs · p95 5 µs · p99 15 µs → [Full details](detectors/large-trade-detected.md)
+**Latency:** p50 1 µs · p95 5 µs · p99 15 µs → [Full details](detectors/large-trade-detected.md) · [Backtest](detectors/large-trade-detected.md#backtest)
+
+**Backtest (2026-07-23, 1 h dump):** 0 fires at all thresholds — BTC-range dataset, no high-supply trades present. Detector unvalidated for its primary use case.
 
 ---
 
@@ -20,7 +22,9 @@ Fires when a single trade's raw quantity exceeds one million base units. The thr
 
 Fires when the incoming price deviates more than 2% from the 100-trade moving average for that symbol. Each symbol maintains its own independent price window. The 2% threshold is a starting point calibrated for stable-market conditions and has not been tuned against historical volatility data.
 
-**Latency:** p50 13 µs · p95 119 µs · p99 278 µs → [Full details](detectors/price-spike.md)
+**Latency:** p50 13 µs · p95 119 µs · p99 278 µs → [Full details](detectors/price-spike.md) · [Backtest](detectors/price-spike.md#backtest)
+
+**Backtest (2026-07-23, 1 h dump, 362k trades):** Current 2% → 63.6 fires/1k trades.
 
 ---
 
@@ -30,4 +34,6 @@ Fires when the incoming price deviates more than 2% from the 100-trade moving av
 
 Fires when the same trade side (BUY or SELL) appears 5 times in a row for a symbol, signalling aggressive market entry or exit pressure. Resets after each fire — so sustained one-sided flow fires again at 10, 15, 20... Trade side is taken directly from the Binance stream with no normalization. Symbols are tracked independently.
 
-**Latency:** p50 ~1 µs · p95 ~230 µs · p99 ~400 µs → [Full details](detectors/aggressive-buyer-seller.md)
+**Latency:** p50 ~1 µs · p95 ~230 µs · p99 ~400 µs → [Full details](detectors/aggressive-buyer-seller.md) · [Backtest](detectors/aggressive-buyer-seller.md#backtest)
+
+**Backtest (2026-07-23, 1 h dump, 362k trades):** Current streak=5 → 177.3 fires/1k trades.

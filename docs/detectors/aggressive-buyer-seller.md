@@ -47,3 +47,21 @@ Instrumented with `@Timed(value = "quantica.stage.detector", extraTags = {"detec
 | p99 | ~400 µs |
 
 The wide p50→p99 spread reflects the ConcurrentHashMap contention under multi-symbol load. Pipeline-level lag is documented in [`docs/PERFORMANCE.md`](../PERFORMANCE.md).
+
+## Backtest
+
+**Dump:** `dump/order_20260723_1Hours.jsonl` (362,129 trades, 2026-07-23, 1 hour)
+**Sweep script:** `scripts/backtest/evaluate.py`
+**Results:** `scripts/backtest/results/threshold_sweep.csv`
+
+| Streak threshold | Fire count | Fire rate / 1k trades |
+|---|---|---|
+| 3 | 112,038 | 309.39 |
+| 4 | 82,037 | 226.54 |
+| 5 _(current)_ | 64,213 | 177.32 |
+| 6 | 52,590 | 145.22 |
+| 7 | 44,381 | 122.56 |
+| 8 | 38,249 | 105.62 |
+| 10 | 29,760 | 82.18 |
+
+The current streak=5 fires at 177.3/1k trades — the highest raw fire rate of the three detectors.

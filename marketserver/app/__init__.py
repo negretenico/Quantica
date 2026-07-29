@@ -3,6 +3,7 @@ import re
 from flask import Flask, jsonify, Response
 
 from app.config import Config
+from app.model import HealthResponse, IndexResponse, BlobEntry, ErrorResponse
 from shared.blob import get_store
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -21,25 +22,25 @@ def create_app(config=None):
         response.headers["Access-Control-Allow-Origin"] = "*"
         return response
 
-    @app.route('/health')
+    @app.route('/health', methods=["GET"])
     def health():
-        return jsonify({"status": "ok"}), 200
+        return jsonify(HealthResponse().to_dict()), 200
 
-    @app.route('/index.json')
+    @app.route('/index.json', methods=["GET"])
     def index():
         filenames = blob_store.list()
-        blobs = [{"filename": f} for f in filenames]
-        return jsonify({"blobs": blobs}), 200
+        body = IndexResponse(blobs=[BlobEntry(filename=f) for f in filenames])
+        return jsonify(body.to_dict()), 200
 
-    @app.route('/blobs/<date>.jsonl')
+    @app.route('/blobs/<date>.jsonl', methods=["GET"])
     def blob(date):
         if not _DATE_RE.match(date):
-            return jsonify({"error": "invalid date format"}), 400
+            return jsonify(ErrorResponse(error="invalid date format").to_dict()), 400
         filename = f"decisions_{date}.jsonl"
         try:
             handle = blob_store.read(filename)
             return Response(handle, mimetype="application/x-ndjson")
         except FileNotFoundError:
-            return jsonify({"error": "not found"}), 404
+            return jsonify(ErrorResponse(error="not found").to_dict()), 404
 
     return app

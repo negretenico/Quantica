@@ -1,4 +1,4 @@
-.PHONY: up down build test build-listener build-transformer build-bard build-risk build-trade test-listener test-transformer test-bard test-risk test-trade test-backtest test-shared
+.PHONY: up down build test build-listener build-transformer build-bard build-risk build-trade build-server test-listener test-transformer test-bard test-risk test-trade test-server test-backtest test-shared
 
 up:
 	docker compose up -d --build
@@ -6,7 +6,7 @@ up:
 down:
 	docker compose down -v
 
-build: build-listener build-transformer build-bard build-risk build-trade
+build: build-listener build-transformer build-bard build-risk build-trade build-server
 
 build-listener:
 	cd marketListener && mvn clean package -DskipTests
@@ -23,7 +23,10 @@ build-risk:
 build-trade:
 	cd markettrade && py -m pip install -e .
 
-test: test-listener test-transformer test-bard test-risk test-trade
+build-server:
+	cd marketserver && py -m pip install -r requirements.txt
+
+test: test-listener test-transformer test-bard test-risk test-trade test-server
 
 test-listener:
 	cd marketListener && mvn test
@@ -39,6 +42,9 @@ test-risk:
 
 test-trade:
 	cd markettrade && py -m pytest tests/
+
+test-server:
+	cd marketserver && py -m pytest tests/ -v
 
 test-backtest:
 	py -m pytest scripts/backtest/tests/ -v

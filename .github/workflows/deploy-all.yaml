@@ -16,5 +16,6 @@ jobs:
           gh workflow run transformer.yaml --ref main --repo ${{ github.repository }}
           gh workflow run analysis.yaml --ref main --repo ${{ github.repository }}
           gh workflow run bard.yaml --ref main --repo ${{ github.repository }}
+          gh workflow run server.yaml --ref main --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

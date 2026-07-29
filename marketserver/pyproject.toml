@@ -3,17 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "markettrade"
+name = "marketserver"
 version = "3.4.0.dev0"
-description = "Market trade service"
+description = "Blob HTTP server for serving JSON blobs"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
-    "pika==1.3.2",
+    "Flask==3.1.2",
     "python-dotenv==1.1.1",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]
-
-[tool.pytest.ini_options]
-pythonpath = ["."]

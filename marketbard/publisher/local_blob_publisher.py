@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from publisher.blob_publisher import BlobPublisher
 from publisher.blob_entry import BlobEntry, make_entry
+from shared.blob import get_store
 
 logger = logging.getLogger(__name__)
 
@@ -19,17 +20,16 @@ class LocalBlobPublisher(BlobPublisher):
         directory: folder where news update files will be written
         """
         self.directory = directory
+        self._store = get_store("disk", directory)
 
     def publish(self, story: str) -> None:
-        """Write a new dated news update file to the local directory."""
-        os.makedirs(self.directory, exist_ok=True)
+        """Append a story record to the daily NDJSON blob and update the index."""
         now = datetime.now(timezone.utc)
-        filename = f"news_{now.strftime('%Y%m%d_%H%M%S_%f')}.md"
-        path = os.path.join(self.directory, filename)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(story)
-        logger.info(f"LocalBlobPublisher: wrote {path}")
-        self._update_index(make_entry(filename))
+        record = {"content": story, "written_at": now.isoformat()}
+        self._store.write(record)
+        daily_filename = f"decisions_{now.strftime('%Y-%m-%d')}.jsonl"
+        logger.info(f"LocalBlobPublisher: wrote story to {daily_filename}")
+        self._update_index(make_entry(daily_filename))
 
     def _update_index(self, entry: BlobEntry) -> None:
         index_path = os.path.join(self.directory, _INDEX_FILENAME)

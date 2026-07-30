@@ -1,10 +1,10 @@
 .PHONY: up down build test build-listener build-transformer build-bard build-risk build-trade build-server test-listener test-transformer test-bard test-risk test-trade test-server test-backtest test-shared
 
 up:
-	docker compose up -d --build
+	docker compose up -d --build --remove-orphans
 
 down:
-	docker compose down -v
+	docker compose down -v --remove-orphans
 
 build: build-listener build-transformer build-bard build-risk build-trade build-server
 

@@ -7,6 +7,7 @@ import (
 	"marketappendonly/model"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/IBM/sarama"
 )
@@ -25,7 +26,8 @@ func NewConsumer() (*Consumer, error) {
 	if bootstrap == "" {
 		bootstrap = "localhost:9092"
 	}
-	consumer, err := sarama.NewConsumerGroup([]string{bootstrap}, "ledger", config)
+	brokers := strings.Split(bootstrap, ",")
+	consumer, err := sarama.NewConsumerGroup(brokers, "ledger", config)
 	if err != nil {
 		return nil, err
 	}

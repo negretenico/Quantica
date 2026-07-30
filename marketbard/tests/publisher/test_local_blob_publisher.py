@@ -64,34 +64,10 @@ def test_creates_directory_if_missing():
         assert len(_jsonl_files(target)) == 1
 
 
-def test_index_json_created_after_publish():
+def test_publish_does_not_write_index_json():
     with tempfile.TemporaryDirectory() as tmp:
         publisher = LocalBlobPublisher(directory=tmp)
         publisher.publish("First story.")
 
         index_path = os.path.join(tmp, "index.json")
-        assert os.path.exists(index_path)
-
-        index = json.loads(open(index_path, encoding="utf-8").read())
-        assert "blobs" in index
-        assert len(index["blobs"]) == 1
-
-        entry = index["blobs"][0]
-        assert entry["filename"].startswith("decisions_")
-        assert entry["filename"].endswith(".jsonl")
-        assert "written_at" in entry
-        assert entry["symbol_count"] == 0
-        assert entry["anomaly_count"] == 0
-
-
-def test_index_json_newest_first_across_two_writes():
-    with tempfile.TemporaryDirectory() as tmp:
-        publisher = LocalBlobPublisher(directory=tmp)
-        publisher.publish("First story.")
-        publisher.publish("Second story.")
-
-        index = json.loads(open(os.path.join(tmp, "index.json"), encoding="utf-8").read())
-        blobs = index["blobs"]
-        assert len(blobs) == 2
-        # index is prepended on each write — newest entry is first
-        assert blobs[0]["written_at"] >= blobs[1]["written_at"]
+        assert not os.path.exists(index_path), "index.json is the server's responsibility, not bard's"

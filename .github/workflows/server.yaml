@@ -1,0 +1,69 @@
+name: Market Server Service CI/CD
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+on:
+  push:
+    paths:
+      - "marketserver/**"
+      - "shared/**"
+    branches: [main, develop]
+  pull_request:
+    paths:
+      - "marketserver/**"
+      - "shared/**"
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should-build: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketserver == 'true' || steps.changes.outputs.shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            marketserver:
+              - 'marketserver/**'
+            shared:
+              - 'shared/**'
+
+  python-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.should-build == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketserver
+      python_version: "3.13"
+      test_command: "pytest tests/ -v"
+    secrets: inherit
+
+  prepare-docker-context:
+    needs: python-build
+    if: needs.check-changes.outputs.should-build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Download artifact from python-build
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: ./marketserver/
+
+  docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.should-build == 'true'
+    needs: prepare-docker-context
+    with:
+      working_directory: ./marketserver
+      dockerfile_path: ./Dockerfile
+      service_name: marketserver
+      artifact_name: python-dist
+      build_contexts: shared=./shared
+    secrets: inherit

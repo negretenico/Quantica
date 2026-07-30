@@ -106,6 +106,7 @@ services:
       context: ./markettransformer
       args:
         GITHUB_TOKEN: ${GITHUB_TOKEN}
+    container_name: quantica-markettransformer
     depends_on:
       kafka-broker-1:
         condition: service_healthy

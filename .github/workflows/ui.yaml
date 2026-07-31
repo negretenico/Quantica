@@ -38,11 +38,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: marketui/package-lock.json
-      - name: Install dependencies
-        run: cd marketui && npm ci
-      - name: Lint
-        run: cd marketui && npm run lint
-      - name: Test
-        run: cd marketui && npm test
       - name: Build
-        run: cd marketui && npm run build
+        run: make build-ui
+      - name: Test
+        run: make test-ui

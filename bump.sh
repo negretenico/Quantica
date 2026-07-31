@@ -34,7 +34,11 @@ for module in marketanalysis marketbard markettrade marketserver; do
   sed -i "s/^version = .*/version = \"${PYTHON_VERSION}\"/" "$module/pyproject.toml"
 done
 
+# Node: update version in package.json
+(cd marketui && npm version "$NEW" --no-git-tag-version --allow-same-version -q)
+
 echo ""
 echo "Done."
 echo "  Java:   $JAVA_VERSION  (marketListener, markettransformer)"
 echo "  Python: $PYTHON_VERSION  (marketanalysis, marketbard, markettrade, marketserver)"
+echo "  Node:   $NEW  (marketui)"

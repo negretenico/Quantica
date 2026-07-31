@@ -1,0 +1,44 @@
+name: Market UI CI
+permissions:
+  contents: read
+on:
+  push:
+    paths:
+      - "marketui/**"
+    branches: [main, develop]
+  pull_request:
+    paths:
+      - "marketui/**"
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should-build: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketui == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            marketui:
+              - 'marketui/**'
+
+  build:
+    needs: check-changes
+    if: needs.check-changes.outputs.should-build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: marketui/package-lock.json
+      - name: Build
+        run: make build-ui
+      - name: Test
+        run: make test-ui

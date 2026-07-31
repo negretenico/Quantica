@@ -151,7 +151,7 @@ services:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
       ANALYTICS_EXCHANGE: analytics
     volumes:
-      - ./decisions/bard:/tmp/marketbard
+      - ./decisions/bard:/app/decisions/bard
 
   markettrade:
     build:

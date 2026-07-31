@@ -64,6 +64,15 @@ def _compute_metrics(events: list, window_start: str) -> dict:
     }
 
 
+def _cap_events(events: list, cap: int) -> list:
+    """Downsample events to *cap* by taking evenly spaced items (preserves time distribution)."""
+    n = len(events)
+    if n <= cap:
+        return events
+    step = n / cap
+    return [events[int(i * step)] for i in range(cap)]
+
+
 def window_trigger():
     """Fires every WINDOW_MINUTES, drains event_buffer, puts batch on window_queue."""
     interval = Config.WINDOW_MINUTES * 60
@@ -74,15 +83,21 @@ def window_trigger():
         if not events:
             logger.debug(f"window_trigger: no events in window ending at {window_start}, skipping")
             continue
-        logger.info(f"window_trigger: {len(events)} events in window ending at {window_start}")
+        raw_count = len(events)
+        if raw_count > Config.MAX_EVENTS_PER_WINDOW:
+            logger.warning(
+                f"window_trigger: {raw_count} events exceed cap {Config.MAX_EVENTS_PER_WINDOW}, sampling down"
+            )
+            events = _cap_events(events, Config.MAX_EVENTS_PER_WINDOW)
+        logger.info(f"window_trigger: {len(events)} events (raw={raw_count}) in window ending at {window_start}")
         window_queue.put((window_start, events))
 
 
 def synthesis_trigger():
-    """Fires at 10:00 PM ET, drains summary_buffer, runs synthesis, queues narrative for GitHub."""
+    """Fires at SYNTHESIS_HOUR ET, drains summary_buffer, runs synthesis, queues narrative for disk."""
     while True:
         now = datetime.datetime.now(_ET)
-        target = now.replace(hour=16, minute=0, second=0, microsecond=0)
+        target = now.replace(hour=Config.SYNTHESIS_HOUR, minute=0, second=0, microsecond=0)
         if now >= target:
             target += datetime.timedelta(days=1)
         sleep_secs = (target - now).total_seconds()
@@ -133,6 +148,18 @@ def writer():
             logger.exception("writer: error writing narrative to GitHub")
 
 
+def _supervised_thread(target, name):
+    """Start a daemon thread that logs CRITICAL on unhandled exception."""
+    def wrapper():
+        try:
+            target()
+        except Exception:
+            logger.critical(f"THREAD DIED: {name}", exc_info=True)
+    t = threading.Thread(target=wrapper, name=name, daemon=True)
+    t.start()
+    return t
+
+
 def main():
     logger.info("Starting MarketBard")
     publisher.check_connection()
@@ -149,10 +176,10 @@ def main():
 
     rabbit_manager = RabbitClientManager(config=Config)
     rabbit_manager.subscribe(handler=signal_event_handler)
-    threading.Thread(target=window_trigger, daemon=True).start()
-    threading.Thread(target=synthesis_trigger, daemon=True).start()
-    threading.Thread(target=window_worker, daemon=True).start()
-    threading.Thread(target=writer, daemon=True).start()
+    _supervised_thread(window_trigger, "window_trigger")
+    _supervised_thread(synthesis_trigger, "synthesis_trigger")
+    _supervised_thread(window_worker, "window_worker")
+    _supervised_thread(writer, "writer")
 
     rabbit_manager.start_consuming()
 

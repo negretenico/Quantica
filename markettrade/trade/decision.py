@@ -33,5 +33,6 @@ def decide(event: dict, config: Config = None) -> dict:
         "anomaly_score": anomaly_score,
         "action": action,
         "entry_price": float(event["price"]),
+        "raw_quantity": float(event.get("quantity", 0)),
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
     }

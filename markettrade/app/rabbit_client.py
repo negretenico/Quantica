@@ -1,14 +1,14 @@
 from typing import Callable
 
 from shared.rabbitmq.consumer import RabbitConsumer
-from app.config import Config
+from app.config import RabbitMQConfig
 
 
 class SignalRabbitClient:
-    def __init__(self, config: Config):
+    def __init__(self, config: RabbitMQConfig):
         self._consumer = RabbitConsumer(
-            url=config.RABBITMQ_URL,
-            queue=config.RABBITMQ_QUEUE,
+            url=config.URL,
+            queue=config.QUEUE,
             exchange=config.SIGNAL_EXCHANGE,
             exchange_type="fanout",
         )

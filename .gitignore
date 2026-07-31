@@ -31,3 +31,8 @@ hs_err_pid*
 replay_pid*
 .claude/settings.local.json
 .claude/skills/teach
+
+# Next.js
+node_modules/
+marketui/out/
+marketui/.next/

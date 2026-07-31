@@ -5,9 +5,9 @@ import logging
 from zoneinfo import ZoneInfo
 
 from app.config import Config
-from rabbitmq.consumer import RabbitConsumer
+from shared.rabbitmq.consumer import RabbitConsumer
 from publisher.factory import build_publisher
-from rabbitmq.rabbit_client import RabbitClientManager
+from shared.rabbitmq.rabbit_client import RabbitClientManager
 from accumulator.event_buffer import EventBuffer
 from accumulator.summary_buffer import SummaryBuffer
 from model.openai_client import OpenAIClient
@@ -82,7 +82,7 @@ def synthesis_trigger():
     """Fires at 10:00 PM ET, drains summary_buffer, runs synthesis, queues narrative for GitHub."""
     while True:
         now = datetime.datetime.now(_ET)
-        target = now.replace(hour=2, minute=0, second=0, microsecond=0)
+        target = now.replace(hour=16, minute=0, second=0, microsecond=0)
         if now >= target:
             target += datetime.timedelta(days=1)
         sleep_secs = (target - now).total_seconds()

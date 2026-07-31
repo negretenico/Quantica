@@ -111,3 +111,15 @@ def test_missing_price_raises():
     del event["price"]
     with pytest.raises(ValueError, match="price"):
         decide(event)
+
+
+# --- raw_quantity ---
+
+def test_raw_quantity_from_event():
+    result = decide(_event(quantity="150.5"))
+    assert result["raw_quantity"] == 150.5
+
+
+def test_raw_quantity_defaults_to_zero():
+    result = decide(_event())
+    assert result["raw_quantity"] == 0.0

@@ -1,5 +1,5 @@
 import logging
-from rabbitmq.consumer import RabbitConsumer
+from .consumer import RabbitConsumer
 
 logger = logging.getLogger(__name__)
 

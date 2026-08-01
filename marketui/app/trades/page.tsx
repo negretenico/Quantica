@@ -11,7 +11,10 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 export default function TradesPage() {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // undefined = user hasn't interacted yet (auto-select first date)
+  // null      = user explicitly closed the panel
+  // string    = user picked a date
+  const [selectedDate, setSelectedDate] = useState<string | null | undefined>(undefined);
 
   const { data: indexData, isLoading, isError } = useQuery({
     queryKey: ["tradeIndex"],
@@ -20,8 +23,10 @@ export default function TradesPage() {
 
   const dates = indexData?.blobs.map((b) => dateFromFilename(b.filename)) ?? [];
 
-  // Auto-select first date once loaded
-  const activeDate = selectedDate ?? (dates.length > 0 ? dates[0] : null);
+  const activeDate =
+    selectedDate === undefined
+      ? dates.length > 0 ? dates[0] : null
+      : selectedDate;
 
   const { data: trades, isError: tradeError } = useQuery({
     queryKey: ["tradeBlob", activeDate],
@@ -63,7 +68,7 @@ export default function TradesPage() {
             {dates.map((d) => (
               <button
                 key={d}
-                onClick={() => setSelectedDate(d)}
+                onClick={() => setSelectedDate(activeDate === d ? null : d)}
                 className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
                   d === activeDate
                     ? "border-accent bg-accent/10 text-accent"

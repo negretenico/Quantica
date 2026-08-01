@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchIndex, dateFromFilename } from "../../lib/api";
 
 interface BlobListProps {
-  onSelectDate: (date: string) => void;
+  onSelectDate: (date: string | null) => void;
   selectedDate: string | null;
 }
 
@@ -33,7 +33,7 @@ export default function BlobList({ onSelectDate, selectedDate }: BlobListProps) 
       {dates.map((date) => (
         <button
           key={date}
-          onClick={() => onSelectDate(date)}
+          onClick={() => onSelectDate(selectedDate === date ? null : date)}
           className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
             selectedDate === date
               ? "border-accent bg-accent-dim text-accent font-medium"

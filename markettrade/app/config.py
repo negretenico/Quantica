@@ -8,8 +8,10 @@ load_dotenv()
 @dataclass
 class RabbitMQConfig:
     URL: str = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@localhost/')
-    QUEUE: str = os.environ.get('RABBITMQ_QUEUE', 'signal.trade')
-    SIGNAL_EXCHANGE: str = os.environ.get('SIGNAL_EXCHANGE', 'signal')
+    QUEUE: str = os.environ.get('RABBITMQ_QUEUE', 'analytics.trade')
+    EXCHANGE: str = os.environ.get('TRADE_EXCHANGE', 'analytics')
+    EXCHANGE_TYPE: str = os.environ.get('TRADE_EXCHANGE_TYPE', 'topic')
+    ROUTING_KEY: str = os.environ.get('TRADE_ROUTING_KEY', 'signal.analytics.#')
 
 
 @dataclass

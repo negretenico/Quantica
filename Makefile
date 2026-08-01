@@ -1,4 +1,4 @@
-.PHONY: up down dev-ui build test build-listener build-transformer build-bard build-risk build-trade build-server build-ui test-listener test-transformer test-bard test-risk test-trade test-server test-ui test-backtest test-shared
+.PHONY: up down dev-ui run-server build test build-listener build-transformer build-bard build-risk build-trade build-server build-ui test-listener test-transformer test-bard test-risk test-trade test-server test-ui test-backtest test-shared
 
 up:
 	docker compose up -d --build --remove-orphans
@@ -8,6 +8,9 @@ down:
 
 dev-ui:
 	cd marketui && npm run dev
+
+run-server:
+	cd marketserver && py run.py
 
 build: build-listener build-transformer build-bard build-risk build-trade build-server build-ui
 

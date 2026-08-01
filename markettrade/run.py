@@ -6,6 +6,7 @@ from app.rabbit_client import SignalRabbitClient
 from marketrisk.risk.engine import RiskEngine
 from marketrisk.risk.models import ProposedAction
 from shared.blob import get_store
+from shared.dedup import DedupFilter
 from trade.decision import decide
 
 logging.basicConfig(
@@ -20,8 +21,13 @@ def main():
     client = SignalRabbitClient(config.rabbitmq)
     risk_engine = RiskEngine(config.risk)
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
+    dedup = DedupFilter()
 
     def handle_message(payload):
+        if dedup.is_duplicate(payload):
+            logger.debug("Duplicate event dropped: %s", payload.get("symbol"))
+            return
+
         logger.debug(
             "Received signal — symbol=%s type=%s",
             payload.get("symbol"),

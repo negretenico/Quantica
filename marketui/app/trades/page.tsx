@@ -1,4 +1,34 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchTradeIndex, fetchTradeBlob, dateFromFilename } from "../../lib/api";
+
+const ACTION_COLORS: Record<string, string> = {
+  BUY: "text-green",
+  SELL: "text-red",
+  HOLD: "text-muted",
+};
+
 export default function TradesPage() {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const { data: indexData, isLoading, isError } = useQuery({
+    queryKey: ["tradeIndex"],
+    queryFn: fetchTradeIndex,
+  });
+
+  const dates = indexData?.blobs.map((b) => dateFromFilename(b.filename)) ?? [];
+
+  // Auto-select first date once loaded
+  const activeDate = selectedDate ?? (dates.length > 0 ? dates[0] : null);
+
+  const { data: trades, isError: tradeError } = useQuery({
+    queryKey: ["tradeBlob", activeDate],
+    queryFn: () => fetchTradeBlob(activeDate!),
+    enabled: !!activeDate,
+  });
+
   return (
     <div>
       <h1 className="mb-2 text-2xl font-semibold">Trade Recommendations</h1>
@@ -13,9 +43,95 @@ export default function TradesPage() {
         based on this data.
       </div>
 
-      <div className="rounded-md border border-border bg-surface p-8 text-center text-muted">
-        Trades coming soon — will display recommendations from markettrade.
-      </div>
+      {isLoading && <p className="text-muted">Loading...</p>}
+
+      {isError && !isLoading && (
+        <div className="rounded-md border border-border bg-surface p-8 text-center text-muted">
+          Could not reach server
+        </div>
+      )}
+
+      {!isLoading && !isError && dates.length === 0 && (
+        <div className="rounded-md border border-border bg-surface p-8 text-center text-muted">
+          No trade data yet.
+        </div>
+      )}
+
+      {dates.length > 0 && (
+        <>
+          <div className="mb-6 flex flex-wrap gap-2">
+            {dates.map((d) => (
+              <button
+                key={d}
+                onClick={() => setSelectedDate(d)}
+                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                  d === activeDate
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-border bg-surface text-muted hover:border-accent"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+
+          {tradeError && (
+            <div className="rounded-md border border-red/30 bg-red/5 p-4 text-sm text-red">
+              Failed to load trades for {activeDate}.
+            </div>
+          )}
+
+          {trades && trades.length > 0 && (
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-surface text-left text-muted">
+                    <th className="px-4 py-2">Time (UTC)</th>
+                    <th className="px-4 py-2">Symbol</th>
+                    <th className="px-4 py-2">Action</th>
+                    <th className="px-4 py-2">Signal</th>
+                    <th className="px-4 py-2 text-right">Entry Price</th>
+                    <th className="px-4 py-2 text-right">Quantity</th>
+                    <th className="px-4 py-2 text-right">Anomaly</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trades.map((t, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-border last:border-0 hover:bg-surface/50"
+                    >
+                      <td className="px-4 py-2 font-mono text-xs text-muted">
+                        {new Date(t.timestamp_utc).toLocaleTimeString()}
+                      </td>
+                      <td className="px-4 py-2 font-medium">{t.symbol}</td>
+                      <td className={`px-4 py-2 font-semibold ${ACTION_COLORS[t.action] || "text-foreground"}`}>
+                        {t.action}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted">
+                        {t.signal_type.replace(/_/g, " ")}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {t.entry_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {t.sized_quantity.toFixed(4)}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono text-xs">
+                        {t.anomaly_score.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeDate && trades && trades.length === 0 && !tradeError && (
+            <p className="text-muted">No trades for {activeDate}.</p>
+          )}
+        </>
+      )}
     </div>
   );
 }

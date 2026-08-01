@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from app.config import Config
 from shared.rabbitmq.consumer import RabbitConsumer
+from shared.dedup import DedupFilter
 from publisher.factory import build_publisher
 from shared.rabbitmq.rabbit_client import RabbitClientManager
 from accumulator.event_buffer import EventBuffer
@@ -33,9 +34,13 @@ _ET = ZoneInfo("America/New_York")
 
 # Latest enrichment (cluster_id, anomaly_score) per symbol, populated by analytics consumer
 _enrichment_cache: dict = {}
+_analytics_dedup = DedupFilter()
+_signal_dedup = DedupFilter()
 
 
 def analytics_handler(payload):
+    if _analytics_dedup.is_duplicate(payload):
+        return
     symbol = payload.get("symbol")
     if symbol:
         _enrichment_cache[symbol] = payload
@@ -43,6 +48,8 @@ def analytics_handler(payload):
 
 
 def signal_event_handler(event):
+    if _signal_dedup.is_duplicate(event):
+        return
     symbol = event.get("symbol")
     enriched = _enrichment_cache.get(symbol)
     if enriched:

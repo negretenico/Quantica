@@ -186,6 +186,37 @@ services:
     environment:
       KAFKA_BOOTSTRAP: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
 
+  marketserver:
+    build:
+      context: ./marketserver
+      additional_contexts:
+        shared: ./shared
+    container_name: quantica-marketserver
+    depends_on:
+      markettrade:
+        condition: service_started
+      marketbard:
+        condition: service_started
+    environment:
+      BLOB_STORE_PATH: /data/bard
+      TRADE_BLOB_STORE_PATH: /data/trade
+    volumes:
+      - ./decisions/bard:/data/bard
+      - ./decisions/trade:/data/trade
+    ports:
+      - "5001:5001"
+
+  marketui:
+    build:
+      context: ./marketui
+      args:
+        NEXT_PUBLIC_DATA_BASE_URL: http://localhost:5001
+    container_name: quantica-marketui
+    depends_on:
+      - marketserver
+    ports:
+      - "3001:3001"
+
   prometheus:
     image: prom/prometheus:latest
     container_name: quantica-prometheus

@@ -1,0 +1,73 @@
+version: 2
+updates:
+  # Java — marketListener
+  - package-ecosystem: "maven"
+    directory: "/marketListener"
+    schedule:
+      interval: "weekly"
+
+  # Java — markettransformer
+  - package-ecosystem: "maven"
+    directory: "/markettransformer"
+    schedule:
+      interval: "weekly"
+
+  # Python — marketanalysis
+  - package-ecosystem: "pip"
+    directory: "/marketanalysis"
+    schedule:
+      interval: "weekly"
+
+  # Python — marketbard
+  - package-ecosystem: "pip"
+    directory: "/marketbard"
+    schedule:
+      interval: "weekly"
+
+  # Python — markettrade
+  - package-ecosystem: "pip"
+    directory: "/markettrade"
+    schedule:
+      interval: "weekly"
+
+  # Python — marketrisk
+  - package-ecosystem: "pip"
+    directory: "/marketrisk"
+    schedule:
+      interval: "weekly"
+
+  # Python — marketnotify
+  - package-ecosystem: "pip"
+    directory: "/marketnotify"
+    schedule:
+      interval: "weekly"
+
+  # Python — marketserver
+  - package-ecosystem: "pip"
+    directory: "/marketserver"
+    schedule:
+      interval: "weekly"
+
+  # Python — shared
+  - package-ecosystem: "pip"
+    directory: "/shared"
+    schedule:
+      interval: "weekly"
+
+  # Node — marketui
+  - package-ecosystem: "npm"
+    directory: "/marketui"
+    schedule:
+      interval: "weekly"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"

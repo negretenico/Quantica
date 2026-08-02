@@ -76,6 +76,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit loopback_users none"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -88,6 +89,7 @@ services:
       args:
         GITHUB_TOKEN: ${GITHUB_TOKEN}
     container_name: quantica-marketlistener
+    restart: unless-stopped
     depends_on:
       kafka-broker-1:
         condition: service_healthy
@@ -107,6 +109,7 @@ services:
       args:
         GITHUB_TOKEN: ${GITHUB_TOKEN}
     container_name: quantica-markettransformer
+    restart: unless-stopped
     depends_on:
       kafka-broker-1:
         condition: service_healthy
@@ -128,6 +131,7 @@ services:
       additional_contexts:
         shared: ./shared
     container_name: quantica-marketanalysis
+    restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -143,6 +147,7 @@ services:
       additional_contexts:
         shared: ./shared
     container_name: quantica-marketbard
+    restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -160,6 +165,7 @@ services:
         shared: ./shared
         marketrisk: ./marketrisk
     container_name: quantica-markettrade
+    restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -178,6 +184,7 @@ services:
     build:
       context: ./marketappendonly
     container_name: quantica-marketappendonly
+    restart: unless-stopped
     depends_on:
       kafka-broker-1:
         condition: service_healthy

@@ -23,6 +23,10 @@ def main():
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
     dedup = DedupFilter()
 
+    # Track which (symbol, reason) pairs have already been logged to avoid
+    # flooding with thousands of identical rejection lines.
+    _rejected_logged: set[tuple[str, str]] = set()
+
     def handle_message(payload):
         if dedup.is_duplicate(payload):
             logger.debug("Duplicate event dropped: %s", payload.get("symbol"))
@@ -51,12 +55,15 @@ def main():
         risk_decision = risk_engine.evaluate(proposed)
 
         if not risk_decision.approved:
-            logger.warning(
-                "Risk REJECTED — symbol=%s action=%s reason=%s",
-                decision["symbol"],
-                decision["action"],
-                risk_decision.rejection_reason,
-            )
+            key = (decision["symbol"], risk_decision.rejection_reason)
+            if key not in _rejected_logged:
+                logger.warning(
+                    "Risk REJECTED — symbol=%s action=%s reason=%s (further duplicates suppressed)",
+                    decision["symbol"],
+                    decision["action"],
+                    risk_decision.rejection_reason,
+                )
+                _rejected_logged.add(key)
             return
 
         decision["risk_approved"] = True

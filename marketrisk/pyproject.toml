@@ -12,14 +12,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
-
-[tool.hatch.build.targets.wheel.shared-data]
-
-[tool.hatch.build.force-include]
-"__init__.py" = "marketrisk/__init__.py"
-"risk" = "marketrisk/risk"
-"app" = "marketrisk/app"
+packages = ["marketrisk"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -1,8 +1,8 @@
 import pytest
 
-from app.config import Config
+from marketrisk.app.config import Config
 from marketrisk.risk.models import ProposedAction
-from risk.engine import RiskEngine
+from marketrisk.risk.engine import RiskEngine
 
 
 def _make_action(symbol: str = "AAPL", raw_quantity: float = 100.0) -> ProposedAction:

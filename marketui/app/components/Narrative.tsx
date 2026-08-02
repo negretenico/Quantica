@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { Suspense } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import { fetchBlob } from "../../lib/api";
 
@@ -8,26 +9,13 @@ interface NarrativeProps {
   date: string;
 }
 
-export default function Narrative({ date }: NarrativeProps) {
-  const { data: records, isLoading, isError } = useQuery({
+function NarrativeContent({ date }: NarrativeProps) {
+  const { data: records } = useSuspenseQuery({
     queryKey: ["blob", date],
     queryFn: () => fetchBlob(date),
-    enabled: !!date,
   });
 
-  if (isLoading) {
-    return <p className="text-sm text-muted">Loading narratives...</p>;
-  }
-
-  if (isError) {
-    return (
-      <div className="rounded-md border border-red/30 bg-red/5 p-4 text-sm text-red">
-        Failed to load narratives for {date}.
-      </div>
-    );
-  }
-
-  if (!records || records.length === 0) {
+  if (records.length === 0) {
     return (
       <div className="rounded-md border border-border bg-surface p-4 text-center text-sm text-muted">
         No narratives for {date}.
@@ -51,5 +39,15 @@ export default function Narrative({ date }: NarrativeProps) {
         </article>
       ))}
     </div>
+  );
+}
+
+export default function Narrative({ date }: NarrativeProps) {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-muted">Loading narratives...</p>}
+    >
+      <NarrativeContent date={date} />
+    </Suspense>
   );
 }

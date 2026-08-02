@@ -1,14 +1,11 @@
-/** Response from GET /health */
 export interface HealthResponse {
   status: string;
 }
 
-/** Single blob file entry from GET /index.json */
 export interface BlobEntry {
   filename: string;
 }
 
-/** Response from GET /index.json */
 export interface IndexResponse {
   blobs: BlobEntry[];
 }

@@ -184,6 +184,24 @@ services:
     volumes:
       - ./decisions/trade:/app/decisions
 
+  marketnotify:
+    build:
+      context: ./marketnotify
+      additional_contexts:
+        shared: ./shared
+    container_name: quantica-marketnotify
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
+      NOTIFY_EXCHANGE: notifications
+      SIGNAL_EXCHANGE: signal
+    ports:
+      - "8000"
+
   marketappendonly:
     build:
       context: ./marketappendonly

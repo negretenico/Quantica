@@ -1,0 +1,35 @@
+name: CI — marketnotify
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "marketnotify/**"
+      - "shared/**"
+  pull_request:
+    paths:
+      - "marketnotify/**"
+      - "shared/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install shared
+        run: pip install -e shared/
+
+      - name: Install dependencies
+        run: pip install -r marketnotify/requirements.txt
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run tests
+        run: cd marketnotify && python -m pytest tests/ -v

@@ -7,9 +7,10 @@ logger = logging.getLogger(__name__)
 
 
 class RabbitPublisher:
-    def __init__(self, url: str, exchange: str):
+    def __init__(self, url: str, exchange: str, exchange_type: str = "topic"):
         self._url = url
         self._exchange = exchange
+        self._exchange_type = exchange_type
         self._connection = None
         self._channel = None
 
@@ -17,6 +18,11 @@ class RabbitPublisher:
         if self._channel is None or self._channel.is_closed:
             self._connection = pika.BlockingConnection(pika.URLParameters(self._url))
             self._channel = self._connection.channel()
+            self._channel.exchange_declare(
+                exchange=self._exchange,
+                exchange_type=self._exchange_type,
+                durable=True,
+            )
 
     def publish(self, routing_key: str, payload: dict):
         self._ensure_connected()

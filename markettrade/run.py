@@ -1,5 +1,6 @@
 import logging
 import threading
+from datetime import datetime, timezone
 
 from app.config import Config
 from app.metrics import (
@@ -15,6 +16,7 @@ from marketrisk.risk.engine import RiskEngine
 from marketrisk.risk.models import ProposedAction
 from shared.blob import get_store
 from shared.dedup import DedupFilter
+from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 
 logging.basicConfig(
@@ -30,6 +32,11 @@ def main():
     risk_engine = RiskEngine(config.risk)
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
     dedup = DedupFilter()
+
+    notify_publisher = RabbitPublisher(
+        url=config.rabbitmq.URL,
+        exchange="notifications",
+    )
 
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
@@ -91,7 +98,29 @@ def main():
 
         decision["risk_approved"] = True
         decision["sized_quantity"] = risk_decision.sized_quantity
-        store.write(decision)
+        try:
+            store.write(decision)
+            try:
+                notify_publisher.publish("publish.markettrade", {
+                    "type": "publish_success",
+                    "source": "markettrade",
+                    "symbol": decision["symbol"],
+                    "action": decision["action"],
+                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                })
+            except Exception:
+                logger.debug("Failed to publish notification event")
+        except Exception as e:
+            try:
+                notify_publisher.publish("publish.markettrade", {
+                    "type": "publish_failure",
+                    "source": "markettrade",
+                    "error": str(e),
+                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                })
+            except Exception:
+                logger.debug("Failed to publish failure notification event")
+            raise
 
     client.subscribe(handle_message)
     client.start_consuming()

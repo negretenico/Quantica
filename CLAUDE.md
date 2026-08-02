@@ -15,6 +15,8 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `marketappendonly` | Go 1.24 / Sarama | Append-only audit ledger | Kafka `order` → `history.log` |
 | `markettrade` | Python 3.13 | Trade execution worker | RabbitMQ `signal.trade` queue → blob store |
 | `marketrisk` | Python 3.13 | **Internal library** — risk cap evaluation | consumed by `markettrade` (not a runnable binary) |
+| `marketserver` | Python 3.13 / Flask | REST API serving blob data | reads `decisions/bard/` + `decisions/trade/` → HTTP |
+| `marketui` | TypeScript / Next.js 15 | Dashboard UI | fetches from `marketserver` HTTP API |
 
 ### RabbitMQ Architecture
 
@@ -96,8 +98,13 @@ make build-risk       && make test-risk
 make build-trade      && make test-trade
 
 # Docker
-make up    # start all containers
+make up    # start all containers (builds all images)
 make down  # stop and remove volumes
+
+# Ops
+make info    # show all service URLs + container status
+make logs    # tail all container logs
+make health  # quick container health overview
 ```
 
 ---
@@ -121,8 +128,41 @@ make down  # stop and remove volumes
 - **Threading** for concurrent workers — `threading.Thread(target=..., daemon=True)`.
 - **kafka-python-ng** as the Kafka client.
 - **No Flask for marketbard** — it's a pure worker process; Flask is only in marketanalysis for health/monitoring endpoints.
-- **Shared RabbitMQ primitives** live in `shared/rabbitmq/` — `RabbitConsumer` and `RabbitPublisher`. Consumers declare their own exchange + queue + binding on startup.
 - **Python command on Windows** — always use `py` (Windows Launcher), never bare `python` or `python3`. MSYS2 puts its own `python` first on PATH and it lacks project dependencies. `py` always resolves to the correct registered Python. Use `py run.py`, `py -m pytest`, `py -m pip`.
+
+### Shared Libraries (`shared/`)
+
+All Python modules that consume from RabbitMQ depend on `shared/` (`pip install -e shared/` or `conftest.py` path injection).
+
+- **`shared/rabbitmq/`** — `RabbitConsumer` and `RabbitPublisher`. Consumers declare their own exchange + queue + binding on startup.
+- **`shared/dedup.py`** — `DedupFilter` — bounded in-memory FIFO dedup keyed on `symbol|eventTime|type`. **Every RabbitMQ consumer must use it** to guard against duplicate delivery. Import: `from shared.dedup import DedupFilter`.
+- **`shared/blob/`** — `get_store(backend, path)` factory for blob persistence. Currently supports `disk` backend; production will likely add an `s3` backend. Import: `from shared.blob import get_store`.
+
+### Prometheus Metrics
+
+- Use `prometheus_client` (`Counter`, `Histogram`, `start_http_server`).
+- Define all metrics as module-level constants in `app/metrics.py`.
+- **Every new hot-path feature must add Prometheus metrics** — counters for events/decisions/errors, histograms for latency. Don't defer instrumentation to a later PR.
+- Expose metrics on port `8000` via `start_http_server`.
+
+### Log Throttling
+
+For high-throughput consumers, throttle repetitive log messages (e.g. risk rejections) by tracking `set[tuple[str, str]]` of already-logged `(symbol, reason)` pairs. Log once per unique combination, then suppress duplicates.
+
+### Internal Library Packaging
+
+`marketrisk` uses a **nested package layout** (`marketrisk/marketrisk/`) for hatchling/sdist compatibility. Imports use the fully qualified path: `from marketrisk.risk.engine import RiskEngine`. Do not use `force-include` hacks in `pyproject.toml`.
+
+## Next.js / React Conventions (marketui)
+
+- **Next.js 15** with App Router (`app/` directory). All pages are `"use client"`.
+- **TanStack React Query** for all data fetching — no `useEffect` + `fetch`. Configured via `Providers` wrapper in `app/providers.tsx` with `QueryClient` (30s staleTime, 1 retry).
+- **`useQuery`** for index/list fetches; **`useSuspenseQuery`** for detail views wrapped in `<Suspense>` boundaries. Use `select` in `useQuery` options for data transformation — don't transform in the component.
+- **Custom hooks in `lib/`** — shared UI logic lives in `lib/` (e.g. `useDateSelector.ts`). API functions live in `lib/api.ts`, types in `lib/types.ts`.
+- **Config** — `NEXT_PUBLIC_DATA_BASE_URL` for the API base URL, read in `app/config.ts`.
+- **Dual output mode** — `NEXT_OUTPUT=standalone` for Docker, default `export` for GitHub Pages. `NEXT_PUBLIC_BASE_PATH` sets the Pages path prefix.
+- **Styling** — Tailwind CSS with custom semantic color tokens (`text-muted`, `bg-surface`, `border-border`, `text-accent`, `text-green`, `text-red`, `text-orange`). No component library.
+- **Components** — small, focused components in `app/components/`. Suspense-backed components split into inner (`Content`) + outer (wrapper with `<Suspense fallback>`).
 
 ## Go Conventions (marketappendonly)
 
@@ -137,4 +177,3 @@ make down  # stop and remove volumes
 - `functionico` — internal functional library, hosted on GitHub Packages. Requires `GITHUB_TOKEN` in Maven settings for resolution.
 - `marketbard` requires `OPENAI_API_KEY` and `GITHUB_TOKEN` in `.env`.
 - All modules require a running Kafka cluster at `localhost:9092` (configurable via `kafka.bootstrap` for Java, env var for Python/Go).
-- All Python modules that consume from RabbitMQ require `shared/` to be on the Python path (`pip install -e shared/` or via `conftest.py` path injection in tests).

@@ -2,6 +2,14 @@ import logging
 import threading
 
 from app.config import Config
+from app.metrics import (
+    decisions_total,
+    duplicates_dropped_total,
+    events_received_total,
+    observe_tick_to_trade,
+    risk_rejections_total,
+    start_metrics_server,
+)
 from app.rabbit_client import SignalRabbitClient
 from marketrisk.risk.engine import RiskEngine
 from marketrisk.risk.models import ProposedAction
@@ -23,12 +31,18 @@ def main():
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
     dedup = DedupFilter()
 
+    start_metrics_server()
+    logger.info("Prometheus metrics server started on :8000")
+
     # Track which (symbol, reason) pairs have already been logged to avoid
     # flooding with thousands of identical rejection lines.
     _rejected_logged: set[tuple[str, str]] = set()
 
     def handle_message(payload):
+        events_received_total.inc()
+
         if dedup.is_duplicate(payload):
+            duplicates_dropped_total.inc()
             logger.debug("Duplicate event dropped: %s", payload.get("symbol"))
             return
 
@@ -38,7 +52,12 @@ def main():
             payload.get("type"),
         )
 
+        observe_tick_to_trade(payload)
+
         decision = decide(payload, config)
+        decisions_total.labels(
+            symbol=decision["symbol"], action=decision["action"]
+        ).inc()
 
         if decision["action"] == "HOLD":
             logger.debug("HOLD — skipping risk evaluation for %s", decision["symbol"])
@@ -55,6 +74,10 @@ def main():
         risk_decision = risk_engine.evaluate(proposed)
 
         if not risk_decision.approved:
+            risk_rejections_total.labels(
+                symbol=decision["symbol"],
+                reason=risk_decision.rejection_reason,
+            ).inc()
             key = (decision["symbol"], risk_decision.rejection_reason)
             if key not in _rejected_logged:
                 logger.warning(

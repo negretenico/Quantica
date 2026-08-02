@@ -5,6 +5,17 @@ import logging
 from zoneinfo import ZoneInfo
 
 from app.config import Config
+from app.metrics import (
+    analytics_received_total,
+    duplicates_dropped_total,
+    event_buffer_size,
+    observe_tick_to_bard,
+    signals_received_total,
+    start_metrics_server,
+    summary_buffer_size,
+    syntheses_completed_total,
+    windows_processed_total,
+)
 from shared.rabbitmq.consumer import RabbitConsumer
 from shared.dedup import DedupFilter
 from publisher.factory import build_publisher
@@ -39,7 +50,9 @@ _signal_dedup = DedupFilter()
 
 
 def analytics_handler(payload):
+    analytics_received_total.inc()
     if _analytics_dedup.is_duplicate(payload):
+        duplicates_dropped_total.labels(source="analytics").inc()
         return
     symbol = payload.get("symbol")
     if symbol:
@@ -48,14 +61,18 @@ def analytics_handler(payload):
 
 
 def signal_event_handler(event):
+    signals_received_total.inc()
     if _signal_dedup.is_duplicate(event):
+        duplicates_dropped_total.labels(source="signal").inc()
         return
+    observe_tick_to_bard(event)
     symbol = event.get("symbol")
     enriched = _enrichment_cache.get(symbol)
     if enriched:
         event = {**event, "cluster_id": enriched.get("cluster_id"), "anomaly_score": enriched.get("anomaly_score")}
         logger.info(f"Enriched signal: symbol={symbol} cluster={enriched.get('cluster_id')} anomaly={enriched.get('anomaly_score'):.4f}")
     event_buffer.add(event)
+    event_buffer_size.set(len(event_buffer))
 
 
 def _compute_metrics(events: list, window_start: str) -> dict:
@@ -90,6 +107,7 @@ def window_trigger():
         if not events:
             logger.debug(f"window_trigger: no events in window ending at {window_start}, skipping")
             continue
+        event_buffer_size.set(0)
         raw_count = len(events)
         if raw_count > Config.MAX_EVENTS_PER_WINDOW:
             logger.warning(
@@ -111,6 +129,7 @@ def synthesis_trigger():
         logger.info(f"synthesis_trigger: next synthesis in {sleep_secs / 3600:.1f}h at market close")
         threading.Event().wait(timeout=sleep_secs)
         summaries = summary_buffer.drain()
+        summary_buffer_size.set(0)
         if not summaries:
             logger.info("synthesis_trigger: no window summaries accumulated today, skipping")
             continue
@@ -119,6 +138,7 @@ def synthesis_trigger():
             prompt = build_synthesis_prompt(summaries)
             narrative = openai_client.create_synthesis(prompt, max_tokens=Config.SYNTHESIS_MAX_TOKENS)
             write_queue.put(narrative)
+            syntheses_completed_total.inc()
             logger.info("synthesis_trigger: synthesis queued for writing")
         except Exception:
             logger.exception("synthesis_trigger: error during synthesis")
@@ -139,6 +159,8 @@ def window_worker():
                 "metrics": metrics,
             }
             summary_buffer.add(summary)
+            summary_buffer_size.set(len(summary_buffer))
+            windows_processed_total.labels(category=result["category"]).inc()
             logger.info(f"window_worker: summary added for window {window_start} [{result['category']}]")
         except Exception:
             logger.exception("window_worker: error processing window")
@@ -169,6 +191,8 @@ def _supervised_thread(target, name):
 
 def main():
     logger.info("Starting MarketBard")
+    start_metrics_server()
+    logger.info("Prometheus metrics server started on :8001")
     publisher.check_connection()
 
     analytics_consumer = RabbitConsumer(

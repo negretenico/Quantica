@@ -155,6 +155,8 @@ services:
     environment:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
       ANALYTICS_EXCHANGE: analytics
+    ports:
+      - "8001:8001"
     volumes:
       - ./decisions/bard:/app/decisions/bard
 
@@ -177,6 +179,8 @@ services:
       TRADE_ROUTING_KEY: "signal.analytics.#"
       BLOB_STORE_PATH: /app/decisions
       BLOB_STORE_BACKEND: disk
+    ports:
+      - "8000:8000"
     volumes:
       - ./decisions/trade:/app/decisions
 

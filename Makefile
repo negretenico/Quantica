@@ -1,4 +1,4 @@
-.PHONY: up down dev-ui run-server build test build-listener build-transformer build-bard build-risk build-trade build-server build-ui test-listener test-transformer test-bard test-risk test-trade test-server test-ui test-backtest test-shared info logs health
+.PHONY: up down dev-ui run-server run-notify build test build-listener build-transformer build-bard build-risk build-trade build-notify build-server build-ui test-listener test-transformer test-bard test-risk test-trade test-notify test-server test-ui test-backtest test-shared info logs health
 
 up:
 	docker compose up -d --build --remove-orphans
@@ -12,7 +12,10 @@ dev-ui:
 run-server:
 	cd marketserver && py run.py
 
-build: build-listener build-transformer build-bard build-risk build-trade build-server build-ui
+run-notify:
+	cd marketnotify && py run.py
+
+build: build-listener build-transformer build-bard build-risk build-trade build-notify build-server build-ui
 
 build-listener:
 	cd marketListener && mvn clean package -DskipTests
@@ -29,13 +32,16 @@ build-risk:
 build-trade:
 	cd markettrade && py -m pip install -e .
 
+build-notify:
+	cd marketnotify && py -m pip install -r requirements.txt
+
 build-server:
 	cd marketserver && py -m pip install -r requirements.txt
 
 build-ui:
 	cd marketui && npm ci && npm run build
 
-test: test-listener test-transformer test-bard test-risk test-trade test-server test-ui
+test: test-listener test-transformer test-bard test-risk test-trade test-notify test-server test-ui
 
 test-listener:
 	cd marketListener && mvn test
@@ -51,6 +57,9 @@ test-risk:
 
 test-trade:
 	cd markettrade && py -m pytest tests/
+
+test-notify:
+	cd marketnotify && py -m pytest tests/ -v
 
 test-server:
 	cd marketserver && py -m pytest tests/ -v
@@ -75,6 +84,7 @@ info:
 	@echo   marketListener        http://localhost:8080
 	@echo   marketanalysis        http://localhost:5000
 	@echo   marketserver [API]    http://localhost:5001
+	@echo   marketnotify          [internal - Discord webhooks]
 	@echo   marketui              http://localhost:3001
 	@echo   Prometheus            http://localhost:9090
 	@echo   Grafana               http://localhost:3000

@@ -2,6 +2,7 @@ import queue
 import threading
 import datetime
 import logging
+from datetime import timezone
 from zoneinfo import ZoneInfo
 
 from app.config import Config
@@ -17,6 +18,7 @@ from app.metrics import (
     windows_processed_total,
 )
 from shared.rabbitmq.consumer import RabbitConsumer
+from shared.rabbitmq.publisher import RabbitPublisher
 from shared.dedup import DedupFilter
 from publisher.factory import build_publisher
 from shared.rabbitmq.rabbit_client import RabbitClientManager
@@ -35,6 +37,10 @@ event_buffer = EventBuffer()
 summary_buffer = SummaryBuffer(maxlen=Config.MAX_SUMMARY_BUFFER)
 openai_client = OpenAIClient(Config.OPEN_AI_TOKEN)
 publisher = build_publisher()
+notify_publisher = RabbitPublisher(
+    url=Config.RABBITMQ_URL,
+    exchange="notifications",
+)
 
 # window_queue: (window_start: str, events: list) tuples from window_trigger
 # write_queue: final narrative strings ready for GitHub commit
@@ -173,8 +179,26 @@ def writer():
             narrative = write_queue.get()
             publisher.publish(narrative)
             logger.info("writer: published daily narrative")
-        except Exception:
+            try:
+                notify_publisher.publish("publish.marketbard", {
+                    "type": "publish_success",
+                    "source": "marketbard",
+                    "action": "synthesis_write",
+                    "timestamp_utc": datetime.datetime.now(timezone.utc).isoformat(),
+                })
+            except Exception:
+                logger.debug("Failed to publish notification event")
+        except Exception as e:
             logger.exception("writer: error writing narrative to GitHub")
+            try:
+                notify_publisher.publish("publish.marketbard", {
+                    "type": "publish_failure",
+                    "source": "marketbard",
+                    "error": str(e),
+                    "timestamp_utc": datetime.datetime.now(timezone.utc).isoformat(),
+                })
+            except Exception:
+                logger.debug("Failed to publish failure notification event")
 
 
 def _supervised_thread(target, name):

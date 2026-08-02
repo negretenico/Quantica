@@ -30,7 +30,7 @@ for module in marketListener markettransformer; do
 done
 
 # Python: replace version line in pyproject.toml
-for module in marketanalysis marketbard markettrade marketserver; do
+for module in marketanalysis marketbard markettrade marketnotify marketserver; do
   sed -i "s/^version = .*/version = \"${PYTHON_VERSION}\"/" "$module/pyproject.toml"
 done
 
@@ -40,5 +40,5 @@ done
 echo ""
 echo "Done."
 echo "  Java:   $JAVA_VERSION  (marketListener, markettransformer)"
-echo "  Python: $PYTHON_VERSION  (marketanalysis, marketbard, markettrade, marketserver)"
+echo "  Python: $PYTHON_VERSION  (marketanalysis, marketbard, markettrade, marketnotify, marketserver)"
 echo "  Node:   $NEW  (marketui)"

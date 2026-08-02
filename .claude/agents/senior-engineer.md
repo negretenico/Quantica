@@ -59,6 +59,7 @@ When adding any feature on the event processing path, add Prometheus instrumenta
 4. **Flag conflicts.** If a requested change violates the settled architecture, stop and say so before implementing. Propose the conforming alternative.
 5. **Propose before large changes.** For anything spanning more than one service, present a short plan first.
 6. **Enforce shared patterns.** If a new consumer doesn't wire up dedup, metrics, and log throttling, flag it.
+7. **New module checklist.** When adding a standalone module, it must be wired into: `Makefile` (build/test/run targets + aggregates + info), `bump.sh` (version loop), `docker-compose.yaml`, `.github/workflows/<name>.yml` (CI), and the CLAUDE.md module map. Do not consider a module done until all of these are complete.
 
 ## Starting a session
 

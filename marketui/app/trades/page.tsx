@@ -1,4 +1,86 @@
+"use client";
+
+import { Suspense } from "react";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { fetchTradeIndex, fetchTradeBlob, dateFromFilename } from "../../lib/api";
+import { useDateSelector } from "../../lib/useDateSelector";
+
+const ACTION_COLORS: Record<string, string> = {
+  BUY: "text-green",
+  SELL: "text-red",
+  HOLD: "text-muted",
+};
+
+function TradeTable({ date }: { date: string }) {
+  const { data: trades } = useSuspenseQuery({
+    queryKey: ["tradeBlob", date],
+    queryFn: () => fetchTradeBlob(date),
+  });
+
+  if (trades.length === 0) {
+    return <p className="text-muted">No trades for {date}.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-surface text-left text-muted">
+            <th className="px-4 py-2">Time (UTC)</th>
+            <th className="px-4 py-2">Symbol</th>
+            <th className="px-4 py-2">Action</th>
+            <th className="px-4 py-2">Signal</th>
+            <th className="px-4 py-2 text-right">Entry Price</th>
+            <th className="px-4 py-2 text-right">Quantity</th>
+            <th className="px-4 py-2 text-right">Anomaly</th>
+          </tr>
+        </thead>
+        <tbody>
+          {trades.map((t, i) => (
+            <tr
+              key={i}
+              className="border-b border-border last:border-0 hover:bg-surface/50"
+            >
+              <td className="px-4 py-2 font-mono text-xs text-muted">
+                {new Date(t.timestamp_utc).toLocaleTimeString()}
+              </td>
+              <td className="px-4 py-2 font-medium">{t.symbol}</td>
+              <td
+                className={`px-4 py-2 font-semibold ${ACTION_COLORS[t.action] || "text-foreground"}`}
+              >
+                {t.action}
+              </td>
+              <td className="px-4 py-2 text-xs text-muted">
+                {t.signal_type.replace(/_/g, " ")}
+              </td>
+              <td className="px-4 py-2 text-right font-mono">
+                {t.entry_price.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </td>
+              <td className="px-4 py-2 text-right font-mono">
+                {t.sized_quantity.toFixed(4)}
+              </td>
+              <td className="px-4 py-2 text-right font-mono text-xs">
+                {t.anomaly_score.toFixed(2)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function TradesPage() {
+  const { data: dates = [], isError } = useQuery({
+    queryKey: ["tradeIndex"],
+    queryFn: fetchTradeIndex,
+    select: (data) => data.blobs.map((b) => dateFromFilename(b.filename)),
+  });
+
+  const { activeDate, toggle } = useDateSelector(dates);
+
   return (
     <div>
       <h1 className="mb-2 text-2xl font-semibold">Trade Recommendations</h1>
@@ -13,9 +95,45 @@ export default function TradesPage() {
         based on this data.
       </div>
 
-      <div className="rounded-md border border-border bg-surface p-8 text-center text-muted">
-        Trades coming soon — will display recommendations from markettrade.
-      </div>
+      {isError && (
+        <div className="rounded-md border border-border bg-surface p-8 text-center text-muted">
+          Could not reach server
+        </div>
+      )}
+
+      {!isError && dates.length === 0 && (
+        <div className="rounded-md border border-border bg-surface p-8 text-center text-muted">
+          No trade data yet.
+        </div>
+      )}
+
+      {dates.length > 0 && (
+        <>
+          <div className="mb-6 flex flex-wrap gap-2">
+            {dates.map((d) => (
+              <button
+                key={d}
+                onClick={() => toggle(d)}
+                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                  d === activeDate
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-border bg-surface text-muted hover:border-accent"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+
+          {activeDate && (
+            <Suspense
+              fallback={<p className="text-muted">Loading trades...</p>}
+            >
+              <TradeTable date={activeDate} />
+            </Suspense>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -13,3 +13,13 @@ scrape_configs:
     static_configs:
       - targets:
           - markettransformer:8080
+
+  - job_name: markettrade
+    static_configs:
+      - targets:
+          - markettrade:8000
+
+  - job_name: marketbard
+    static_configs:
+      - targets:
+          - marketbard:8001

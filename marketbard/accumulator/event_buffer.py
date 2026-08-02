@@ -14,6 +14,10 @@ class EventBuffer:
             self._buffer.append(event)
             logger.debug(f"EventBuffer: added event, buffer size={len(self._buffer)}")
 
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._buffer)
+
     def drain(self) -> list:
         with self._lock:
             batch = self._buffer[:]

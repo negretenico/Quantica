@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.config import Config
+from marketrisk.app.config import Config
 from marketrisk.risk.models import ProposedAction, RiskDecision
 
 

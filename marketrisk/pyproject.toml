@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
+packages = ["marketrisk"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

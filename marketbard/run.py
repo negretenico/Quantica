@@ -5,7 +5,19 @@ import logging
 from zoneinfo import ZoneInfo
 
 from app.config import Config
+from app.metrics import (
+    analytics_received_total,
+    duplicates_dropped_total,
+    event_buffer_size,
+    observe_tick_to_bard,
+    signals_received_total,
+    start_metrics_server,
+    summary_buffer_size,
+    syntheses_completed_total,
+    windows_processed_total,
+)
 from shared.rabbitmq.consumer import RabbitConsumer
+from shared.dedup import DedupFilter
 from publisher.factory import build_publisher
 from shared.rabbitmq.rabbit_client import RabbitClientManager
 from accumulator.event_buffer import EventBuffer
@@ -33,9 +45,15 @@ _ET = ZoneInfo("America/New_York")
 
 # Latest enrichment (cluster_id, anomaly_score) per symbol, populated by analytics consumer
 _enrichment_cache: dict = {}
+_analytics_dedup = DedupFilter()
+_signal_dedup = DedupFilter()
 
 
 def analytics_handler(payload):
+    analytics_received_total.inc()
+    if _analytics_dedup.is_duplicate(payload):
+        duplicates_dropped_total.labels(source="analytics").inc()
+        return
     symbol = payload.get("symbol")
     if symbol:
         _enrichment_cache[symbol] = payload
@@ -43,12 +61,18 @@ def analytics_handler(payload):
 
 
 def signal_event_handler(event):
+    signals_received_total.inc()
+    if _signal_dedup.is_duplicate(event):
+        duplicates_dropped_total.labels(source="signal").inc()
+        return
+    observe_tick_to_bard(event)
     symbol = event.get("symbol")
     enriched = _enrichment_cache.get(symbol)
     if enriched:
         event = {**event, "cluster_id": enriched.get("cluster_id"), "anomaly_score": enriched.get("anomaly_score")}
         logger.info(f"Enriched signal: symbol={symbol} cluster={enriched.get('cluster_id')} anomaly={enriched.get('anomaly_score'):.4f}")
     event_buffer.add(event)
+    event_buffer_size.set(len(event_buffer))
 
 
 def _compute_metrics(events: list, window_start: str) -> dict:
@@ -64,6 +88,15 @@ def _compute_metrics(events: list, window_start: str) -> dict:
     }
 
 
+def _cap_events(events: list, cap: int) -> list:
+    """Downsample events to *cap* by taking evenly spaced items (preserves time distribution)."""
+    n = len(events)
+    if n <= cap:
+        return events
+    step = n / cap
+    return [events[int(i * step)] for i in range(cap)]
+
+
 def window_trigger():
     """Fires every WINDOW_MINUTES, drains event_buffer, puts batch on window_queue."""
     interval = Config.WINDOW_MINUTES * 60
@@ -74,21 +107,29 @@ def window_trigger():
         if not events:
             logger.debug(f"window_trigger: no events in window ending at {window_start}, skipping")
             continue
-        logger.info(f"window_trigger: {len(events)} events in window ending at {window_start}")
+        event_buffer_size.set(0)
+        raw_count = len(events)
+        if raw_count > Config.MAX_EVENTS_PER_WINDOW:
+            logger.warning(
+                f"window_trigger: {raw_count} events exceed cap {Config.MAX_EVENTS_PER_WINDOW}, sampling down"
+            )
+            events = _cap_events(events, Config.MAX_EVENTS_PER_WINDOW)
+        logger.info(f"window_trigger: {len(events)} events (raw={raw_count}) in window ending at {window_start}")
         window_queue.put((window_start, events))
 
 
 def synthesis_trigger():
-    """Fires at 10:00 PM ET, drains summary_buffer, runs synthesis, queues narrative for GitHub."""
+    """Fires at SYNTHESIS_HOUR ET, drains summary_buffer, runs synthesis, queues narrative for disk."""
     while True:
         now = datetime.datetime.now(_ET)
-        target = now.replace(hour=16, minute=0, second=0, microsecond=0)
+        target = now.replace(hour=Config.SYNTHESIS_HOUR, minute=0, second=0, microsecond=0)
         if now >= target:
             target += datetime.timedelta(days=1)
         sleep_secs = (target - now).total_seconds()
         logger.info(f"synthesis_trigger: next synthesis in {sleep_secs / 3600:.1f}h at market close")
         threading.Event().wait(timeout=sleep_secs)
         summaries = summary_buffer.drain()
+        summary_buffer_size.set(0)
         if not summaries:
             logger.info("synthesis_trigger: no window summaries accumulated today, skipping")
             continue
@@ -97,6 +138,7 @@ def synthesis_trigger():
             prompt = build_synthesis_prompt(summaries)
             narrative = openai_client.create_synthesis(prompt, max_tokens=Config.SYNTHESIS_MAX_TOKENS)
             write_queue.put(narrative)
+            syntheses_completed_total.inc()
             logger.info("synthesis_trigger: synthesis queued for writing")
         except Exception:
             logger.exception("synthesis_trigger: error during synthesis")
@@ -117,6 +159,8 @@ def window_worker():
                 "metrics": metrics,
             }
             summary_buffer.add(summary)
+            summary_buffer_size.set(len(summary_buffer))
+            windows_processed_total.labels(category=result["category"]).inc()
             logger.info(f"window_worker: summary added for window {window_start} [{result['category']}]")
         except Exception:
             logger.exception("window_worker: error processing window")
@@ -133,8 +177,22 @@ def writer():
             logger.exception("writer: error writing narrative to GitHub")
 
 
+def _supervised_thread(target, name):
+    """Start a daemon thread that logs CRITICAL on unhandled exception."""
+    def wrapper():
+        try:
+            target()
+        except Exception:
+            logger.critical(f"THREAD DIED: {name}", exc_info=True)
+    t = threading.Thread(target=wrapper, name=name, daemon=True)
+    t.start()
+    return t
+
+
 def main():
     logger.info("Starting MarketBard")
+    start_metrics_server()
+    logger.info("Prometheus metrics server started on :8001")
     publisher.check_connection()
 
     analytics_consumer = RabbitConsumer(
@@ -149,10 +207,10 @@ def main():
 
     rabbit_manager = RabbitClientManager(config=Config)
     rabbit_manager.subscribe(handler=signal_event_handler)
-    threading.Thread(target=window_trigger, daemon=True).start()
-    threading.Thread(target=synthesis_trigger, daemon=True).start()
-    threading.Thread(target=window_worker, daemon=True).start()
-    threading.Thread(target=writer, daemon=True).start()
+    _supervised_thread(window_trigger, "window_trigger")
+    _supervised_thread(synthesis_trigger, "synthesis_trigger")
+    _supervised_thread(window_worker, "window_worker")
+    _supervised_thread(writer, "writer")
 
     rabbit_manager.start_consuming()
 

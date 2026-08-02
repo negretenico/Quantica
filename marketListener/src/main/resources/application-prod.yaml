@@ -2,3 +2,7 @@ binance:
   stream:
     base: wss://fstream.binance.com/ws
     symbols: ${BINANCE_SYMBOLS:btcusdt@trade}
+
+kafka:
+  bootstrap: ${KAFKA_BOOTSTRAP}
+  order-topic-replication-factor: ${KAFKA_ORDER_TOPIC_REPLICATION_FACTOR:1}

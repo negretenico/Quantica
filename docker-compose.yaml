@@ -76,6 +76,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit loopback_users none"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -88,6 +89,7 @@ services:
       args:
         GITHUB_TOKEN: ${GITHUB_TOKEN}
     container_name: quantica-marketlistener
+    restart: unless-stopped
     depends_on:
       kafka-broker-1:
         condition: service_healthy
@@ -107,6 +109,7 @@ services:
       args:
         GITHUB_TOKEN: ${GITHUB_TOKEN}
     container_name: quantica-markettransformer
+    restart: unless-stopped
     depends_on:
       kafka-broker-1:
         condition: service_healthy
@@ -128,6 +131,7 @@ services:
       additional_contexts:
         shared: ./shared
     container_name: quantica-marketanalysis
+    restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -143,6 +147,7 @@ services:
       additional_contexts:
         shared: ./shared
     container_name: quantica-marketbard
+    restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -150,8 +155,10 @@ services:
     environment:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
       ANALYTICS_EXCHANGE: analytics
+    ports:
+      - "8001:8001"
     volumes:
-      - ./decisions/bard:/tmp/marketbard
+      - ./decisions/bard:/app/decisions/bard
 
   markettrade:
     build:
@@ -160,15 +167,20 @@ services:
         shared: ./shared
         marketrisk: ./marketrisk
     container_name: quantica-markettrade
+    restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
     environment:
       RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
-      RABBITMQ_QUEUE: signal.trade
-      SIGNAL_EXCHANGE: signal
+      RABBITMQ_QUEUE: analytics.trade
+      TRADE_EXCHANGE: analytics
+      TRADE_EXCHANGE_TYPE: topic
+      TRADE_ROUTING_KEY: "signal.analytics.#"
       BLOB_STORE_PATH: /app/decisions
       BLOB_STORE_BACKEND: disk
+    ports:
+      - "8000:8000"
     volumes:
       - ./decisions/trade:/app/decisions
 
@@ -176,6 +188,7 @@ services:
     build:
       context: ./marketappendonly
     container_name: quantica-marketappendonly
+    restart: unless-stopped
     depends_on:
       kafka-broker-1:
         condition: service_healthy
@@ -183,6 +196,37 @@ services:
         condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
+
+  marketserver:
+    build:
+      context: ./marketserver
+      additional_contexts:
+        shared: ./shared
+    container_name: quantica-marketserver
+    depends_on:
+      markettrade:
+        condition: service_started
+      marketbard:
+        condition: service_started
+    environment:
+      BLOB_STORE_PATH: /data/bard
+      TRADE_BLOB_STORE_PATH: /data/trade
+    volumes:
+      - ./decisions/bard:/data/bard
+      - ./decisions/trade:/data/trade
+    ports:
+      - "5001:5001"
+
+  marketui:
+    build:
+      context: ./marketui
+      args:
+        NEXT_PUBLIC_DATA_BASE_URL: http://localhost:5001
+    container_name: quantica-marketui
+    depends_on:
+      - marketserver
+    ports:
+      - "3001:3001"
 
   prometheus:
     image: prom/prometheus:latest

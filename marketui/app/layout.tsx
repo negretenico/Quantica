@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Nav from "./components/Nav";
+import Providers from "./providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,14 +31,16 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Nav />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">
-          {children}
-        </main>
-        <footer className="border-t border-border px-6 py-4 text-center text-xs text-muted">
-          Quantica pipeline: Binance WSS &rarr; Kafka &rarr; ML analysis &rarr;
-          LLM narrative
-        </footer>
+        <Providers>
+          <Nav />
+          <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">
+            {children}
+          </main>
+          <footer className="border-t border-border px-6 py-4 text-center text-xs text-muted">
+            Quantica pipeline: Binance WSS &rarr; Kafka &rarr; ML analysis &rarr;
+            LLM narrative
+          </footer>
+        </Providers>
       </body>
     </html>
   );

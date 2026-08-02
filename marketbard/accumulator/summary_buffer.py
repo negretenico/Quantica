@@ -20,6 +20,10 @@ class SummaryBuffer:
             self._buffer.append(summary)
             logger.debug(f"SummaryBuffer: added summary, size={len(self._buffer)}")
 
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._buffer)
+
     def drain(self) -> list:
         with self._lock:
             items = list(self._buffer)

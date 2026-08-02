@@ -9,8 +9,9 @@ class SignalRabbitClient:
         self._consumer = RabbitConsumer(
             url=config.URL,
             queue=config.QUEUE,
-            exchange=config.SIGNAL_EXCHANGE,
-            exchange_type="fanout",
+            exchange=config.EXCHANGE,
+            exchange_type=config.EXCHANGE_TYPE,
+            routing_key=config.ROUTING_KEY,
         )
 
     def subscribe(self, handler: Callable):

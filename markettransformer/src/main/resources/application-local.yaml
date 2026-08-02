@@ -1,5 +1,5 @@
 kafka:
-  bootstrap: localhost:9092
+  bootstrap: "${KAFKA_BOOTSTRAP:localhost:9092}"
 spring:
   rabbitmq:
     host: localhost

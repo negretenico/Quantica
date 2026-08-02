@@ -1,4 +1,4 @@
-.PHONY: up down dev-ui run-server run-notify build test build-listener build-transformer build-bard build-risk build-trade build-notify build-server build-ui test-listener test-transformer test-bard test-risk test-trade test-notify test-server test-ui test-backtest test-shared info logs health
+.PHONY: up down dev-ui run-server run-notify build test build-listener build-transformer build-bard build-risk build-trade build-notify build-server build-ui test-listener test-transformer test-bard test-risk test-trade test-notify test-server test-ui test-backtest test-shared tunnel info logs health
 
 up:
 	docker compose up -d --build --remove-orphans
@@ -73,6 +73,9 @@ test-backtest:
 test-shared:
 	py -m pytest shared/tests/ -v
 
+tunnel:
+	cloudflared tunnel run QuanticaAPI
+
 info:
 	@echo .
 	@echo === Quantica Services ===
@@ -84,10 +87,13 @@ info:
 	@echo   marketListener        http://localhost:8080
 	@echo   marketanalysis        http://localhost:5000
 	@echo   marketserver [API]    http://localhost:5001
+	@echo   Tunnel [API]          https://quantica-api.com
 	@echo   marketnotify          [internal - Discord webhooks]
 	@echo   marketui              http://localhost:3001
 	@echo   Prometheus            http://localhost:9090
+	@echo   Prometheus [Tunnel]   https://prometheus.quantica-api.com
 	@echo   Grafana               http://localhost:3000
+	@echo   Grafana [Tunnel]      https://grafana.quantica-api.com
 	@echo .
 	@docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 	@echo .

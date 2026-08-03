@@ -4,7 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marketanalysis"
+<<<<<<< HEAD
+version = "4.0.0.dev0"
+=======
 version = "3.6.2.dev0"
+>>>>>>> ce60c133089a8484d7023438d4ee5388f2ea3f38
 description = "Market analysis service"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
@@ -13,7 +17,7 @@ dependencies = [
     "numpy==2.3.2",
     "scikit-learn==1.7.1",
     "scipy==1.16.1",
-    "python-dotenv==1.1.1",
+    "python-dotenv==1.2.2",
 ]
 
 [tool.hatch.build.targets.wheel]

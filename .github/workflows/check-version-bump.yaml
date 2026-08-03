@@ -19,7 +19,7 @@ jobs:
           CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- \
             'marketListener/**' 'markettransformer/**' \
             'marketanalysis/**' 'marketbard/**' 'markettrade/**' \
-            'marketappendonly/**' 'marketserver/**' \
+            'marketserver/**' \
             ':!docs/**' ':!*.md' ':!**/README*')
           if [[ -z "$CHANGED" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT

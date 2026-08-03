@@ -202,19 +202,6 @@ services:
     ports:
       - "8000"
 
-  marketappendonly:
-    build:
-      context: ./marketappendonly
-    container_name: quantica-marketappendonly
-    restart: unless-stopped
-    depends_on:
-      kafka-broker-1:
-        condition: service_healthy
-      kafka-broker-2:
-        condition: service_healthy
-    environment:
-      KAFKA_BOOTSTRAP: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
-
   marketserver:
     build:
       context: ./marketserver

@@ -74,9 +74,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit loopback_users none"
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -121,7 +120,9 @@ services:
       SPRING_PROFILES_ACTIVE: local
       KAFKA_BOOTSTRAP: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
       SPRING_RABBITMQ_HOST: quantica-rabbitmq
-      RABBITMQ_MANAGEMENT_URL: http://guest:guest@quantica-rabbitmq:15672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS}
+      RABBITMQ_MANAGEMENT_URL: http://${RABBITMQ_USER}:${RABBITMQ_PASS}@quantica-rabbitmq:15672
     ports:
       - "8080"
 
@@ -136,7 +137,7 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@quantica-rabbitmq/
       ANALYTICS_EXCHANGE: analytics
     ports:
       - "5000:5000"
@@ -153,7 +154,7 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@quantica-rabbitmq/
       ANALYTICS_EXCHANGE: analytics
     ports:
       - "8001:8001"
@@ -172,7 +173,7 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@quantica-rabbitmq/
       RABBITMQ_QUEUE: analytics.trade
       TRADE_EXCHANGE: analytics
       TRADE_EXCHANGE_TYPE: topic
@@ -196,7 +197,7 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      RABBITMQ_URL: amqp://guest:guest@quantica-rabbitmq/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@quantica-rabbitmq/
       NOTIFY_EXCHANGE: notifications
       SIGNAL_EXCHANGE: signal
     ports:

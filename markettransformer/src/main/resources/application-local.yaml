@@ -2,8 +2,10 @@ kafka:
   bootstrap: "${KAFKA_BOOTSTRAP:localhost:9092}"
 spring:
   rabbitmq:
-    host: localhost
+    host: "${SPRING_RABBITMQ_HOST:localhost}"
     port: 5672
+    username: "${SPRING_RABBITMQ_USERNAME:guest}"
+    password: "${SPRING_RABBITMQ_PASSWORD:guest}"
 market:
   signal:
     exchange: signal

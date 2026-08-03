@@ -9,7 +9,7 @@ description = "Discord notification worker for Quantica pipeline"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
     "pika==1.3.2",
-    "prometheus-client==0.22.1",
+    "prometheus-client==0.26.0",
     "python-dotenv==1.2.2",
     "requests>=2.31.0",
 ]

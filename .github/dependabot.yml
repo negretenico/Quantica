@@ -5,69 +5,81 @@ updates:
     directory: "/marketListener"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Java — markettransformer
   - package-ecosystem: "maven"
     directory: "/markettransformer"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Python — marketanalysis
   - package-ecosystem: "pip"
     directory: "/marketanalysis"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Python — marketbard
   - package-ecosystem: "pip"
     directory: "/marketbard"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Python — markettrade
   - package-ecosystem: "pip"
     directory: "/markettrade"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Python — marketrisk
   - package-ecosystem: "pip"
     directory: "/marketrisk"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Python — marketnotify
   - package-ecosystem: "pip"
     directory: "/marketnotify"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Python — marketserver
   - package-ecosystem: "pip"
     directory: "/marketserver"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Python — shared
   - package-ecosystem: "pip"
     directory: "/shared"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Node — marketui
   - package-ecosystem: "npm"
     directory: "/marketui"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
 
   # Docker
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"

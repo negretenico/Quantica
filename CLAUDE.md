@@ -1,6 +1,6 @@
 # Quantica
 
-Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enrichment, ML analysis, LLM storytelling, and append-only audit log.
+Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enrichment, ML analysis, LLM storytelling, and trade execution.
 
 ---
 
@@ -12,7 +12,6 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `markettransformer` | Java 21 / Spring Boot 3.x | Raw trades → enriched signals | Kafka `order` → RabbitMQ `signal` fanout exchange |
 | `marketanalysis` | Python 3.11 / Flask | Clustering + anomaly detection | RabbitMQ `signal.analysis` queue → RabbitMQ `analytics` topic exchange |
 | `marketbard` | Python 3.11 | LLM storytelling → disk | RabbitMQ `signal.bard` queue + `analytics.bard` queue → `decisions/bard/` |
-| `marketappendonly` | Go 1.24 / Sarama | Append-only audit ledger | Kafka `order` → `history.log` |
 | `markettrade` | Python 3.13 | Trade execution worker | RabbitMQ `signal.trade` queue → blob store |
 | `marketrisk` | Python 3.13 | **Internal library** — risk cap evaluation | consumed by `markettrade` (not a runnable binary) |
 | `marketserver` | Python 3.13 / Flask | REST API serving blob data | reads `decisions/bard/` + `decisions/trade/` → HTTP |
@@ -42,7 +41,6 @@ cd marketListener && mvn spring-boot:run -Dspring-boot.run.profiles=local
 cd markettransformer && mvn spring-boot:run -Dspring-boot.run.profiles=local
 cd marketanalysis   && py run.py
 cd marketbard       && py run.py
-cd marketappendonly && go run cmd/server/main.go
 cd markettrade      && py run.py
 ```
 
@@ -175,16 +173,8 @@ For high-throughput consumers, throttle repetitive log messages (e.g. risk rejec
 - **Styling** — Tailwind CSS with custom semantic color tokens (`text-muted`, `bg-surface`, `border-border`, `text-accent`, `text-green`, `text-red`, `text-orange`). No component library.
 - **Components** — small, focused components in `app/components/`. Suspense-backed components split into inner (`Content`) + outer (wrapper with `<Suspense fallback>`).
 
-## Go Conventions (marketappendonly)
-
-- **Sarama** for Kafka consumer.
-- Simple imperative style — no frameworks.
-- Entry point: `cmd/server/main.go`.
-
----
-
 ## Dependencies of Note
 
 - `functionico` — internal functional library, hosted on GitHub Packages. Requires `GITHUB_TOKEN` in Maven settings for resolution.
 - `marketbard` requires `OPENAI_API_KEY` and `GITHUB_TOKEN` in `.env`.
-- All modules require a running Kafka cluster at `localhost:9092` (configurable via `kafka.bootstrap` for Java, env var for Python/Go).
+- All modules require a running Kafka cluster at `localhost:9092` (configurable via `kafka.bootstrap` for Java, env var for Python).

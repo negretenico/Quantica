@@ -51,7 +51,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: Download artifact from python-build  # Fixed: was "java-build"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: python-dist  # Fixed: artifact name from reusable workflow
           path: ./marketanalysis/

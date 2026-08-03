@@ -10,7 +10,7 @@ authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
     "pika==1.3.2",
     "prometheus-client==0.22.1",
-    "python-dotenv==1.1.1",
+    "python-dotenv==1.2.2",
     "requests>=2.31.0",
 ]
 

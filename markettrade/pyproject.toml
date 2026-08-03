@@ -13,7 +13,7 @@ description = "Market trade service"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
     "pika==1.4.2",
-    "python-dotenv==1.1.1",
+    "python-dotenv==1.2.2",
 ]
 
 [tool.hatch.build.targets.wheel]

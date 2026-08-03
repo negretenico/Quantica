@@ -4,11 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marketserver"
-<<<<<<< HEAD
-version = "4.0.0.dev0"
-=======
-version = "3.6.2.dev0"
->>>>>>> ce60c133089a8484d7023438d4ee5388f2ea3f38
+version = "4.0.1.dev0"
 description = "Blob HTTP server for serving JSON blobs"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [

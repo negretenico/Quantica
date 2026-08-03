@@ -20,7 +20,8 @@ jobs:
             'marketListener/**' 'markettransformer/**' \
             'marketanalysis/**' 'marketbard/**' 'markettrade/**' \
             'marketappendonly/**' 'marketserver/**' \
-            ':!docs/**' ':!*.md' ':!**/README*')
+            ':!docs/**' ':!*.md' ':!**/README*' \
+            ':!**/pom.xml' ':!**/requirements*.txt' ':!**/pyproject.toml' ':!**/package.json' ':!**/package-lock.json')
           if [[ -z "$CHANGED" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "No source files changed — skipping version bump check."

@@ -8,7 +8,7 @@ Six workstreams to take the pipeline from "works on the happy path" to "producti
 
 ### Problem Statement
 
-The shared RabbitMQ consumer (`shared/rabbitmq/consumer.py`) nacks failed messages with `requeue=False`, which silently drops them. There are no dead-letter queues, no retry-with-backoff, and no error handlers that preserve failed messages for inspection. On the Kafka side, `marketappendonly` and `markettransformer` lack equivalent safeguards. A single malformed event or transient downstream failure results in permanent data loss with only a log line as evidence.
+The shared RabbitMQ consumer (`shared/rabbitmq/consumer.py`) nacks failed messages with `requeue=False`, which silently drops them. There are no dead-letter queues, no retry-with-backoff, and no error handlers that preserve failed messages for inspection. On the Kafka side, `markettransformer` lacks equivalent safeguards. A single malformed event or transient downstream failure results in permanent data loss with only a log line as evidence.
 
 ### Success Criteria
 
@@ -20,7 +20,7 @@ The shared RabbitMQ consumer (`shared/rabbitmq/consumer.py`) nacks failed messag
 
 ### Scope Boundaries
 
-- **In scope:** RabbitMQ consumers (shared library + all Python workers), Kafka consumers (Java + Go).
+- **In scope:** RabbitMQ consumers (shared library + all Python workers), Kafka consumers (Java).
 - **Out of scope:** Message replay tooling, DLQ reprocessing automation (future workstream).
 
 ### Key Deliverables
@@ -29,8 +29,7 @@ The shared RabbitMQ consumer (`shared/rabbitmq/consumer.py`) nacks failed messag
 2. Retry-with-backoff wrapper (configurable max retries, base delay).
 3. Per-module error handler that publishes to DLQ on exhausted retries.
 4. Kafka `ErrorHandler` bean in `markettransformer` and `marketListener`.
-5. Go-side DLQ/retry in `marketappendonly`.
-6. Prometheus counters: `messages_retried_total`, `messages_dlq_total`.
+5. Prometheus counters: `messages_retried_total`, `messages_dlq_total`.
 7. Grafana panel for DLQ depth.
 
 ---
@@ -39,13 +38,12 @@ The shared RabbitMQ consumer (`shared/rabbitmq/consumer.py`) nacks failed messag
 
 ### Problem Statement
 
-`prometheus.yml` only scrapes four of nine modules (marketlistener, markettransformer, markettrade, marketbard). `marketanalysis`, `marketappendonly`, `marketserver`, `marketnotify`, and `marketui` are invisible. `marketanalysis` has no `prometheus_client` integration at all despite being a Flask app. Grafana dashboards have not been audited for coverage against the full module set. The result: pipeline health is partially observable at best.
+`prometheus.yml` only scrapes four of nine modules (marketlistener, markettransformer, markettrade, marketbard). `marketanalysis`, `marketserver`, `marketnotify`, and `marketui` are invisible. `marketanalysis` has no `prometheus_client` integration at all despite being a Flask app. Grafana dashboards have not been audited for coverage against the full module set. The result: pipeline health is partially observable at best.
 
 ### Success Criteria
 
-- `prometheus.yml` scrapes every module that exposes metrics (all Python workers, both Java services, Go service).
+- `prometheus.yml` scrapes every module that exposes metrics (all Python workers, both Java services).
 - `marketanalysis` exposes `prometheus_client` metrics on port 8000 (events consumed, clusters computed, anomalies detected, processing latency).
-- `marketappendonly` exposes Go Prometheus metrics (events appended, append latency, errors).
 - `marketserver` exposes request count/latency metrics.
 - `marketnotify` exposes notification send count/error metrics.
 - Grafana has one "Pipeline Health" dashboard with panels for every module's key counters/histograms.
@@ -59,8 +57,7 @@ The shared RabbitMQ consumer (`shared/rabbitmq/consumer.py`) nacks failed messag
 ### Key Deliverables
 
 1. `app/metrics.py` in `marketanalysis` with standard counters/histograms.
-2. Prometheus metrics endpoint in `marketappendonly` (Go `promhttp`).
-3. Prometheus metrics endpoint in `marketserver`.
+2. Prometheus metrics endpoint in `marketserver`.
 4. Prometheus metrics endpoint in `marketnotify`.
 5. Updated `prometheus/prometheus.yml` with all scrape targets.
 6. Grafana "Pipeline Health" dashboard JSON provisioned via `grafana/provisioning/dashboards/`.
@@ -177,7 +174,6 @@ All existing tests are unit tests that mock infrastructure. There are no integra
   - `marketanalysis` produces an enriched event on the `analytics` exchange.
   - `markettrade` writes a decision blob to disk.
   - `marketbard` writes a story blob to disk.
-  - `marketappendonly` appends to `history.log`.
 - Tests run in CI on a schedule (not on every push — too slow).
 - Test execution time < 3 minutes.
 - Tests are idempotent and clean up after themselves.
@@ -209,20 +205,18 @@ All existing tests are unit tests that mock infrastructure. There are no integra
 | 1.2 | Add retry-with-exponential-backoff to shared RabbitMQ consumer | track:resilience, parallel-safe | — |
 | 1.3 | Wire DLQ + retry into markettrade, marketbard, marketanalysis, marketnotify consumers | track:resilience, sequential | 1.1, 1.2 |
 | 1.4 | Add Kafka ErrorHandler to markettransformer and marketListener | track:resilience, parallel-safe | — |
-| 1.5 | Add DLQ/retry to marketappendonly Go Kafka consumer | track:resilience, parallel-safe | — |
-| 1.6 | Add Prometheus metrics for retries and DLQ depth | track:resilience, sequential | 1.3, 1.4, 1.5 |
-| 1.7 | Add Grafana DLQ depth panel | track:resilience, sequential | 1.6 |
+| 1.5 | Add Prometheus metrics for retries and DLQ depth | track:resilience, sequential | 1.3, 1.4 |
+| 1.6 | Add Grafana DLQ depth panel | track:resilience, sequential | 1.5 |
 
 ### Workstream 2: Observability
 
 | # | Issue Title | Labels | Blocked By |
 |---|---|---|---|
 | 2.1 | Add prometheus_client instrumentation to marketanalysis | track:observability, parallel-safe | — |
-| 2.2 | Add Prometheus metrics endpoint to marketappendonly | track:observability, parallel-safe | — |
-| 2.3 | Add Prometheus metrics endpoint to marketserver | track:observability, parallel-safe | — |
-| 2.4 | Add Prometheus metrics endpoint to marketnotify | track:observability, parallel-safe | — |
-| 2.5 | Update prometheus.yml to scrape all modules | track:observability, sequential | 2.1, 2.2, 2.3, 2.4 |
-| 2.6 | Create Grafana "Pipeline Health" dashboard | track:observability, sequential | 2.5 |
+| 2.2 | Add Prometheus metrics endpoint to marketserver | track:observability, parallel-safe | — |
+| 2.3 | Add Prometheus metrics endpoint to marketnotify | track:observability, parallel-safe | — |
+| 2.4 | Update prometheus.yml to scrape all modules | track:observability, sequential | 2.1, 2.2, 2.3 |
+| 2.5 | Create Grafana "Pipeline Health" dashboard | track:observability, sequential | 2.4 |
 
 ### Workstream 3: Trade Validation
 
@@ -265,8 +259,7 @@ All existing tests are unit tests that mock infrastructure. There are no integra
 | 6.3 | Write e2e test: Kafka to markettransformer to RabbitMQ signal exchange | track:e2e, sequential | 6.1, 6.2 |
 | 6.4 | Write e2e test: signal exchange to markettrade blob output | track:e2e, sequential | 6.3 |
 | 6.5 | Write e2e test: signal exchange to marketbard blob output | track:e2e, sequential | 6.3 |
-| 6.6 | Write e2e test: Kafka to marketappendonly history.log | track:e2e, sequential | 6.1, 6.2 |
-| 6.7 | Add make test-e2e target and GitHub Actions nightly workflow | track:e2e, sequential | 6.3, 6.4, 6.5, 6.6 |
+| 6.6 | Add make test-e2e target and GitHub Actions nightly workflow | track:e2e, sequential | 6.3, 6.4, 6.5 |
 
 ---
 

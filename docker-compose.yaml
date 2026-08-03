@@ -200,6 +200,7 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@quantica-rabbitmq/
       NOTIFY_EXCHANGE: notifications
       SIGNAL_EXCHANGE: signal
+      PROMETHEUS_TARGETS: http://marketnotify:8000/metrics,http://marketbard:8001/metrics
     ports:
       - "8000"
 

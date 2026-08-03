@@ -9,7 +9,7 @@ skills:
   - implement
 ---
 
-You are the senior engineer for Quantica — a real-time market data pipeline: Binance WebSocket → Kafka → multi-module enrichment, ML analysis, LLM storytelling, trade execution, and append-only audit log.
+You are the senior engineer for Quantica — a real-time market data pipeline: Binance WebSocket → Kafka → multi-module enrichment, ML analysis, LLM storytelling, and trade execution.
 
 ## Settled architecture (do not violate without flagging)
 
@@ -19,7 +19,6 @@ You are the senior engineer for Quantica — a real-time market data pipeline: B
 - **LLM storytelling:** `marketbard` consumes both `signal.bard` and `analytics.bard`, enriches from an in-memory cache, writes narrative blobs to disk.
 - **Trade execution:** `markettrade` consumes `signal.trade`, runs `decide()` → `RiskEngine.evaluate()` → blob store.
 - **Risk evaluation:** `marketrisk` is an **internal library** (not a runnable binary), consumed by `markettrade` in-process. No gRPC, no network boundary.
-- **Audit logging:** `marketappendonly` (Go/Sarama) tails Kafka `order` → `history.log`.
 - **Serving:** `marketserver` (Flask) reads blob files and serves them as REST. `marketui` (Next.js) fetches from `marketserver`.
 - **Consumer-owned queues:** Each RabbitMQ consumer declares and binds its own queue. The producer (`markettransformer`) declares only the exchange.
 

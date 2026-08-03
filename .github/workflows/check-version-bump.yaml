@@ -19,7 +19,7 @@ jobs:
           CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- \
             'marketListener/**' 'markettransformer/**' \
             'marketanalysis/**' 'marketbard/**' 'markettrade/**' \
-            'marketappendonly/**' 'marketserver/**' \
+            'marketserver/**' \
             ':!docs/**' ':!*.md' ':!**/README*' \
             ':!**/pom.xml' ':!**/requirements*.txt' ':!**/pyproject.toml' ':!**/package.json' ':!**/package-lock.json')
           if [[ -z "$CHANGED" ]]; then

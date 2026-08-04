@@ -9,6 +9,7 @@ description = "Market trade service"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
     "pika==1.4.2",
+    "pydantic==2.13.4",
     "python-dotenv==1.2.2",
 ]
 

@@ -33,6 +33,12 @@ duplicates_dropped_total = Counter(
     "Events dropped as duplicates",
 )
 
+validation_errors_total = Counter(
+    "markettrade_validation_errors_total",
+    "Events rejected by schema validation",
+    ["reason"],
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

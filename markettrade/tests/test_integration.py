@@ -7,6 +7,7 @@ from marketrisk.risk.engine import RiskEngine
 from marketrisk.risk.models import ProposedAction
 from shared.blob import get_store
 from trade.decision import decide
+from trade.models import SignalEvent
 
 
 def _config(risk_overrides=None, **overrides):
@@ -29,7 +30,7 @@ def _event(**overrides):
         "quantity": "100.0",
     }
     base.update(overrides)
-    return base
+    return SignalEvent(**base)
 
 
 def _run_pipeline(event, config, risk_engine, store):

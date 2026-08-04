@@ -1,13 +1,13 @@
 import json
 from unittest.mock import patch, MagicMock, call
 
-from shared.rabbitmq.consumer import RabbitConsumer, _DLQ_EXCHANGE
+from shared.rabbitmq.consumer import RabbitConsumer, ConsumerConfig, _DLQ_EXCHANGE
 
 
 def _make_consumer(**kwargs):
     defaults = dict(url="amqp://localhost", queue="signal.trade", exchange="signal", exchange_type="fanout")
     defaults.update(kwargs)
-    return RabbitConsumer(**defaults)
+    return RabbitConsumer(ConsumerConfig(**defaults))
 
 
 def _extract_on_message(mock_channel):
@@ -250,7 +250,7 @@ class TestDlqMessageFormat:
         assert envelope["attempt_count"] == 1
 
     def test_no_exchange_consumer_gets_dlq(self, mock_conn_cls):
-        consumer = RabbitConsumer(url="amqp://localhost", queue="my.queue")
+        consumer = RabbitConsumer(ConsumerConfig(url="amqp://localhost", queue="my.queue"))
         consumer.register_handler(lambda p: (_ for _ in ()).throw(RuntimeError("fail")))
         mock_channel = mock_conn_cls.return_value.channel.return_value
         mock_channel.start_consuming.side_effect = KeyboardInterrupt

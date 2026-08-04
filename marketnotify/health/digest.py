@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from handlers.signal_counter import SignalSnapshot
 from shared.notifications import NotificationChannel, NotificationMessage
 
 logger = logging.getLogger(__name__)
@@ -20,12 +21,14 @@ class HealthDigestThread:
         interval_minutes: int,
         synthesis_hour: int,
         prometheus_targets: list[str],
+        consumer_health: "ConsumerHealth | None" = None,
     ):
         self._channel = channel
         self._signal_counter = signal_counter
         self._interval_minutes = interval_minutes
         self._synthesis_hour = synthesis_hour
         self._prometheus_targets = prometheus_targets
+        self._consumer_health = consumer_health
         self._thread = None
 
     def start(self):
@@ -43,7 +46,7 @@ class HealthDigestThread:
 
     def _send_digest(self):
         now = datetime.datetime.now(_ET)
-        event_count = self._signal_counter.get_and_reset()
+        snap: SignalSnapshot = self._signal_counter.snapshot_and_reset()
 
         target = now.replace(hour=self._synthesis_hour, minute=0, second=0, microsecond=0)
         if now >= target:
@@ -52,15 +55,25 @@ class HealthDigestThread:
 
         service_health = self._scrape_targets()
 
+        consumer_ok = self._consumer_health.is_connected() if self._consumer_health else None
+
         fields = [
-            ("Events (last period)", str(event_count)),
+            ("Events received", str(snap.received)),
+            ("Duplicates dropped", str(snap.duplicates)),
+            ("Events counted", str(snap.counted)),
             ("Hours to synthesis", f"{hours_until:.1f}h"),
         ]
+
+        if consumer_ok is not None:
+            fields.append(("Signal consumer", "CONNECTED" if consumer_ok else "DISCONNECTED"))
+
         for target_url, healthy in service_health:
             name = target_url.split("//")[-1].split("/")[0]
             fields.append((name, "UP" if healthy else "DOWN"))
 
-        color = "00ff00" if all(h for _, h in service_health) else "ff0000"
+        all_services_ok = all(h for _, h in service_health)
+        consumer_problem = consumer_ok is not None and not consumer_ok
+        color = "ff0000" if (not all_services_ok or consumer_problem) else "00ff00"
 
         message = NotificationMessage(
             title="Quantica Health Digest",
@@ -69,7 +82,13 @@ class HealthDigestThread:
             color=color,
         )
         self._channel.send(message)
-        logger.info("Health digest sent: %d events, %d targets checked", event_count, len(service_health))
+        logger.info(
+            "Health digest sent: received=%d duplicates=%d counted=%d consumer=%s",
+            snap.received,
+            snap.duplicates,
+            snap.counted,
+            consumer_ok,
+        )
 
     def _scrape_targets(self) -> list[tuple[str, bool]]:
         results = []

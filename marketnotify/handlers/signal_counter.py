@@ -1,4 +1,12 @@
 import threading
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class SignalSnapshot:
+    received: int
+    duplicates: int
+    counted: int
 
 
 class SignalCounter:
@@ -6,19 +14,30 @@ class SignalCounter:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._count = 0
+        self._received = 0
+        self._duplicates = 0
+        self._counted = 0
 
-    def increment(self):
+    def record_received(self):
         with self._lock:
-            self._count += 1
+            self._received += 1
 
-    def get_and_reset(self) -> int:
+    def record_duplicate(self):
         with self._lock:
-            count = self._count
-            self._count = 0
-            return count
+            self._duplicates += 1
 
-    @property
-    def count(self) -> int:
+    def record_counted(self):
         with self._lock:
-            return self._count
+            self._counted += 1
+
+    def snapshot_and_reset(self) -> SignalSnapshot:
+        with self._lock:
+            snap = SignalSnapshot(
+                received=self._received,
+                duplicates=self._duplicates,
+                counted=self._counted,
+            )
+            self._received = 0
+            self._duplicates = 0
+            self._counted = 0
+            return snap

@@ -63,11 +63,28 @@ class ConsumerConfig:
         return result
 
 
+class ConsumerHealth:
+    """Thread-safe flag tracking whether a RabbitMQ consumer is connected."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._connected = False
+
+    def set_connected(self, value: bool):
+        with self._lock:
+            self._connected = value
+
+    def is_connected(self) -> bool:
+        with self._lock:
+            return self._connected
+
+
 class RabbitConsumer:
     def __init__(self, config: ConsumerConfig):
         self._config = config
         self._handler: Callable | None = None
         self._thread: threading.Thread | None = None
+        self.health = ConsumerHealth()
 
     def register_handler(self, handler: Callable):
         self._handler = handler
@@ -82,9 +99,11 @@ class RabbitConsumer:
             try:
                 self._connect_and_consume()
             except pika.exceptions.AMQPConnectionError as e:
+                self.health.set_connected(False)
                 logger.warning(f"RabbitMQ not available ({e}), retrying in {_RETRY_DELAY}s")
                 time.sleep(_RETRY_DELAY)
             except Exception as e:
+                self.health.set_connected(False)
                 logger.error(f"Unexpected consumer error ({e}), retrying in {_RETRY_DELAY}s")
                 time.sleep(_RETRY_DELAY)
 
@@ -126,6 +145,7 @@ class RabbitConsumer:
 
         channel.basic_qos(prefetch_count=1)
         channel.basic_consume(queue=cfg.queue, on_message_callback=on_message)
+        self.health.set_connected(True)
         logger.info(f"Waiting for messages on queue '{cfg.queue}'")
         channel.start_consuming()
 

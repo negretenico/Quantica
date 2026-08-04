@@ -45,10 +45,12 @@ def main():
     # --- Signal consumer (event volume counting) ---
     def handle_signal(payload):
         events_received_total.labels(queue="signal.notify").inc()
+        signal_counter.record_received()
         if signal_dedup.is_duplicate(payload):
             duplicates_dropped_total.labels(queue="signal.notify").inc()
+            signal_counter.record_duplicate()
             return
-        signal_counter.increment()
+        signal_counter.record_counted()
 
     signal_consumer = RabbitConsumer(ConsumerConfig(
         url=config.RABBITMQ_URL,
@@ -94,6 +96,7 @@ def main():
         interval_minutes=config.HEALTH_DIGEST_INTERVAL_MINUTES,
         synthesis_hour=config.SYNTHESIS_HOUR,
         prometheus_targets=config.prometheus_target_list(),
+        consumer_health=signal_consumer.health,
     )
     digest.start()
 

@@ -90,9 +90,10 @@ class TestDlqDeclaration:
         assert len(dlq_queue) == 0
 
 
+@patch("shared.rabbitmq.retry.time.sleep")
 @patch("pika.BlockingConnection")
 class TestDlqRouting:
-    def test_failed_message_published_to_dlq(self, mock_conn_cls):
+    def test_failed_message_published_to_dlq(self, mock_conn_cls, mock_sleep):
         consumer = _make_consumer()
         consumer.register_handler(lambda p: (_ for _ in ()).throw(ValueError("bad data")))
         mock_channel = mock_conn_cls.return_value.channel.return_value
@@ -119,12 +120,12 @@ class TestDlqRouting:
         assert "ValueError" in envelope["error"]
         assert "bad data" in envelope["error"]
         assert envelope["original_queue"] == "signal.trade"
-        assert envelope["attempt_count"] == 1
+        assert envelope["attempt_count"] == 4  # 1 initial + 3 retries (default)
         assert "timestamp" in envelope
 
         mock_channel.basic_nack.assert_called_once_with(delivery_tag=delivery.delivery_tag, requeue=False)
 
-    def test_successful_message_not_sent_to_dlq(self, mock_conn_cls):
+    def test_successful_message_not_sent_to_dlq(self, mock_conn_cls, mock_sleep):
         consumer = _make_consumer()
         consumer.register_handler(lambda p: None)
         mock_channel = mock_conn_cls.return_value.channel.return_value
@@ -144,7 +145,7 @@ class TestDlqRouting:
         mock_channel.basic_publish.assert_not_called()
         mock_channel.basic_ack.assert_called_once()
 
-    def test_dlq_disabled_drops_message(self, mock_conn_cls):
+    def test_dlq_disabled_drops_message(self, mock_conn_cls, mock_sleep):
         consumer = _make_consumer(dlq_enabled=False)
         consumer.register_handler(lambda p: (_ for _ in ()).throw(RuntimeError("fail")))
         mock_channel = mock_conn_cls.return_value.channel.return_value
@@ -165,9 +166,10 @@ class TestDlqRouting:
         mock_channel.basic_nack.assert_called_once()
 
 
+@patch("shared.rabbitmq.retry.time.sleep")
 @patch("pika.BlockingConnection")
 class TestRetries:
-    def test_retries_before_dlq(self, mock_conn_cls):
+    def test_retries_before_dlq(self, mock_conn_cls, mock_sleep):
         call_count = 0
 
         def failing_handler(p):
@@ -195,7 +197,7 @@ class TestRetries:
         envelope = json.loads(mock_channel.basic_publish.call_args[1]["body"])
         assert envelope["attempt_count"] == 3
 
-    def test_retry_succeeds_no_dlq(self, mock_conn_cls):
+    def test_retry_succeeds_no_dlq(self, mock_conn_cls, mock_sleep):
         call_count = 0
 
         def eventually_succeeds(p):
@@ -268,7 +270,8 @@ class TestDlqMessageFormat:
         delivery = _make_delivery()
         body = json.dumps({"data": 1}).encode()
 
-        on_message(mock_channel, delivery, None, body)
+        with patch("shared.rabbitmq.retry.time.sleep"):
+            on_message(mock_channel, delivery, None, body)
 
         mock_channel.basic_publish.assert_called_once()
         assert mock_channel.basic_publish.call_args[1]["routing_key"] == "my.queue"

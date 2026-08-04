@@ -28,3 +28,8 @@ scrape_configs:
     static_configs:
       - targets:
           - marketbard:8001
+
+  - job_name: marketnotify
+    static_configs:
+      - targets:
+          - marketnotify:8000

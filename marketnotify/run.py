@@ -14,7 +14,7 @@ from handlers.signal_counter import SignalCounter
 from health.digest import HealthDigestThread
 from shared.dedup import DedupFilter
 from shared.notifications import DiscordWebhookChannel
-from shared.rabbitmq.consumer import RabbitConsumer
+from shared.rabbitmq.consumer import RabbitConsumer, ConsumerConfig
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,12 +50,12 @@ def main():
             return
         signal_counter.increment()
 
-    signal_consumer = RabbitConsumer(
+    signal_consumer = RabbitConsumer(ConsumerConfig(
         url=config.RABBITMQ_URL,
         queue=config.SIGNAL_QUEUE,
         exchange=config.SIGNAL_EXCHANGE,
         exchange_type="fanout",
-    )
+    ))
     signal_consumer.register_handler(handle_signal)
     signal_consumer.start_consuming()
 
@@ -75,13 +75,13 @@ def main():
                 logger.error("Error handling notification: %s (further duplicates suppressed)", e)
                 _notify_errors_logged.add(error_key)
 
-    notify_consumer = RabbitConsumer(
+    notify_consumer = RabbitConsumer(ConsumerConfig(
         url=config.RABBITMQ_URL,
         queue=config.NOTIFY_QUEUE,
         exchange=config.NOTIFY_EXCHANGE,
         exchange_type="topic",
         routing_key="#",
-    )
+    ))
     notify_consumer.register_handler(handle_notification)
     notify_consumer.start_consuming()
 

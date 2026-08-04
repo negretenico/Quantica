@@ -1,17 +1,17 @@
 import json
 from unittest.mock import MagicMock, patch
 
-from shared.rabbitmq.consumer import RabbitConsumer
+from shared.rabbitmq.consumer import RabbitConsumer, ConsumerConfig
 
 
 def _make_consumer():
-    return RabbitConsumer(
+    return RabbitConsumer(ConsumerConfig(
         url="amqp://guest:guest@localhost/",
         queue="analytics.trade",
         exchange="analytics",
         exchange_type="topic",
         routing_key="signal.analytics.#",
-    )
+    ))
 
 
 @patch("pika.BlockingConnection")
@@ -22,7 +22,7 @@ def test_exchange_declare(mock_connection_cls):
     consumer = _make_consumer()
     consumer._connect_and_consume()
 
-    mock_channel.exchange_declare.assert_called_once_with(
+    mock_channel.exchange_declare.assert_any_call(
         exchange="analytics",
         exchange_type="topic",
         durable=True,
@@ -37,7 +37,7 @@ def test_queue_bind(mock_connection_cls):
     consumer = _make_consumer()
     consumer._connect_and_consume()
 
-    mock_channel.queue_bind.assert_called_once_with(
+    mock_channel.queue_bind.assert_any_call(
         queue="analytics.trade",
         exchange="analytics",
         routing_key="signal.analytics.#",

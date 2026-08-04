@@ -1,0 +1,69 @@
+# E2E test overlay — use with: docker compose -f docker-compose.yaml -f docker-compose.test.yaml up
+# Faster health checks, smaller buffers, isolated volumes, no external notifications.
+
+services:
+  kafka-broker-1:
+    healthcheck:
+      interval: 3s
+      start_period: 10s
+      retries: 3
+
+  kafka-broker-2:
+    healthcheck:
+      interval: 3s
+      start_period: 10s
+      retries: 3
+
+  rabbitmq:
+    healthcheck:
+      interval: 3s
+      retries: 3
+
+  marketlistener:
+    environment:
+      BINANCE_SYMBOLS: btcusdt@trade
+
+  marketanalysis:
+    environment:
+      WARMUP_SAMPLES: "10"
+      RETRAIN_BUFFER_SIZE: "20"
+      DEDUP_SET_SIZE: "1000"
+
+  marketbard:
+    environment:
+      WINDOW_MINUTES: "1"
+      MAX_SUMMARY_BUFFER: "5"
+      MAX_EVENTS_PER_WINDOW: "50"
+    volumes:
+      - test-bard-decisions:/app/decisions/bard
+
+  markettrade:
+    environment:
+      ANOMALY_SCORE_THRESHOLD: "0.3"
+      MAX_TRADE_QUANTITY: "100.0"
+      MAX_SYMBOL_EXPOSURE: "500.0"
+      MAX_DRAWDOWN_PCT: "0.50"
+    volumes:
+      - test-trade-decisions:/app/decisions
+
+  marketnotify:
+    environment:
+      DISCORD_WEBHOOK_URL: ""
+      HEALTH_DIGEST_INTERVAL_MINUTES: "1"
+
+  marketserver:
+    volumes:
+      - test-bard-decisions:/data/bard
+      - test-trade-decisions:/data/trade
+
+  prometheus:
+    profiles:
+      - monitoring
+
+  grafana:
+    profiles:
+      - monitoring
+
+volumes:
+  test-bard-decisions:
+  test-trade-decisions:

@@ -56,3 +56,6 @@ class RiskEngine:
             sized_quantity=sized_quantity,
             rejection_reason=None,
         )
+
+    def get_symbol_exposure(self, symbol: str) -> float:
+        return self._symbol_exposure.get(symbol, 0.0)

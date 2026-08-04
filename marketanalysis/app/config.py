@@ -13,6 +13,7 @@ class Config:
     WARMUP_SAMPLES = int(os.environ.get('WARMUP_SAMPLES', '100'))
     RETRAIN_BUFFER_SIZE = int(os.environ.get('RETRAIN_BUFFER_SIZE', '500'))
     DEDUP_SET_SIZE = int(os.environ.get('DEDUP_SET_SIZE', '10000'))
+    ANOMALY_THRESHOLD = float(os.environ.get('ANOMALY_THRESHOLD', '0.9'))
 
     def __str__(self):
         return (f"RabbitMQ: {self.RABBITMQ_URL}\n"

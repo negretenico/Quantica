@@ -1,4 +1,4 @@
-.PHONY: up down dev-ui run-server run-notify build test build-listener build-transformer build-bard build-risk build-trade build-notify build-server build-ui test-listener test-transformer test-bard test-risk test-trade test-notify test-server test-ui test-backtest test-shared tunnel info logs health
+.PHONY: up down dev-ui run-server run-notify build test build-listener build-transformer build-analysis build-bard build-risk build-trade build-notify build-server build-ui test-listener test-transformer test-analysis test-bard test-risk test-trade test-notify test-server test-ui test-backtest test-shared tunnel info logs health
 
 up:
 	docker compose up -d --build --remove-orphans
@@ -15,13 +15,16 @@ run-server:
 run-notify:
 	cd marketnotify && py run.py
 
-build: build-listener build-transformer build-bard build-risk build-trade build-notify build-server build-ui
+build: build-listener build-transformer build-analysis build-bard build-risk build-trade build-notify build-server build-ui
 
 build-listener:
 	cd marketListener && mvn clean package -DskipTests
 
 build-transformer:
 	cd markettransformer && mvn clean package -DskipTests
+
+build-analysis:
+	cd marketanalysis && py -m pip install -r requirements.txt
 
 build-bard:
 	cd marketbard && py -m pip install -r requirements.txt
@@ -41,13 +44,16 @@ build-server:
 build-ui:
 	cd marketui && npm ci && npm run build
 
-test: test-listener test-transformer test-bard test-risk test-trade test-notify test-server test-ui
+test: test-listener test-transformer test-analysis test-bard test-risk test-trade test-notify test-server test-ui
 
 test-listener:
 	cd marketListener && mvn test
 
 test-transformer:
 	cd markettransformer && mvn test
+
+test-analysis:
+	cd marketanalysis && py -m pytest tests/ -v
 
 test-bard:
 	cd marketbard && py -m pytest tests/ -v

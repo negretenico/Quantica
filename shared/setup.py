@@ -5,5 +5,5 @@ setup(
     version="0.0.1",
     packages=["shared", *[f"shared.{p}" for p in find_packages()]],
     package_dir={"shared": "."},
-    install_requires=["pika>=1.3.0", "requests>=2.31.0"],
+    install_requires=["pika>=1.3.0", "requests>=2.31.0", "prometheus_client>=0.20.0"],
 )

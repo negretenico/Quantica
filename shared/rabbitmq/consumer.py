@@ -56,16 +56,18 @@ class ConsumerConfig:
     max_retries: int = 0
     dlq_enabled: bool = True
 
+    def bindings(self) -> list["QueueBinding"]:
+        result = [QueueBinding(queue=self.queue, exchange=self.exchange, exchange_type=self.exchange_type, routing_key=self.routing_key)]
+        if self.dlq_enabled:
+            result.append(QueueBinding(queue=f"{self.queue}.dlq", exchange=_DLQ_EXCHANGE, exchange_type="direct", routing_key=self.queue))
+        return result
+
 
 class RabbitConsumer:
     def __init__(self, config: ConsumerConfig):
         self._config = config
         self._handler: Callable | None = None
         self._thread: threading.Thread | None = None
-
-    @property
-    def dlq_queue(self) -> str:
-        return f"{self._config.queue}.dlq"
 
     def register_handler(self, handler: Callable):
         self._handler = handler
@@ -91,10 +93,7 @@ class RabbitConsumer:
         connection = pika.BlockingConnection(pika.URLParameters(cfg.url))
         channel = connection.channel()
 
-        bindings = [QueueBinding(queue=cfg.queue, exchange=cfg.exchange, exchange_type=cfg.exchange_type, routing_key=cfg.routing_key)]
-        if cfg.dlq_enabled:
-            bindings.append(QueueBinding(queue=self.dlq_queue, exchange=_DLQ_EXCHANGE, exchange_type="direct", routing_key=cfg.queue))
-        for binding in bindings:
+        for binding in cfg.bindings():
             binding.declare(channel)
 
         def on_message(ch, method, properties, body):

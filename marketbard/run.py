@@ -17,7 +17,7 @@ from app.metrics import (
     syntheses_completed_total,
     windows_processed_total,
 )
-from shared.rabbitmq.consumer import RabbitConsumer
+from shared.rabbitmq.consumer import RabbitConsumer, ConsumerConfig
 from shared.rabbitmq.publisher import RabbitPublisher
 from shared.dedup import DedupFilter
 from publisher.factory import build_publisher
@@ -219,13 +219,13 @@ def main():
     logger.info("Prometheus metrics server started on :8001")
     publisher.check_connection()
 
-    analytics_consumer = RabbitConsumer(
+    analytics_consumer = RabbitConsumer(ConsumerConfig(
         url=Config.RABBITMQ_URL,
         queue=Config.ANALYTICS_QUEUE,
         exchange=Config.ANALYTICS_EXCHANGE,
         exchange_type="topic",
         routing_key="signal.analytics.#",
-    )
+    ))
     analytics_consumer.register_handler(analytics_handler)
     analytics_consumer.start_consuming()
 

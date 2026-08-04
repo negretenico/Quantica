@@ -80,7 +80,7 @@ test-server:
 	cd marketserver && py -m pytest tests/ -v
 
 test-ui:
-	cd marketui && npm test
+	cd marketui && npx vitest run
 
 test-backtest:
 	py -m pytest scripts/backtest/tests/ -v

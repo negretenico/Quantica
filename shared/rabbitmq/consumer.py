@@ -2,6 +2,7 @@ import json
 import time
 import threading
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Callable
 
@@ -30,22 +31,41 @@ handler_errors_total = Counter(
 )
 
 
+@dataclass(frozen=True)
+class QueueBinding:
+    queue: str
+    exchange: str | None = None
+    exchange_type: str = "direct"
+    routing_key: str | None = None
+
+    def declare(self, channel):
+        if self.exchange:
+            channel.exchange_declare(exchange=self.exchange, exchange_type=self.exchange_type, durable=True)
+        channel.queue_declare(queue=self.queue, durable=True)
+        if self.exchange:
+            channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.routing_key)
+
+
+@dataclass(frozen=True)
+class ConsumerConfig:
+    url: str
+    queue: str
+    exchange: str | None = None
+    exchange_type: str = "fanout"
+    routing_key: str | None = None
+    max_retries: int = 0
+    dlq_enabled: bool = True
+
+
 class RabbitConsumer:
-    def __init__(self, url: str, queue: str, exchange: str = None, exchange_type: str = "fanout",
-                 routing_key: str = None, max_retries: int = 0, dlq_enabled: bool = True):
-        self._url = url
-        self._queue = queue
-        self._exchange = exchange
-        self._exchange_type = exchange_type
-        self._routing_key = routing_key
-        self._max_retries = max_retries
-        self._dlq_enabled = dlq_enabled
+    def __init__(self, config: ConsumerConfig):
+        self._config = config
         self._handler: Callable | None = None
         self._thread: threading.Thread | None = None
 
     @property
     def dlq_queue(self) -> str:
-        return f"{self._queue}.dlq"
+        return f"{self._config.queue}.dlq"
 
     def register_handler(self, handler: Callable):
         self._handler = handler
@@ -53,7 +73,7 @@ class RabbitConsumer:
     def start_consuming(self):
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
-        logger.info(f"RabbitMQ consumer thread started for queue '{self._queue}'")
+        logger.info(f"RabbitMQ consumer thread started for queue '{self._config.queue}'")
 
     def _run(self):
         while True:
@@ -67,34 +87,28 @@ class RabbitConsumer:
                 time.sleep(_RETRY_DELAY)
 
     def _connect_and_consume(self):
-        connection = pika.BlockingConnection(pika.URLParameters(self._url))
+        cfg = self._config
+        connection = pika.BlockingConnection(pika.URLParameters(cfg.url))
         channel = connection.channel()
 
-        if self._exchange:
-            channel.exchange_declare(exchange=self._exchange, exchange_type=self._exchange_type, durable=True)
-
-        channel.queue_declare(queue=self._queue, durable=True)
-
-        if self._exchange:
-            channel.queue_bind(queue=self._queue, exchange=self._exchange, routing_key=self._routing_key)
-
-        if self._dlq_enabled:
-            channel.exchange_declare(exchange=_DLQ_EXCHANGE, exchange_type="direct", durable=True)
-            channel.queue_declare(queue=self.dlq_queue, durable=True)
-            channel.queue_bind(queue=self.dlq_queue, exchange=_DLQ_EXCHANGE, routing_key=self._queue)
+        bindings = [QueueBinding(queue=cfg.queue, exchange=cfg.exchange, exchange_type=cfg.exchange_type, routing_key=cfg.routing_key)]
+        if cfg.dlq_enabled:
+            bindings.append(QueueBinding(queue=self.dlq_queue, exchange=_DLQ_EXCHANGE, exchange_type="direct", routing_key=cfg.queue))
+        for binding in bindings:
+            binding.declare(channel)
 
         def on_message(ch, method, properties, body):
             try:
                 payload = json.loads(body)
             except Exception as e:
-                logger.error(f"Failed to deserialize message from '{self._queue}': {e}")
+                logger.error(f"Failed to deserialize message from '{cfg.queue}': {e}")
                 self._publish_to_dlq(ch, body.decode("utf-8", errors="replace"), e, 1)
                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
 
             last_error = None
             attempts = 0
-            for attempt in range(1, self._max_retries + 2):
+            for attempt in range(1, cfg.max_retries + 2):
                 attempts = attempt
                 try:
                     if self._handler:
@@ -103,34 +117,35 @@ class RabbitConsumer:
                     return
                 except Exception as e:
                     last_error = e
-                    handler_errors_total.labels(queue=self._queue).inc()
-                    logger.error(f"Error processing message from '{self._queue}' (attempt {attempt}/{self._max_retries + 1}): {e}")
-                    if attempt <= self._max_retries:
-                        retries_total.labels(queue=self._queue).inc()
+                    handler_errors_total.labels(queue=cfg.queue).inc()
+                    logger.error(f"Error processing message from '{cfg.queue}' (attempt {attempt}/{cfg.max_retries + 1}): {e}")
+                    if attempt <= cfg.max_retries:
+                        retries_total.labels(queue=cfg.queue).inc()
 
             self._publish_to_dlq(ch, payload, last_error, attempts)
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
         channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(queue=self._queue, on_message_callback=on_message)
-        logger.info(f"Waiting for messages on queue '{self._queue}'")
+        channel.basic_consume(queue=cfg.queue, on_message_callback=on_message)
+        logger.info(f"Waiting for messages on queue '{cfg.queue}'")
         channel.start_consuming()
 
     def _publish_to_dlq(self, channel, original_payload, error: Exception, attempt_count: int):
-        if not self._dlq_enabled:
+        if not self._config.dlq_enabled:
             return
+        queue = self._config.queue
         envelope = {
             "original_payload": original_payload,
             "error": f"{type(error).__name__}: {error}",
-            "original_queue": self._queue,
+            "original_queue": queue,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "attempt_count": attempt_count,
         }
         channel.basic_publish(
             exchange=_DLQ_EXCHANGE,
-            routing_key=self._queue,
+            routing_key=queue,
             body=json.dumps(envelope),
             properties=pika.BasicProperties(delivery_mode=2),
         )
-        dlq_published_total.labels(queue=self._queue).inc()
-        logger.warning(f"Message from '{self._queue}' published to DLQ after {attempt_count} attempt(s): {error}")
+        dlq_published_total.labels(queue=queue).inc()
+        logger.warning(f"Message from '{queue}' published to DLQ after {attempt_count} attempt(s): {error}")

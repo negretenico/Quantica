@@ -1,6 +1,6 @@
 import time
 
-from prometheus_client import Counter, Histogram, start_http_server
+from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
 METRICS_PORT = 8000
 
@@ -21,6 +21,24 @@ risk_rejections_total = Counter(
     "markettrade_risk_rejections_total",
     "Trade proposals rejected by risk engine",
     ["symbol", "reason"],
+)
+
+risk_evaluations_total = Counter(
+    "markettrade_risk_evaluations_total",
+    "Total risk evaluations by result",
+    ["result"],
+)
+
+risk_sized_quantity = Histogram(
+    "markettrade_risk_sized_quantity",
+    "Sized quantity of approved trades after risk adjustment",
+    buckets=(1, 5, 10, 25, 50, 100, 250, 500, 1000),
+)
+
+risk_exposure_ratio = Gauge(
+    "markettrade_risk_exposure_ratio",
+    "Current symbol exposure as ratio of max allowed",
+    ["symbol"],
 )
 
 events_received_total = Counter(
@@ -44,6 +62,16 @@ def observe_tick_to_trade(event: dict):
             tick_to_trade_latency.labels(symbol=event.get("symbol", "unknown")).observe(latency)
     except (ValueError, TypeError):
         pass
+
+
+def observe_risk_evaluation(risk_decision, symbol, risk_engine, max_exposure):
+    result_label = "approved" if risk_decision.approved else "rejected"
+    risk_evaluations_total.labels(result=result_label).inc()
+
+    if risk_decision.approved:
+        risk_sized_quantity.observe(risk_decision.sized_quantity)
+        exposure = risk_engine.get_symbol_exposure(symbol)
+        risk_exposure_ratio.labels(symbol=symbol).set(exposure / max_exposure)
 
 
 def start_metrics_server():

@@ -7,6 +7,7 @@ from app.metrics import (
     decisions_total,
     duplicates_dropped_total,
     events_received_total,
+    observe_risk_evaluation,
     observe_tick_to_trade,
     risk_rejections_total,
     start_metrics_server,
@@ -79,6 +80,7 @@ def main():
         )
 
         risk_decision = risk_engine.evaluate(proposed)
+        observe_risk_evaluation(risk_decision, decision["symbol"], risk_engine, config.risk.MAX_SYMBOL_EXPOSURE)
 
         if not risk_decision.approved:
             risk_rejections_total.labels(

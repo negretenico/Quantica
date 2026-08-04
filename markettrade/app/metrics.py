@@ -51,6 +51,18 @@ duplicates_dropped_total = Counter(
     "Events dropped as duplicates",
 )
 
+outcome_records_total = Counter(
+    "markettrade_outcome_records_total",
+    "Decision records written for outcome tracking",
+    ["symbol", "action"],
+)
+
+outcome_record_errors_total = Counter(
+    "markettrade_outcome_record_errors_total",
+    "Errors writing outcome records",
+    ["symbol"],
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

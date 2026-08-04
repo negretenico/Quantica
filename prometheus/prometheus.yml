@@ -14,6 +14,11 @@ scrape_configs:
       - targets:
           - markettransformer:8080
 
+  - job_name: marketanalysis
+    static_configs:
+      - targets:
+          - marketanalysis:8000
+
   - job_name: markettrade
     static_configs:
       - targets:

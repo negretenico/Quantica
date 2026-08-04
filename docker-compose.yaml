@@ -141,6 +141,7 @@ services:
       ANALYTICS_EXCHANGE: analytics
     ports:
       - "5000:5000"
+      - "8002:8000"
 
   marketbard:
     build:

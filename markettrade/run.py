@@ -9,6 +9,8 @@ from app.metrics import (
     events_received_total,
     observe_risk_evaluation,
     observe_tick_to_trade,
+    outcome_record_errors_total,
+    outcome_records_total,
     risk_rejections_total,
     start_metrics_server,
 )
@@ -19,6 +21,7 @@ from shared.blob import get_store
 from shared.dedup import DedupFilter
 from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
+from trade.outcome import DecisionLog
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +35,8 @@ def main():
     client = SignalRabbitClient(config.rabbitmq)
     risk_engine = RiskEngine(config.risk)
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
+    outcome_store = get_store(config.blob_store.BACKEND, config.OUTCOME_STORE_PATH)
+    decision_log = DecisionLog(outcome_store, max_size=config.DECISION_LOG_MAX_SIZE)
     dedup = DedupFilter()
 
     notify_publisher = RabbitPublisher(
@@ -100,6 +105,16 @@ def main():
 
         decision["risk_approved"] = True
         decision["sized_quantity"] = risk_decision.sized_quantity
+
+        try:
+            decision_log.record(decision)
+            outcome_records_total.labels(
+                symbol=decision["symbol"], action=decision["action"]
+            ).inc()
+        except Exception:
+            outcome_record_errors_total.labels(symbol=decision["symbol"]).inc()
+            logger.exception("Failed to record outcome for %s", decision["symbol"])
+
         try:
             store.write(decision)
             try:

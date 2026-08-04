@@ -1,7 +1,6 @@
-import pytest
-
 from app.config import Config
 from trade.decision import decide
+from trade.models import SignalEvent
 
 
 def _config(**overrides):
@@ -20,7 +19,7 @@ def _event(**overrides):
         "price": "42000.00",
     }
     base.update(overrides)
-    return base
+    return SignalEvent(**base)
 
 
 # --- BUY cases ---
@@ -88,29 +87,6 @@ def test_custom_threshold_hold_below():
     cfg = _config(ANOMALY_SCORE_THRESHOLD=0.8)
     result = decide(_event(type="LARGE_TRADE", anomaly_score=0.75), config=cfg)
     assert result["action"] == "HOLD"
-
-
-# --- Missing fields ---
-
-def test_missing_symbol_raises():
-    event = _event()
-    del event["symbol"]
-    with pytest.raises(ValueError, match="symbol"):
-        decide(event)
-
-
-def test_missing_anomaly_score_raises():
-    event = _event()
-    del event["anomaly_score"]
-    with pytest.raises(ValueError, match="anomaly_score"):
-        decide(event)
-
-
-def test_missing_price_raises():
-    event = _event()
-    del event["price"]
-    with pytest.raises(ValueError, match="price"):
-        decide(event)
 
 
 # --- raw_quantity ---

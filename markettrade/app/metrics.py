@@ -51,6 +51,12 @@ duplicates_dropped_total = Counter(
     "Events dropped as duplicates",
 )
 
+validation_errors_total = Counter(
+    "markettrade_validation_errors_total",
+    "Events rejected by schema validation",
+    ["reason"],
+)
+
 outcome_records_total = Counter(
     "markettrade_outcome_records_total",
     "Decision records written for outcome tracking",

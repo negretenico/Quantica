@@ -2,6 +2,8 @@ import logging
 import threading
 from datetime import datetime, timezone
 
+from pydantic import ValidationError
+
 from app.config import Config
 from app.metrics import (
     decisions_total,
@@ -13,6 +15,7 @@ from app.metrics import (
     outcome_records_total,
     risk_rejections_total,
     start_metrics_server,
+    validation_errors_total,
 )
 from app.rabbit_client import SignalRabbitClient
 from marketrisk.risk.engine import RiskEngine
@@ -21,6 +24,7 @@ from shared.blob import get_store
 from shared.dedup import DedupFilter
 from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
+from trade.models import SignalEvent
 from trade.outcome import DecisionLog
 
 logging.basicConfig(
@@ -47,9 +51,8 @@ def main():
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
 
-    # Track which (symbol, reason) pairs have already been logged to avoid
-    # flooding with thousands of identical rejection lines.
     _rejected_logged: set[tuple[str, str]] = set()
+    _validation_logged: set[tuple[str, str]] = set()
 
     def handle_message(payload):
         events_received_total.inc()
@@ -59,15 +62,31 @@ def main():
             logger.debug("Duplicate event dropped: %s", payload.get("symbol"))
             return
 
+        try:
+            event = SignalEvent(**payload)
+        except ValidationError as e:
+            reason = e.errors()[0]["loc"][0] if e.errors() else "unknown"
+            validation_errors_total.labels(reason=reason).inc()
+            symbol = payload.get("symbol", "unknown")
+            key = (str(symbol), str(reason))
+            if key not in _validation_logged:
+                logger.warning(
+                    "Validation REJECTED — symbol=%s reason=%s (further duplicates suppressed)",
+                    symbol,
+                    reason,
+                )
+                _validation_logged.add(key)
+            return
+
         logger.debug(
             "Received signal — symbol=%s type=%s",
-            payload.get("symbol"),
-            payload.get("type"),
+            event.symbol,
+            event.type,
         )
 
         observe_tick_to_trade(payload)
 
-        decision = decide(payload, config)
+        decision = decide(event, config)
         decisions_total.labels(
             symbol=decision["symbol"], action=decision["action"]
         ).inc()

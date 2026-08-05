@@ -2,12 +2,13 @@ package com.negretenico.quantica.markettransformer;
 
 import com.negretenico.quantica.markettransformer.config.RabbitManagementProperties;
 import com.negretenico.quantica.markettransformer.model.KafkaProperties;
+import com.negretenico.quantica.markettransformer.validation.price.PriceSanityProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties({KafkaProperties.class, RabbitManagementProperties.class})
+@EnableConfigurationProperties({KafkaProperties.class, RabbitManagementProperties.class, PriceSanityProperties.class})
 public class MarketTransformerApplication {
 
 	public static void main(String[] args) {

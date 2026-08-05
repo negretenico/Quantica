@@ -1,0 +1,41 @@
+package com.negretenico.quantica.markettransformer.validation.price;
+
+import com.negretenico.quantica.markettransformer.validation.price.PriceCheckFact;
+import com.negretenico.quantica.markettransformer.validation.price.PriceCheckResult;
+
+global com.negretenico.quantica.markettransformer.validation.price.TrailingPriceWindow window;
+
+rule "Reject non-positive price"
+    salience 100
+    when
+        $fact : PriceCheckFact(price <= 0)
+        $result : PriceCheckResult(rejected == false)
+    then
+        $result.reject("non_positive", "Price is non-positive: " + $fact.price());
+end
+
+rule "Accept during cold start"
+    salience 50
+    when
+        $fact : PriceCheckFact(price > 0)
+        $result : PriceCheckResult(rejected == false)
+        eval(window.isColdStart($fact.symbol()))
+    then
+        // Bootstrap phase: accept without median check
+end
+
+rule "Reject median deviation exceeds threshold"
+    salience 10
+    when
+        $fact : PriceCheckFact(price > 0)
+        $result : PriceCheckResult(rejected == false)
+        eval(!window.isColdStart($fact.symbol()))
+    then
+        double median = window.getMedian($fact.symbol());
+        double deviation = Math.abs($fact.price() - median) / median;
+        if (deviation > window.getDeviationThreshold()) {
+            $result.reject("median_deviation", String.format(
+                "Price %.4f deviates %.2f%% from median %.4f (threshold %.0f%%)",
+                $fact.price(), deviation * 100, median, window.getDeviationThreshold() * 100));
+        }
+end

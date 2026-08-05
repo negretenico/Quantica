@@ -1,4 +1,5 @@
 import logging
+import time
 import threading
 from datetime import datetime, timezone
 
@@ -26,6 +27,7 @@ from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.models import SignalEvent
 from trade.outcome import DecisionLog
+from trade.price_lookback import BinancePriceSource, InMemoryPriceCache, PriceLookback
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,6 +49,26 @@ def main():
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
+
+    if config.lookback.ENABLED:
+        price_cache = InMemoryPriceCache()
+        price_source = BinancePriceSource(
+            config.lookback.BINANCE_BASE_URL,
+            config.lookback.BINANCE_TIMEOUT,
+        )
+        lookback_store = get_store(config.blob_store.BACKEND, config.lookback.STORE_PATH)
+        lookback = PriceLookback(
+            windows=config.lookback.WINDOWS,
+            price_source=price_source,
+            cache=price_cache,
+            outcome_store=lookback_store,
+            max_pending=config.lookback.MAX_PENDING,
+        )
+        logger.info("PriceLookback enabled (windows=%s)", config.lookback.WINDOWS)
+    else:
+        price_cache = None
+        lookback = None
+        logger.info("PriceLookback disabled")
 
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
@@ -85,6 +107,10 @@ def main():
         )
 
         observe_tick_to_trade(payload)
+
+        if price_cache is not None:
+            ts = event.eventTime / 1000.0 if event.eventTime else time.time()
+            price_cache.record(event.symbol, ts, event.price)
 
         decision = decide(event, config)
         decisions_total.labels(
@@ -133,6 +159,9 @@ def main():
         except Exception:
             outcome_record_errors_total.labels(symbol=decision["symbol"]).inc()
             logger.exception("Failed to record outcome for %s", decision["symbol"])
+
+        if lookback is not None:
+            lookback.schedule(decision)
 
         try:
             store.write(decision)

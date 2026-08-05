@@ -33,3 +33,8 @@ scrape_configs:
     static_configs:
       - targets:
           - marketnotify:8000
+
+  - job_name: marketserver
+    static_configs:
+      - targets:
+          - marketserver:8000

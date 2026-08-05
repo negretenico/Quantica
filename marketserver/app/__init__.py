@@ -3,6 +3,7 @@ import re
 from flask import Flask, jsonify, Response, request
 
 from app.config import Config
+from app.metrics import init_metrics
 from app.model import HealthResponse, IndexResponse, BlobEntry, ErrorResponse
 from shared.blob import get_store
 
@@ -31,6 +32,7 @@ def create_app(config=None):
 
     cfg = config or Config
     app.config.from_object(cfg)
+    init_metrics(app)
 
     blob_store = get_store(cfg.BLOB_BACKEND, cfg.BLOB_STORE_PATH)
     trade_store = get_store(cfg.BLOB_BACKEND, cfg.TRADE_BLOB_STORE_PATH)

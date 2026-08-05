@@ -1,5 +1,5 @@
 import pytest
-from marketrisk.risk.models import ProposedAction, RiskDecision
+from marketrisk.risk.models import NearLimitAlert, ProposedAction, RiskDecision
 
 
 class TestProposedAction:
@@ -64,4 +64,41 @@ class TestRiskDecision:
     def test_equality_is_value_based(self):
         a = RiskDecision(approved=True, sized_quantity=0.1, rejection_reason=None)
         b = RiskDecision(approved=True, sized_quantity=0.1, rejection_reason=None)
+        assert a == b
+
+
+class TestNearLimitAlert:
+    def test_construction_and_field_access(self):
+        alert = NearLimitAlert(
+            symbol="BTCUSDT",
+            current_exposure=4200.0,
+            max_exposure=5000.0,
+            ratio=0.84,
+            timestamp_utc="2026-08-04T12:00:00+00:00",
+        )
+        assert alert.symbol == "BTCUSDT"
+        assert alert.current_exposure == 4200.0
+        assert alert.max_exposure == 5000.0
+        assert alert.ratio == pytest.approx(0.84)
+        assert alert.timestamp_utc == "2026-08-04T12:00:00+00:00"
+
+    def test_frozen_prevents_mutation(self):
+        alert = NearLimitAlert("BTCUSDT", 4200.0, 5000.0, 0.84, "2026-08-04T12:00:00+00:00")
+        with pytest.raises(Exception):
+            alert.symbol = "ETHUSDT"  # type: ignore[misc]
+
+    def test_to_dict_returns_all_fields(self):
+        alert = NearLimitAlert("BTCUSDT", 4200.0, 5000.0, 0.84, "2026-08-04T12:00:00+00:00")
+        d = alert.to_dict()
+        assert d == {
+            "symbol": "BTCUSDT",
+            "current_exposure": 4200.0,
+            "max_exposure": 5000.0,
+            "ratio": 0.84,
+            "timestamp_utc": "2026-08-04T12:00:00+00:00",
+        }
+
+    def test_equality_is_value_based(self):
+        a = NearLimitAlert("BTCUSDT", 4200.0, 5000.0, 0.84, "2026-08-04T12:00:00+00:00")
+        b = NearLimitAlert("BTCUSDT", 4200.0, 5000.0, 0.84, "2026-08-04T12:00:00+00:00")
         assert a == b

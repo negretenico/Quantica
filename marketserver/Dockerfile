@@ -23,5 +23,6 @@ RUN useradd --create-home --shell /bin/bash app && \
 USER app
 
 EXPOSE 5001
+EXPOSE 8000
 
 CMD ["python", "run.py"]

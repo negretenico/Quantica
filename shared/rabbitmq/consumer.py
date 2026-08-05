@@ -2,12 +2,14 @@ import json
 import time
 import threading
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Callable
 
 import pika
 from prometheus_client import Counter
+
+from shared.rabbitmq.retry import RetryPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -17,16 +19,6 @@ _DLQ_EXCHANGE = "dlq"
 dlq_published_total = Counter(
     "rabbitmq_consumer_dlq_published_total",
     "Messages published to dead-letter queue",
-    ["queue"],
-)
-retries_total = Counter(
-    "rabbitmq_consumer_retries_total",
-    "Retry attempts before dead-letter",
-    ["queue"],
-)
-handler_errors_total = Counter(
-    "rabbitmq_consumer_handler_errors_total",
-    "Total handler errors (includes retried and dead-lettered)",
     ["queue"],
 )
 
@@ -53,7 +45,8 @@ class ConsumerConfig:
     exchange: str | None = None
     exchange_type: str = "fanout"
     routing_key: str | None = None
-    max_retries: int = 0
+    max_retries: int = 3
+    base_delay_seconds: float = 1.0
     dlq_enabled: bool = True
 
     def bindings(self) -> list["QueueBinding"]:
@@ -61,6 +54,9 @@ class ConsumerConfig:
         if self.dlq_enabled:
             result.append(QueueBinding(queue=f"{self.queue}.dlq", exchange=_DLQ_EXCHANGE, exchange_type="direct", routing_key=self.queue))
         return result
+
+    def retry_policy(self) -> "RetryPolicy":
+        return RetryPolicy(max_retries=self.max_retries, base_delay_seconds=self.base_delay_seconds)
 
 
 class ConsumerHealth:
@@ -115,6 +111,8 @@ class RabbitConsumer:
         for binding in cfg.bindings():
             binding.declare(channel)
 
+        retry_policy = cfg.retry_policy()
+
         def on_message(ch, method, properties, body):
             try:
                 payload = json.loads(body)
@@ -124,24 +122,16 @@ class RabbitConsumer:
                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
 
-            last_error = None
-            attempts = 0
-            for attempt in range(1, cfg.max_retries + 2):
-                attempts = attempt
-                try:
-                    if self._handler:
-                        self._handler(payload)
-                    ch.basic_ack(delivery_tag=method.delivery_tag)
-                    return
-                except Exception as e:
-                    last_error = e
-                    handler_errors_total.labels(queue=cfg.queue).inc()
-                    logger.error(f"Error processing message from '{cfg.queue}' (attempt {attempt}/{cfg.max_retries + 1}): {e}")
-                    if attempt <= cfg.max_retries:
-                        retries_total.labels(queue=cfg.queue).inc()
+            if self._handler:
+                success, last_error, attempts = retry_policy.execute(self._handler, payload, cfg.queue)
+            else:
+                success, last_error, attempts = True, None, 1
 
-            self._publish_to_dlq(ch, payload, last_error, attempts)
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            if success:
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+            else:
+                self._publish_to_dlq(ch, payload, last_error, attempts)
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
         channel.basic_qos(prefetch_count=1)
         channel.basic_consume(queue=cfg.queue, on_message_callback=on_message)

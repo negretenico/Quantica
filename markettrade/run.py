@@ -1,4 +1,5 @@
 import logging
+import time
 import threading
 from datetime import datetime, timezone
 
@@ -30,6 +31,7 @@ from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.models import SignalEvent
 from trade.outcome import DecisionLog
+from trade.price_lookback import create_lookback
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,6 +55,7 @@ def main():
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
+    lookback, price_cache = create_lookback(config)
 
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
@@ -92,6 +95,10 @@ def main():
         )
 
         observe_tick_to_trade(payload)
+
+        if price_cache is not None:
+            ts = event.eventTime / 1000.0 if event.eventTime else time.time()
+            price_cache.record(event.symbol, ts, event.price)
 
         decision = decide(event, config)
         decisions_total.labels(
@@ -161,6 +168,9 @@ def main():
         except Exception:
             outcome_record_errors_total.labels(symbol=decision["symbol"]).inc()
             logger.exception("Failed to record outcome for %s", decision["symbol"])
+
+        if lookback is not None:
+            lookback.schedule(decision)
 
         try:
             store.write(decision)

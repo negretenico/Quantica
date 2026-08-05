@@ -29,10 +29,26 @@ class RiskConfig:
 
 
 @dataclass
+class LookbackConfig:
+    ENABLED: bool = os.environ.get('LOOKBACK_ENABLED', 'true').lower() == 'true'
+    WINDOWS: list[int] = None
+    BINANCE_BASE_URL: str = os.environ.get('BINANCE_BASE_URL', 'https://api.binance.com')
+    BINANCE_TIMEOUT: int = int(os.environ.get('BINANCE_TIMEOUT', '5'))
+    MAX_PENDING: int = int(os.environ.get('LOOKBACK_MAX_PENDING', '5000'))
+    STORE_PATH: str = os.environ.get('LOOKBACK_STORE_PATH', './decisions/lookback')
+
+    def __post_init__(self):
+        if self.WINDOWS is None:
+            raw = os.environ.get('LOOKBACK_WINDOWS', '60,300,900')
+            self.WINDOWS = [int(w.strip()) for w in raw.split(',')]
+
+
+@dataclass
 class Config:
     rabbitmq: RabbitMQConfig = None
     blob_store: BlobStoreConfig = None
     risk: RiskConfig = None
+    lookback: LookbackConfig = None
     ANOMALY_SCORE_THRESHOLD: float = float(os.environ.get('ANOMALY_SCORE_THRESHOLD', '0.7'))
     DECISION_LOG_MAX_SIZE: int = int(os.environ.get('DECISION_LOG_MAX_SIZE', '1000'))
     OUTCOME_STORE_PATH: str = os.environ.get('OUTCOME_STORE_PATH', './decisions/outcomes')
@@ -45,6 +61,8 @@ class Config:
             self.blob_store = BlobStoreConfig()
         if self.risk is None:
             self.risk = RiskConfig()
+        if self.lookback is None:
+            self.lookback = LookbackConfig()
 
     def __str__(self):
         return (

@@ -27,7 +27,7 @@ from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.models import SignalEvent
 from trade.outcome import DecisionLog
-from trade.price_lookback import BinancePriceSource, InMemoryPriceCache, PriceLookback
+from trade.price_lookback import create_lookback
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,26 +49,7 @@ def main():
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
-
-    if config.lookback.ENABLED:
-        price_cache = InMemoryPriceCache()
-        price_source = BinancePriceSource(
-            config.lookback.BINANCE_BASE_URL,
-            config.lookback.BINANCE_TIMEOUT,
-        )
-        lookback_store = get_store(config.blob_store.BACKEND, config.lookback.STORE_PATH)
-        lookback = PriceLookback(
-            windows=config.lookback.WINDOWS,
-            price_source=price_source,
-            cache=price_cache,
-            outcome_store=lookback_store,
-            max_pending=config.lookback.MAX_PENDING,
-        )
-        logger.info("PriceLookback enabled (windows=%s)", config.lookback.WINDOWS)
-    else:
-        price_cache = None
-        lookback = None
-        logger.info("PriceLookback disabled")
+    lookback, price_cache = create_lookback(config)
 
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")

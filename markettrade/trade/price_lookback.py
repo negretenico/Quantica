@@ -10,7 +10,29 @@ from datetime import datetime, timezone
 from queue import Empty, PriorityQueue
 from typing import Protocol
 
+from shared.blob import get_store
+
 logger = logging.getLogger(__name__)
+
+
+def create_lookback(config):
+    """Factory: build a (PriceLookback, InMemoryPriceCache) pair from config, or (None, None) if disabled."""
+    if not config.lookback.ENABLED:
+        logger.info("PriceLookback disabled")
+        return None, None
+
+    cache = InMemoryPriceCache()
+    source = BinancePriceSource(config.lookback.BINANCE_BASE_URL, config.lookback.BINANCE_TIMEOUT)
+    store = get_store(config.blob_store.BACKEND, config.lookback.STORE_PATH)
+    lookback = PriceLookback(
+        windows=config.lookback.WINDOWS,
+        price_source=source,
+        cache=cache,
+        outcome_store=store,
+        max_pending=config.lookback.MAX_PENDING,
+    )
+    logger.info("PriceLookback enabled (windows=%s)", config.lookback.WINDOWS)
+    return lookback, cache
 
 
 class PriceSource(Protocol):

@@ -1,6 +1,12 @@
 kafka:
   groupId: market-transformer-group
 
+price:
+  sanity:
+    window-size: 100
+    bootstrap-threshold: 20
+    deviation-threshold: 0.50
+
 management:
   endpoints:
     web:

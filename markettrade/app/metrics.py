@@ -69,6 +69,60 @@ outcome_record_errors_total = Counter(
     ["symbol"],
 )
 
+lookback_scheduled_total = Counter(
+    "markettrade_lookback_scheduled_total",
+    "Price lookback tasks scheduled",
+    ["symbol", "window"],
+)
+
+lookback_completed_total = Counter(
+    "markettrade_lookback_completed_total",
+    "Price lookback tasks completed",
+    ["symbol", "window", "source"],
+)
+
+lookback_failed_total = Counter(
+    "markettrade_lookback_failed_total",
+    "Price lookback tasks that failed to get a price",
+    ["symbol", "window"],
+)
+
+lookback_dropped_total = Counter(
+    "markettrade_lookback_dropped_total",
+    "Lookback tasks dropped due to max_pending cap",
+)
+
+lookback_latency = Histogram(
+    "markettrade_lookback_fetch_seconds",
+    "Time to fetch outcome price",
+    ["source"],
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5),
+)
+
+lookback_pnl = Histogram(
+    "markettrade_lookback_pnl_pct",
+    "PnL percentage of lookback outcomes",
+    ["symbol", "window", "action"],
+    buckets=(-0.05, -0.02, -0.01, -0.005, 0, 0.005, 0.01, 0.02, 0.05),
+)
+
+near_limit_alerts_total = Counter(
+    "markettrade_near_limit_alerts_total",
+    "Near-limit exposure alerts fired",
+    ["symbol"],
+)
+
+near_limit_active_symbols = Gauge(
+    "markettrade_near_limit_active_symbols",
+    "Number of symbols currently in near-limit state",
+)
+
+near_limit_ratio = Gauge(
+    "markettrade_near_limit_ratio",
+    "Exposure ratio when near-limit alert fires",
+    ["symbol"],
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

@@ -1,4 +1,5 @@
 import logging
+import time
 import threading
 from datetime import datetime, timezone
 
@@ -9,6 +10,9 @@ from app.metrics import (
     decisions_total,
     duplicates_dropped_total,
     events_received_total,
+    near_limit_active_symbols,
+    near_limit_alerts_total,
+    near_limit_ratio,
     observe_risk_evaluation,
     observe_tick_to_trade,
     outcome_record_errors_total,
@@ -20,12 +24,14 @@ from app.metrics import (
 from app.rabbit_client import SignalRabbitClient
 from marketrisk.risk.engine import RiskEngine
 from marketrisk.risk.models import ProposedAction
+from marketrisk.risk.observer import NearLimitObserver
 from shared.blob import get_store
 from shared.dedup import DedupFilter
 from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.models import SignalEvent
 from trade.outcome import DecisionLog
+from trade.price_lookback import create_lookback
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,8 +44,10 @@ def main():
     config = Config()
     client = SignalRabbitClient(config.rabbitmq)
     risk_engine = RiskEngine(config.risk)
+    near_limit_observer = NearLimitObserver(threshold_pct=config.risk.NEAR_LIMIT_THRESHOLD_PCT)
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
     outcome_store = get_store(config.blob_store.BACKEND, config.OUTCOME_STORE_PATH)
+    risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
     decision_log = DecisionLog(outcome_store, max_size=config.DECISION_LOG_MAX_SIZE)
     dedup = DedupFilter()
 
@@ -47,12 +55,14 @@ def main():
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
+    lookback, price_cache = create_lookback(config)
 
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
 
     _rejected_logged: set[tuple[str, str]] = set()
     _validation_logged: set[tuple[str, str]] = set()
+    _near_limit_logged: set[str] = set()
 
     def handle_message(payload):
         events_received_total.inc()
@@ -86,6 +96,10 @@ def main():
 
         observe_tick_to_trade(payload)
 
+        if price_cache is not None:
+            ts = event.eventTime / 1000.0 if event.eventTime else time.time()
+            price_cache.record(event.symbol, ts, event.price)
+
         decision = decide(event, config)
         decisions_total.labels(
             symbol=decision["symbol"], action=decision["action"]
@@ -105,6 +119,27 @@ def main():
 
         risk_decision = risk_engine.evaluate(proposed)
         observe_risk_evaluation(risk_decision, decision["symbol"], risk_engine, config.risk.MAX_SYMBOL_EXPOSURE)
+
+        alert = near_limit_observer.check(
+            symbol=decision["symbol"],
+            current_exposure=risk_engine.get_symbol_exposure(decision["symbol"]),
+            max_exposure=config.risk.MAX_SYMBOL_EXPOSURE,
+        )
+        if alert is not None:
+            risk_alert_store.write(alert.to_dict())
+            near_limit_alerts_total.labels(symbol=alert.symbol).inc()
+            near_limit_ratio.labels(symbol=alert.symbol).set(alert.ratio)
+            if alert.symbol not in _near_limit_logged:
+                logger.warning(
+                    "NEAR-LIMIT exposure — symbol=%s ratio=%.2f (%.0f/%.0f) "
+                    "(further alerts suppressed until cleared)",
+                    alert.symbol, alert.ratio, alert.current_exposure, alert.max_exposure,
+                )
+                _near_limit_logged.add(alert.symbol)
+        else:
+            if decision["symbol"] in _near_limit_logged:
+                _near_limit_logged.discard(decision["symbol"])
+        near_limit_active_symbols.set(len(near_limit_observer.active_symbols()))
 
         if not risk_decision.approved:
             risk_rejections_total.labels(
@@ -133,6 +168,9 @@ def main():
         except Exception:
             outcome_record_errors_total.labels(symbol=decision["symbol"]).inc()
             logger.exception("Failed to record outcome for %s", decision["symbol"])
+
+        if lookback is not None:
+            lookback.schedule(decision)
 
         try:
             store.write(decision)

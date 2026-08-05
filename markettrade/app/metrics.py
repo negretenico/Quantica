@@ -69,6 +69,23 @@ outcome_record_errors_total = Counter(
     ["symbol"],
 )
 
+near_limit_alerts_total = Counter(
+    "markettrade_near_limit_alerts_total",
+    "Near-limit exposure alerts fired",
+    ["symbol"],
+)
+
+near_limit_active_symbols = Gauge(
+    "markettrade_near_limit_active_symbols",
+    "Number of symbols currently in near-limit state",
+)
+
+near_limit_ratio = Gauge(
+    "markettrade_near_limit_ratio",
+    "Exposure ratio when near-limit alert fires",
+    ["symbol"],
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

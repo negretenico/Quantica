@@ -1,4 +1,4 @@
-.PHONY: up down e2e-up e2e-down e2e-logs dev-ui run-server run-notify build test build-listener build-transformer build-analysis build-bard build-risk build-trade build-notify build-server build-ui test-listener test-transformer test-analysis test-bard test-risk test-trade test-notify test-server test-ui test-backtest test-shared tunnel info logs health
+.PHONY: up down e2e-up e2e-down e2e-logs dev-ui run-server run-notify build test build-listener build-transformer build-analysis build-bard build-risk build-trade build-notify build-server build-ui build-e2e test-listener test-transformer test-analysis test-bard test-risk test-trade test-notify test-server test-ui test-e2e test-backtest test-shared tunnel info logs health
 
 up:
 	docker compose up -d --build --remove-orphans
@@ -81,6 +81,12 @@ test-server:
 
 test-ui:
 	cd marketui && npx vitest run
+
+build-e2e:
+	cd markete2e && py -m pip install -e .
+
+test-e2e:
+	cd markete2e && py -m pytest tests/ -v -m e2e
 
 test-backtest:
 	py -m pytest scripts/backtest/tests/ -v

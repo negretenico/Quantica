@@ -1,7 +1,54 @@
 import json
+import subprocess
 import time
 
+import pika
 from kafka import KafkaProducer
+
+
+def wait_for_rabbitmq(
+    rabbitmq_url: str = "amqp://quantica:quantica@localhost:5672/",
+    timeout_seconds: int = 30,
+) -> None:
+    """Block until RabbitMQ is accepting connections."""
+    deadline = time.monotonic() + timeout_seconds
+    last_error = None
+    while time.monotonic() < deadline:
+        try:
+            params = pika.URLParameters(rabbitmq_url)
+            connection = pika.BlockingConnection(params)
+            connection.close()
+            return
+        except Exception as exc:
+            last_error = exc
+        time.sleep(1)
+    raise TimeoutError(
+        f"RabbitMQ not ready at {rabbitmq_url} after {timeout_seconds}s: {last_error}"
+    )
+
+
+def wait_for_markettransformer(
+    container_name: str = "quantica-markettransformer",
+    timeout_seconds: int = 60,
+) -> None:
+    """Block until the markettransformer Docker container reports healthy."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            result = subprocess.run(
+                ["docker", "inspect", "--format", "{{.State.Health.Status}}", container_name],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip() == "healthy":
+                return
+        except Exception:
+            pass
+        time.sleep(2)
+    raise TimeoutError(
+        f"markettransformer container not healthy after {timeout_seconds}s"
+    )
 
 
 def wait_for_kafka(

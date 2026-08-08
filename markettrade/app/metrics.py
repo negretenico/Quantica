@@ -99,11 +99,21 @@ lookback_latency = Histogram(
     buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5),
 )
 
-lookback_pnl = Histogram(
-    "markettrade_lookback_pnl_pct",
-    "PnL percentage of lookback outcomes",
-    ["symbol", "window", "action"],
-    buckets=(-0.05, -0.02, -0.01, -0.005, 0, 0.005, 0.01, 0.02, 0.05),
+outcome_tracker_total = Counter(
+    "markettrade_outcome_tracker_total",
+    "Outcomes tracked by OutcomeTracker",
+    ["symbol", "window", "action", "direction_correct"],
+)
+
+outcome_tracker_correctness = Gauge(
+    "markettrade_outcome_tracker_correctness_rate",
+    "Rolling correctness rate of tracked outcomes",
+    ["window", "action"],
+)
+
+outcome_tracker_errors_total = Counter(
+    "markettrade_outcome_tracker_errors_total",
+    "Errors in OutcomeTracker.record_outcome",
 )
 
 near_limit_alerts_total = Counter(

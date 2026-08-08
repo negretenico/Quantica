@@ -33,6 +33,7 @@ from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.models import SignalEvent
 from trade.outcome import DecisionLog
+from trade.outcome_tracker import OutcomeTracker
 from trade.price_lookback import create_lookback
 from trade.rate_limiter import TradeRateLimiter
 
@@ -52,13 +53,14 @@ def main():
     outcome_store = get_store(config.blob_store.BACKEND, config.OUTCOME_STORE_PATH)
     risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
     decision_log = DecisionLog(outcome_store, max_size=config.DECISION_LOG_MAX_SIZE)
+    outcome_tracker = OutcomeTracker()
     dedup = DedupFilter()
 
     notify_publisher = RabbitPublisher(
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
-    lookback, price_cache = create_lookback(config)
+    lookback, price_cache = create_lookback(config, outcome_tracker=outcome_tracker)
 
     rate_limiter = None
     if config.rate_limiter.ENABLED:

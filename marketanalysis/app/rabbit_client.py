@@ -1,6 +1,6 @@
 import logging
 from app.config import Config
-from rabbitmq.consumer import RabbitConsumer, ConsumerConfig
+from shared.rabbitmq.consumer import RabbitConsumer, ConsumerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,9 @@ class RabbitClientManager:
             queue=config.RABBITMQ_QUEUE,
             exchange=config.SIGNAL_EXCHANGE,
             exchange_type="fanout",
+            max_retries=config.MAX_RETRIES,
+            base_delay_seconds=config.RETRY_BASE_DELAY,
+            dlq_enabled=True,
         ))
 
     def subscribe(self, handler):

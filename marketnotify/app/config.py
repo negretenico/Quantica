@@ -15,6 +15,8 @@ class Config:
     NOTIFY_QUEUE: str = os.environ.get('NOTIFY_QUEUE', 'notifications.notify')
     SYNTHESIS_HOUR: int = int(os.environ.get('SYNTHESIS_HOUR', '16'))
     HEALTH_DIGEST_INTERVAL_MINUTES: int = int(os.environ.get('HEALTH_DIGEST_INTERVAL_MINUTES', '60'))
+    MAX_RETRIES: int = int(os.environ.get('RABBITMQ_MAX_RETRIES', '3'))
+    RETRY_BASE_DELAY: float = float(os.environ.get('RABBITMQ_RETRY_BASE_DELAY', '1.0'))
     PROMETHEUS_TARGETS: str = os.environ.get(
         'PROMETHEUS_TARGETS',
         'http://localhost:8000/metrics,http://localhost:8001/metrics',

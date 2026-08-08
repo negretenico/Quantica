@@ -12,6 +12,8 @@ class RabbitMQConfig:
     EXCHANGE: str = os.environ.get('TRADE_EXCHANGE', 'analytics')
     EXCHANGE_TYPE: str = os.environ.get('TRADE_EXCHANGE_TYPE', 'topic')
     ROUTING_KEY: str = os.environ.get('TRADE_ROUTING_KEY', 'signal.analytics.#')
+    MAX_RETRIES: int = int(os.environ.get('RABBITMQ_MAX_RETRIES', '3'))
+    RETRY_BASE_DELAY: float = float(os.environ.get('RABBITMQ_RETRY_BASE_DELAY', '1.0'))
 
 
 @dataclass

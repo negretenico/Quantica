@@ -22,6 +22,8 @@ class Config:
     S3_BUCKET         = os.environ.get('S3_BUCKET', '')
     S3_PREFIX         = os.environ.get('S3_PREFIX', 'news')
     S3_REGION         = os.environ.get('S3_REGION', 'us-east-1')
+    MAX_RETRIES = int(os.environ.get('RABBITMQ_MAX_RETRIES', '3'))
+    RETRY_BASE_DELAY = float(os.environ.get('RABBITMQ_RETRY_BASE_DELAY', '1.0'))
 
     def __str__(self):
         return (f"RabbitMQ: {self.RABBITMQ_URL}\n"

@@ -123,6 +123,16 @@ near_limit_ratio = Gauge(
     ["symbol"],
 )
 
+concentration_alerts_total = Counter(
+    "markettrade_concentration_alerts_total",
+    "Concentration risk alerts fired",
+)
+
+concentration_active = Gauge(
+    "markettrade_concentration_active",
+    "Whether concentration risk is currently active (1 or 0)",
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

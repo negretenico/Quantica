@@ -7,6 +7,8 @@ from pydantic import ValidationError
 
 from app.config import Config
 from app.metrics import (
+    concentration_active,
+    concentration_alerts_total,
     decisions_total,
     duplicates_dropped_total,
     events_received_total,
@@ -23,8 +25,8 @@ from app.metrics import (
 )
 from app.rabbit_client import SignalRabbitClient
 from marketrisk.risk.engine import RiskEngine
-from marketrisk.risk.models import ProposedAction
-from marketrisk.risk.observer import NearLimitObserver
+from marketrisk.risk.models import ConcentrationState, ProposedAction
+from marketrisk.risk.observer import ConcentrationObserver, NearLimitObserver
 from shared.blob import get_store
 from shared.dedup import DedupFilter
 from shared.rabbitmq.publisher import RabbitPublisher
@@ -45,6 +47,9 @@ def main():
     client = SignalRabbitClient(config.rabbitmq)
     risk_engine = RiskEngine(config.risk)
     near_limit_observer = NearLimitObserver(threshold_pct=config.risk.NEAR_LIMIT_THRESHOLD_PCT)
+    concentration_observer = ConcentrationObserver(
+        near_limit_observer, max_correlated=config.risk.CONCENTRATION_THRESHOLD,
+    )
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
     outcome_store = get_store(config.blob_store.BACKEND, config.OUTCOME_STORE_PATH)
     risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
@@ -120,26 +125,34 @@ def main():
         risk_decision = risk_engine.evaluate(proposed)
         observe_risk_evaluation(risk_decision, decision["symbol"], risk_engine, config.risk.MAX_SYMBOL_EXPOSURE)
 
-        alert = near_limit_observer.check(
+        near_alert, conc_alert = concentration_observer.check(
             symbol=decision["symbol"],
             current_exposure=risk_engine.get_symbol_exposure(decision["symbol"]),
             max_exposure=config.risk.MAX_SYMBOL_EXPOSURE,
         )
-        if alert is not None:
-            risk_alert_store.write(alert.to_dict())
-            near_limit_alerts_total.labels(symbol=alert.symbol).inc()
-            near_limit_ratio.labels(symbol=alert.symbol).set(alert.ratio)
-            if alert.symbol not in _near_limit_logged:
+        if near_alert is not None:
+            risk_alert_store.write(near_alert.to_dict())
+            near_limit_alerts_total.labels(symbol=near_alert.symbol).inc()
+            near_limit_ratio.labels(symbol=near_alert.symbol).set(near_alert.ratio)
+            if near_alert.symbol not in _near_limit_logged:
                 logger.warning(
                     "NEAR-LIMIT exposure — symbol=%s ratio=%.2f (%.0f/%.0f) "
                     "(further alerts suppressed until cleared)",
-                    alert.symbol, alert.ratio, alert.current_exposure, alert.max_exposure,
+                    near_alert.symbol, near_alert.ratio, near_alert.current_exposure, near_alert.max_exposure,
                 )
-                _near_limit_logged.add(alert.symbol)
+                _near_limit_logged.add(near_alert.symbol)
         else:
             if decision["symbol"] in _near_limit_logged:
                 _near_limit_logged.discard(decision["symbol"])
         near_limit_active_symbols.set(len(near_limit_observer.active_symbols()))
+
+        if conc_alert is not None:
+            risk_alert_store.write(conc_alert.to_dict())
+            concentration_alerts_total.inc()
+            concentration_active.set(1)
+        else:
+            if concentration_observer.state != ConcentrationState.FIRED:
+                concentration_active.set(0)
 
         if not risk_decision.approved:
             risk_rejections_total.labels(

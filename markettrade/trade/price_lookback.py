@@ -8,14 +8,14 @@ from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from queue import Empty, PriorityQueue
-from typing import Callable, Protocol
+from typing import Protocol
 
 from shared.blob import get_store
 
 logger = logging.getLogger(__name__)
 
 
-def create_lookback(config, outcome_callback: Callable[[dict], None] | None = None):
+def create_lookback(config, outcome_tracker=None):
     """Factory: build a (PriceLookback, InMemoryPriceCache) pair from config, or (None, None) if disabled."""
     if not config.lookback.ENABLED:
         logger.info("PriceLookback disabled")
@@ -30,7 +30,7 @@ def create_lookback(config, outcome_callback: Callable[[dict], None] | None = No
         cache=cache,
         outcome_store=store,
         max_pending=config.lookback.MAX_PENDING,
-        outcome_callback=outcome_callback,
+        outcome_tracker=outcome_tracker,
     )
     logger.info("PriceLookback enabled (windows=%s)", config.lookback.WINDOWS)
     return lookback, cache
@@ -113,14 +113,14 @@ class PriceLookback:
         cache: InMemoryPriceCache,
         outcome_store,
         max_pending: int = 5000,
-        outcome_callback: Callable[[dict], None] | None = None,
+        outcome_tracker=None,
     ):
         self._windows = windows
         self._source = price_source
         self._cache = cache
         self._store = outcome_store
         self._max_pending = max_pending
-        self._outcome_callback = outcome_callback
+        self._tracker = outcome_tracker
         self._queue: PriorityQueue[LookbackTask] = PriorityQueue()
         self._pending_count = 0
         self._count_lock = threading.Lock()
@@ -177,7 +177,6 @@ class PriceLookback:
             lookback_completed_total,
             lookback_failed_total,
             lookback_latency,
-            lookback_pnl,
         )
 
         start = time.time()
@@ -208,17 +207,6 @@ class PriceLookback:
             symbol=task.symbol, window=str(task.window), source=source
         ).inc()
 
-        if task.action == "BUY":
-            pnl_pct = (price - task.entry_price) / task.entry_price
-        else:
-            pnl_pct = (task.entry_price - price) / task.entry_price
-
-        direction_correct = pnl_pct > 0
-
-        lookback_pnl.labels(
-            symbol=task.symbol, window=str(task.window), action=task.action
-        ).observe(pnl_pct)
-
         record = {
             "type": "price_lookback",
             "symbol": task.symbol,
@@ -227,8 +215,6 @@ class PriceLookback:
             "decision_time": datetime.fromtimestamp(task.decision_time, tz=timezone.utc).isoformat(),
             "window_seconds": task.window,
             "outcome_price": price,
-            "pnl_pct": round(pnl_pct, 6),
-            "direction_correct": direction_correct,
             "recorded_at": datetime.now(timezone.utc).isoformat(),
             "price_source": source,
         }
@@ -238,11 +224,11 @@ class PriceLookback:
         except Exception:
             logger.exception("Failed to write lookback record for %s", task.symbol)
 
-        if self._outcome_callback is not None:
+        if self._tracker is not None:
             try:
-                self._outcome_callback(record)
+                self._tracker.evaluate(record)
             except Exception:
-                logger.exception("Outcome callback failed for %s", task.symbol)
+                logger.exception("OutcomeTracker evaluation failed for %s", task.symbol)
 
         with self._count_lock:
             self._pending_count -= 1

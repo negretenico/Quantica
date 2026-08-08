@@ -60,7 +60,7 @@ def main():
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
-    lookback, price_cache = create_lookback(config, outcome_callback=outcome_tracker.record_outcome)
+    lookback, price_cache = create_lookback(config, outcome_tracker=outcome_tracker)
 
     rate_limiter = None
     if config.rate_limiter.ENABLED:

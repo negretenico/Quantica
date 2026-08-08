@@ -18,27 +18,14 @@ class OutcomeRecord:
     direction_correct: bool
     recorded_at: str
 
-    @classmethod
-    def from_lookback(cls, record: dict) -> "OutcomeRecord":
-        return cls(
-            symbol=record["symbol"],
-            action=record["action"],
-            entry_price=record["entry_price"],
-            decision_time=record["decision_time"],
-            window_seconds=record["window_seconds"],
-            outcome_price=record["outcome_price"],
-            pnl_pct=record["pnl_pct"],
-            direction_correct=record["direction_correct"],
-            recorded_at=record["recorded_at"],
-        )
-
 
 class OutcomeTracker:
     def __init__(self, max_outcomes: int = 5000):
         self._outcomes: deque[OutcomeRecord] = deque(maxlen=max_outcomes)
         self._lock = threading.Lock()
 
-    def record_outcome(self, lookback_record: dict) -> None:
+    def evaluate(self, lookback_record: dict) -> None:
+        """Evaluate a raw lookback record: compute pnl and directional correctness."""
         from app.metrics import (
             outcome_tracker_total,
             outcome_tracker_correctness,
@@ -46,11 +33,36 @@ class OutcomeTracker:
         )
 
         try:
-            rec = OutcomeRecord.from_lookback(lookback_record)
+            symbol = lookback_record["symbol"]
+            action = lookback_record["action"]
+            entry_price = lookback_record["entry_price"]
+            outcome_price = lookback_record["outcome_price"]
+            window_seconds = lookback_record["window_seconds"]
+            decision_time = lookback_record["decision_time"]
+            recorded_at = lookback_record["recorded_at"]
         except (KeyError, TypeError) as e:
             outcome_tracker_errors_total.inc()
             logger.warning("Failed to parse lookback record: %s", e)
             return
+
+        if action == "BUY":
+            pnl_pct = (outcome_price - entry_price) / entry_price
+        else:
+            pnl_pct = (entry_price - outcome_price) / entry_price
+
+        direction_correct = pnl_pct > 0
+
+        rec = OutcomeRecord(
+            symbol=symbol,
+            action=action,
+            entry_price=entry_price,
+            decision_time=decision_time,
+            window_seconds=window_seconds,
+            outcome_price=outcome_price,
+            pnl_pct=round(pnl_pct, 6),
+            direction_correct=direction_correct,
+            recorded_at=recorded_at,
+        )
 
         with self._lock:
             self._outcomes.append(rec)

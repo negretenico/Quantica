@@ -3,7 +3,13 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from marketrisk.risk.models import ConcentrationAlert, ConcentrationState, NearLimitAlert
+from marketrisk.risk.models import (
+    ConcentrationAlert,
+    ConcentrationCleared,
+    ConcentrationState,
+    NearLimitAlert,
+    NearLimitCleared,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +25,7 @@ class NearLimitObserver:
         self._threshold_pct = threshold_pct
         self._active_alerts: dict[str, NearLimitAlert] = {}
 
-    def check(self, symbol: str, current_exposure: float, max_exposure: float) -> NearLimitAlert | None:
+    def check(self, symbol: str, current_exposure: float, max_exposure: float) -> NearLimitAlert | NearLimitCleared | None:
         if max_exposure <= 0:
             return None
 
@@ -38,6 +44,10 @@ class NearLimitObserver:
 
         if ratio < self._threshold_pct and symbol in self._active_alerts:
             del self._active_alerts[symbol]
+            return NearLimitCleared(
+                symbol=symbol,
+                timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            )
 
         return None
 
@@ -69,10 +79,10 @@ class ConcentrationObserver:
 
     def check(
         self, symbol: str, current_exposure: float, max_exposure: float,
-    ) -> ConcentrationAlert | None:
+    ) -> ConcentrationAlert | ConcentrationCleared | None:
         return self._transition()
 
-    def _transition(self) -> ConcentrationAlert | None:
+    def _transition(self) -> ConcentrationAlert | ConcentrationCleared | None:
         count = len(self._near_limit.active_symbols())
 
         if self._state == ConcentrationState.ARMED:
@@ -93,6 +103,11 @@ class ConcentrationObserver:
                     "Concentration risk DISARMED — active near-limit symbols dropped to %d "
                     "(threshold=%d)",
                     count, self._threshold,
+                )
+                return ConcentrationCleared(
+                    remaining_count=count,
+                    threshold=self._threshold,
+                    timestamp_utc=datetime.now(timezone.utc).isoformat(),
                 )
 
         elif self._state == ConcentrationState.DISARMED:
@@ -139,7 +154,7 @@ class RiskObserverPipeline:
     NearLimitObserver).
 
     Each observer must implement check(symbol, current_exposure, max_exposure)
-    and return an alert object or None.
+    and return an alert, a cleared signal, or None.
     """
 
     def __init__(self, observers: list) -> None:

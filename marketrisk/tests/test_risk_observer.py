@@ -1,6 +1,12 @@
 import pytest
 
-from marketrisk.risk.models import ConcentrationState
+from marketrisk.risk.models import (
+    ConcentrationAlert,
+    ConcentrationCleared,
+    ConcentrationState,
+    NearLimitAlert,
+    NearLimitCleared,
+)
 from marketrisk.risk.observer import ConcentrationObserver, NearLimitObserver, RiskObserverPipeline
 
 
@@ -36,8 +42,10 @@ class TestNearLimitObserver:
         observer.check("BTCUSDT", 4100.0, 5000.0)
         assert observer.is_near_limit("BTCUSDT") is True
 
-        observer.check("BTCUSDT", 3000.0, 5000.0)
+        result = observer.check("BTCUSDT", 3000.0, 5000.0)
         assert observer.is_near_limit("BTCUSDT") is False
+        assert isinstance(result, NearLimitCleared)
+        assert result.symbol == "BTCUSDT"
 
     def test_fires_again_after_clearing(self):
         observer = NearLimitObserver(threshold_pct=0.80)
@@ -143,8 +151,11 @@ class TestConcentrationObserver:
         self._push_near_limit(nl, obs, "SOLUSDT")
         assert obs.state == ConcentrationState.FIRED
         nl.check("BTCUSDT", 1000.0, 5000.0)
-        obs.check("BTCUSDT", 1000.0, 5000.0)
+        result = obs.check("BTCUSDT", 1000.0, 5000.0)
         assert obs.state == ConcentrationState.DISARMED
+        assert isinstance(result, ConcentrationCleared)
+        assert result.remaining_count == 2
+        assert result.threshold == 3
 
     def test_re_arms_after_disarmed_and_still_below(self):
         obs, nl = self._make(max_correlated=3)
@@ -229,9 +240,24 @@ class TestRiskObserverPipeline:
         pipeline = RiskObserverPipeline([nl, conc])
 
         pipeline.check("BTCUSDT", 4100.0, 5000.0)
-        alerts = pipeline.check("ETHUSDT", 4500.0, 5000.0)
+        results = pipeline.check("ETHUSDT", 4500.0, 5000.0)
 
-        # near-limit alert is first, concentration alert is second
-        from marketrisk.risk.models import ConcentrationAlert, NearLimitAlert
-        assert isinstance(alerts[0], NearLimitAlert)
-        assert isinstance(alerts[1], ConcentrationAlert)
+        assert isinstance(results[0], NearLimitAlert)
+        assert isinstance(results[1], ConcentrationAlert)
+
+    def test_cleared_signals_flow_through(self):
+        """Pipeline collects cleared signals alongside alerts."""
+        nl = NearLimitObserver(threshold_pct=0.80)
+        conc = ConcentrationObserver(nl, max_correlated=2)
+        pipeline = RiskObserverPipeline([nl, conc])
+
+        # fire both
+        pipeline.check("BTCUSDT", 4100.0, 5000.0)
+        pipeline.check("ETHUSDT", 4500.0, 5000.0)
+
+        # drop BTCUSDT — near-limit cleared + concentration cleared
+        results = pipeline.check("BTCUSDT", 1000.0, 5000.0)
+        assert isinstance(results[0], NearLimitCleared)
+        assert results[0].symbol == "BTCUSDT"
+        assert isinstance(results[1], ConcentrationCleared)
+        assert results[1].remaining_count == 1

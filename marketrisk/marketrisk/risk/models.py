@@ -32,6 +32,15 @@ class NearLimitAlert:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class NearLimitCleared:
+    symbol: str
+    timestamp_utc: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
 class ConcentrationState(Enum):
     """State machine for concentration risk alerting.
 
@@ -63,3 +72,13 @@ class ConcentrationAlert:
             "threshold": self.threshold,
             "timestamp_utc": self.timestamp_utc,
         }
+
+
+@dataclass(frozen=True)
+class ConcentrationCleared:
+    remaining_count: int
+    threshold: int
+    timestamp_utc: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)

@@ -46,11 +46,19 @@ class LookbackConfig:
 
 
 @dataclass
+class RateLimiterConfig:
+    ENABLED: bool = os.environ.get('RATE_LIMITER_ENABLED', 'true').lower() == 'true'
+    MAX_PER_MINUTE: int = int(os.environ.get('RATE_LIMITER_MAX_PER_MINUTE', '10'))
+    WINDOW_SECONDS: float = float(os.environ.get('RATE_LIMITER_WINDOW_SECONDS', '60.0'))
+
+
+@dataclass
 class Config:
     rabbitmq: RabbitMQConfig = None
     blob_store: BlobStoreConfig = None
     risk: RiskConfig = None
     lookback: LookbackConfig = None
+    rate_limiter: RateLimiterConfig = None
     ANOMALY_SCORE_THRESHOLD: float = float(os.environ.get('ANOMALY_SCORE_THRESHOLD', '0.7'))
     DECISION_LOG_MAX_SIZE: int = int(os.environ.get('DECISION_LOG_MAX_SIZE', '1000'))
     OUTCOME_STORE_PATH: str = os.environ.get('OUTCOME_STORE_PATH', './decisions/outcomes')
@@ -65,6 +73,8 @@ class Config:
             self.risk = RiskConfig()
         if self.lookback is None:
             self.lookback = LookbackConfig()
+        if self.rate_limiter is None:
+            self.rate_limiter = RateLimiterConfig()
 
     def __str__(self):
         return (

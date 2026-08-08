@@ -8,14 +8,14 @@ from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from queue import Empty, PriorityQueue
-from typing import Protocol
+from typing import Callable, Protocol
 
 from shared.blob import get_store
 
 logger = logging.getLogger(__name__)
 
 
-def create_lookback(config):
+def create_lookback(config, outcome_callback: Callable[[dict], None] | None = None):
     """Factory: build a (PriceLookback, InMemoryPriceCache) pair from config, or (None, None) if disabled."""
     if not config.lookback.ENABLED:
         logger.info("PriceLookback disabled")
@@ -30,6 +30,7 @@ def create_lookback(config):
         cache=cache,
         outcome_store=store,
         max_pending=config.lookback.MAX_PENDING,
+        outcome_callback=outcome_callback,
     )
     logger.info("PriceLookback enabled (windows=%s)", config.lookback.WINDOWS)
     return lookback, cache
@@ -112,12 +113,14 @@ class PriceLookback:
         cache: InMemoryPriceCache,
         outcome_store,
         max_pending: int = 5000,
+        outcome_callback: Callable[[dict], None] | None = None,
     ):
         self._windows = windows
         self._source = price_source
         self._cache = cache
         self._store = outcome_store
         self._max_pending = max_pending
+        self._outcome_callback = outcome_callback
         self._queue: PriorityQueue[LookbackTask] = PriorityQueue()
         self._pending_count = 0
         self._count_lock = threading.Lock()
@@ -234,6 +237,12 @@ class PriceLookback:
             self._store.write(record)
         except Exception:
             logger.exception("Failed to write lookback record for %s", task.symbol)
+
+        if self._outcome_callback is not None:
+            try:
+                self._outcome_callback(record)
+            except Exception:
+                logger.exception("Outcome callback failed for %s", task.symbol)
 
         with self._count_lock:
             self._pending_count -= 1

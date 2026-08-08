@@ -21,7 +21,6 @@ from shared.rabbitmq.consumer import RabbitConsumer, ConsumerConfig
 from shared.rabbitmq.publisher import RabbitPublisher
 from shared.dedup import DedupFilter
 from publisher.factory import build_publisher
-from shared.rabbitmq.rabbit_client import RabbitClientManager
 from accumulator.event_buffer import EventBuffer
 from accumulator.summary_buffer import SummaryBuffer
 from model.openai_client import OpenAIClient
@@ -225,18 +224,29 @@ def main():
         exchange=Config.ANALYTICS_EXCHANGE,
         exchange_type="topic",
         routing_key="signal.analytics.#",
+        max_retries=Config.MAX_RETRIES,
+        base_delay_seconds=Config.RETRY_BASE_DELAY,
+        dlq_enabled=True,
     ))
     analytics_consumer.register_handler(analytics_handler)
     analytics_consumer.start_consuming()
 
-    rabbit_manager = RabbitClientManager(config=Config)
-    rabbit_manager.subscribe(handler=signal_event_handler)
+    signal_consumer = RabbitConsumer(ConsumerConfig(
+        url=Config.RABBITMQ_URL,
+        queue=Config.RABBITMQ_QUEUE,
+        exchange="signal",
+        exchange_type="fanout",
+        max_retries=Config.MAX_RETRIES,
+        base_delay_seconds=Config.RETRY_BASE_DELAY,
+        dlq_enabled=True,
+    ))
+    signal_consumer.register_handler(signal_event_handler)
     _supervised_thread(window_trigger, "window_trigger")
     _supervised_thread(synthesis_trigger, "synthesis_trigger")
     _supervised_thread(window_worker, "window_worker")
     _supervised_thread(writer, "writer")
 
-    rabbit_manager.start_consuming()
+    signal_consumer.start_consuming()
 
     try:
         threading.Event().wait()

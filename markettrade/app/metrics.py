@@ -123,6 +123,18 @@ near_limit_ratio = Gauge(
     ["symbol"],
 )
 
+rate_limited_total = Counter(
+    "markettrade_rate_limited_total",
+    "Decisions rate-limited per symbol",
+    ["symbol"],
+)
+
+rate_limiter_utilization = Gauge(
+    "markettrade_rate_limiter_utilization",
+    "Current window usage as fraction of max",
+    ["symbol"],
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

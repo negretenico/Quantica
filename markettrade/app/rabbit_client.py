@@ -12,6 +12,9 @@ class SignalRabbitClient:
             exchange=config.EXCHANGE,
             exchange_type=config.EXCHANGE_TYPE,
             routing_key=config.ROUTING_KEY,
+            max_retries=config.MAX_RETRIES,
+            base_delay_seconds=config.RETRY_BASE_DELAY,
+            dlq_enabled=True,
         ))
 
     def subscribe(self, handler: Callable):

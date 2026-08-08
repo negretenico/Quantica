@@ -19,21 +19,25 @@ from app.metrics import (
     observe_tick_to_trade,
     outcome_record_errors_total,
     outcome_records_total,
+    rate_limited_total,
+    rate_limiter_utilization,
     risk_rejections_total,
     start_metrics_server,
     validation_errors_total,
 )
 from app.rabbit_client import SignalRabbitClient
 from marketrisk.risk.engine import RiskEngine
-from marketrisk.risk.models import ConcentrationState, ProposedAction
-from marketrisk.risk.observer import ConcentrationObserver, NearLimitObserver
+from marketrisk.risk.models import ConcentrationAlert, ConcentrationState, NearLimitAlert, ProposedAction
+from marketrisk.risk.observer import ConcentrationObserver, NearLimitObserver, RiskObserverPipeline
 from shared.blob import get_store
 from shared.dedup import DedupFilter
 from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.models import SignalEvent
 from trade.outcome import DecisionLog
+from trade.outcome_tracker import OutcomeTracker
 from trade.price_lookback import create_lookback
+from trade.rate_limiter import TradeRateLimiter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,17 +54,31 @@ def main():
     concentration_observer = ConcentrationObserver(
         near_limit_observer, max_correlated=config.risk.CONCENTRATION_THRESHOLD,
     )
+    risk_observer_pipeline = RiskObserverPipeline([near_limit_observer, concentration_observer])
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
     outcome_store = get_store(config.blob_store.BACKEND, config.OUTCOME_STORE_PATH)
     risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
     decision_log = DecisionLog(outcome_store, max_size=config.DECISION_LOG_MAX_SIZE)
+    outcome_tracker = OutcomeTracker()
     dedup = DedupFilter()
 
     notify_publisher = RabbitPublisher(
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
-    lookback, price_cache = create_lookback(config)
+    lookback, price_cache = create_lookback(config, outcome_tracker=outcome_tracker)
+
+    rate_limiter = None
+    if config.rate_limiter.ENABLED:
+        rate_limiter = TradeRateLimiter(
+            max_per_minute=config.rate_limiter.MAX_PER_MINUTE,
+            window_seconds=config.rate_limiter.WINDOW_SECONDS,
+        )
+        logger.info(
+            "Rate limiter enabled — max %d per symbol per %.0fs",
+            config.rate_limiter.MAX_PER_MINUTE,
+            config.rate_limiter.WINDOW_SECONDS,
+        )
 
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
@@ -68,6 +86,7 @@ def main():
     _rejected_logged: set[tuple[str, str]] = set()
     _validation_logged: set[tuple[str, str]] = set()
     _near_limit_logged: set[str] = set()
+    _rate_limited_logged: set[str] = set()
 
     def handle_message(payload):
         events_received_total.inc()
@@ -114,6 +133,22 @@ def main():
             logger.debug("HOLD — skipping risk evaluation for %s", decision["symbol"])
             return
 
+        if rate_limiter is not None:
+            allowed, reason = rate_limiter.check(decision["symbol"])
+            rate_limiter_utilization.labels(symbol=decision["symbol"]).set(
+                len(rate_limiter._windows.get(decision["symbol"], [])) / rate_limiter._max
+            )
+            if not allowed:
+                rate_limited_total.labels(symbol=decision["symbol"]).inc()
+                if decision["symbol"] not in _rate_limited_logged:
+                    logger.warning(
+                        "Rate LIMITED — symbol=%s %s (further suppressed)",
+                        decision["symbol"],
+                        reason,
+                    )
+                    _rate_limited_logged.add(decision["symbol"])
+                return
+
         proposed = ProposedAction(
             symbol=decision["symbol"],
             action=decision["action"],
@@ -125,32 +160,32 @@ def main():
         risk_decision = risk_engine.evaluate(proposed)
         observe_risk_evaluation(risk_decision, decision["symbol"], risk_engine, config.risk.MAX_SYMBOL_EXPOSURE)
 
-        near_alert, conc_alert = concentration_observer.check(
+        risk_alerts = risk_observer_pipeline.check(
             symbol=decision["symbol"],
             current_exposure=risk_engine.get_symbol_exposure(decision["symbol"]),
             max_exposure=config.risk.MAX_SYMBOL_EXPOSURE,
         )
-        if near_alert is not None:
-            risk_alert_store.write(near_alert.to_dict())
-            near_limit_alerts_total.labels(symbol=near_alert.symbol).inc()
-            near_limit_ratio.labels(symbol=near_alert.symbol).set(near_alert.ratio)
-            if near_alert.symbol not in _near_limit_logged:
-                logger.warning(
-                    "NEAR-LIMIT exposure — symbol=%s ratio=%.2f (%.0f/%.0f) "
-                    "(further alerts suppressed until cleared)",
-                    near_alert.symbol, near_alert.ratio, near_alert.current_exposure, near_alert.max_exposure,
-                )
-                _near_limit_logged.add(near_alert.symbol)
-        else:
-            if decision["symbol"] in _near_limit_logged:
-                _near_limit_logged.discard(decision["symbol"])
+        has_near_limit = False
+        for alert in risk_alerts:
+            risk_alert_store.write(alert.to_dict())
+            if isinstance(alert, NearLimitAlert):
+                has_near_limit = True
+                near_limit_alerts_total.labels(symbol=alert.symbol).inc()
+                near_limit_ratio.labels(symbol=alert.symbol).set(alert.ratio)
+                if alert.symbol not in _near_limit_logged:
+                    logger.warning(
+                        "NEAR-LIMIT exposure — symbol=%s ratio=%.2f (%.0f/%.0f) "
+                        "(further alerts suppressed until cleared)",
+                        alert.symbol, alert.ratio, alert.current_exposure, alert.max_exposure,
+                    )
+                    _near_limit_logged.add(alert.symbol)
+            elif isinstance(alert, ConcentrationAlert):
+                concentration_alerts_total.inc()
+                concentration_active.set(1)
+        if not has_near_limit and decision["symbol"] in _near_limit_logged:
+            _near_limit_logged.discard(decision["symbol"])
         near_limit_active_symbols.set(len(near_limit_observer.active_symbols()))
-
-        if conc_alert is not None:
-            risk_alert_store.write(conc_alert.to_dict())
-            concentration_alerts_total.inc()
-            concentration_active.set(1)
-        else:
+        if not any(isinstance(a, ConcentrationAlert) for a in risk_alerts):
             if concentration_observer.state != ConcentrationState.FIRED:
                 concentration_active.set(0)
 

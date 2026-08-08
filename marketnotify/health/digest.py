@@ -1,10 +1,12 @@
 import datetime
 import logging
 import threading
+import time
 from zoneinfo import ZoneInfo
 
 import requests
 
+from app.metrics import notification_latency
 from handlers.signal_counter import SignalSnapshot
 from shared.notifications import NotificationChannel, NotificationMessage
 
@@ -81,7 +83,9 @@ class HealthDigestThread:
             fields=fields,
             color=color,
         )
+        start = time.time()
         self._channel.send(message)
+        notification_latency.observe(time.time() - start)
         logger.info(
             "Health digest sent: received=%d duplicates=%d counted=%d consumer=%s",
             snap.received,

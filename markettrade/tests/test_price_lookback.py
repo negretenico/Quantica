@@ -172,41 +172,8 @@ def test_lookback_executes_and_writes_outcome(mock_logger):
     assert record["type"] == "price_lookback"
     assert record["symbol"] == "BTCUSDT"
     assert record["outcome_price"] == 50150.0
-    assert record["direction_correct"] is True
-
-
-@patch("trade.price_lookback.logger")
-def test_lookback_pnl_calculation_buy(mock_logger):
-    source = MagicMock()
-    source.get_price.return_value = 105.0
-    cache = InMemoryPriceCache()
-    store = MagicMock()
-
-    lb = PriceLookback(windows=[0], price_source=source, cache=cache, outcome_store=store)
-    lb.schedule({"symbol": "X", "action": "BUY", "entry_price": 100.0})
-    time.sleep(0.5)
-    lb.stop()
-
-    record = store.write.call_args[0][0]
-    assert record["pnl_pct"] == 0.05
-    assert record["direction_correct"] is True
-
-
-@patch("trade.price_lookback.logger")
-def test_lookback_pnl_calculation_sell(mock_logger):
-    source = MagicMock()
-    source.get_price.return_value = 95.0
-    cache = InMemoryPriceCache()
-    store = MagicMock()
-
-    lb = PriceLookback(windows=[0], price_source=source, cache=cache, outcome_store=store)
-    lb.schedule({"symbol": "X", "action": "SELL", "entry_price": 100.0})
-    time.sleep(0.5)
-    lb.stop()
-
-    record = store.write.call_args[0][0]
-    assert record["pnl_pct"] == 0.05
-    assert record["direction_correct"] is True
+    assert "direction_correct" not in record
+    assert "pnl_pct" not in record
 
 
 @patch("trade.price_lookback.logger")

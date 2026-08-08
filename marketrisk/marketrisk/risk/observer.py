@@ -69,10 +69,8 @@ class ConcentrationObserver:
 
     def check(
         self, symbol: str, current_exposure: float, max_exposure: float,
-    ) -> tuple[NearLimitAlert | None, ConcentrationAlert | None]:
-        near_limit_alert = self._near_limit.check(symbol, current_exposure, max_exposure)
-        concentration_alert = self._transition()
-        return near_limit_alert, concentration_alert
+    ) -> ConcentrationAlert | None:
+        return self._transition()
 
     def _transition(self) -> ConcentrationAlert | None:
         count = len(self._near_limit.active_symbols())
@@ -131,3 +129,26 @@ class ConcentrationObserver:
     @property
     def state(self) -> ConcentrationState:
         return self._state
+
+
+class RiskObserverPipeline:
+    """Runs risk observers in registration order and collects alerts.
+
+    Observers are called sequentially so that downstream observers (e.g.
+    ConcentrationObserver) can read state updated by upstream ones (e.g.
+    NearLimitObserver).
+
+    Each observer must implement check(symbol, current_exposure, max_exposure)
+    and return an alert object or None.
+    """
+
+    def __init__(self, observers: list) -> None:
+        self._observers = list(observers)
+
+    def check(self, symbol: str, current_exposure: float, max_exposure: float) -> list:
+        alerts = []
+        for observer in self._observers:
+            alert = observer.check(symbol, current_exposure, max_exposure)
+            if alert is not None:
+                alerts.append(alert)
+        return alerts

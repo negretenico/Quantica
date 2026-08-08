@@ -113,3 +113,23 @@ def tiny_quantity_event(symbol: str = "BTCUSDT") -> dict:
         "X": "MARKET",
         "m": True,
     }
+
+
+def large_trade_event(
+    symbol: str = "E2ETEST",
+    price: str = "50000.00",
+    quantity: str = "1000001",
+) -> dict:
+    """Event with quantity > 1,000,000 to trigger LargeTradeDetected in markettransformer."""
+    ts = _now_ms()
+    return {
+        "e": "trade",
+        "E": ts,
+        "T": ts,
+        "s": symbol,
+        "t": 387235076,
+        "p": price,
+        "q": quantity,
+        "X": "MARKET",
+        "m": True,
+    }

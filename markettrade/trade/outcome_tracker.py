@@ -90,7 +90,7 @@ class OutcomeTracker:
                     if o.window_seconds == window and o.action == action
                 ]
                 if filtered:
-                    rate = sum(1 for o in filtered if o.direction_correct) / len(filtered)
+                    rate = sum(o.direction_correct for o in filtered) / len(filtered)
                     gauge.labels(window=str(window), action=action).set(rate)
 
     def outcomes_for_symbol(self, symbol: str) -> list[OutcomeRecord]:
@@ -115,7 +115,7 @@ class OutcomeTracker:
         if not filtered:
             return None
 
-        return sum(1 for o in filtered if o.direction_correct) / len(filtered)
+        return sum(o.direction_correct for o in filtered) / len(filtered)
 
     def summary(self) -> dict:
         with self._lock:
@@ -125,15 +125,15 @@ class OutcomeTracker:
         if total == 0:
             return {"total": 0, "overall_correctness": None, "by_window": {}, "by_action": {}}
 
-        overall = sum(1 for o in outcomes if o.direction_correct) / total
+        overall = sum(o.direction_correct for o in outcomes) / total
 
         by_window: dict[int, dict] = {}
         for w in sorted({o.window_seconds for o in outcomes}):
             w_outcomes = [o for o in outcomes if o.window_seconds == w]
             by_window[w] = {
                 "total": len(w_outcomes),
-                "correct": sum(1 for o in w_outcomes if o.direction_correct),
-                "rate": sum(1 for o in w_outcomes if o.direction_correct) / len(w_outcomes),
+                "correct": sum(o.direction_correct for o in w_outcomes),
+                "rate": sum(o.direction_correct for o in w_outcomes) / len(w_outcomes),
             }
 
         by_action: dict[str, dict] = {}
@@ -141,8 +141,8 @@ class OutcomeTracker:
             a_outcomes = [o for o in outcomes if o.action == a]
             by_action[a] = {
                 "total": len(a_outcomes),
-                "correct": sum(1 for o in a_outcomes if o.direction_correct),
-                "rate": sum(1 for o in a_outcomes if o.direction_correct) / len(a_outcomes),
+                "correct": sum(o.direction_correct for o in a_outcomes),
+                "rate": sum(o.direction_correct for o in a_outcomes) / len(a_outcomes),
             }
 
         return {

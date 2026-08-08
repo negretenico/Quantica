@@ -1,5 +1,4 @@
 import json
-import uuid
 
 import pytest
 from kafka import KafkaConsumer
@@ -30,26 +29,35 @@ def test_publish_and_consume():
     event = valid_trade_event(symbol="ETHUSDT", price="3500.00", quantity="0.5")
     publish_test_event(BOOTSTRAP, event)
 
-    group_id = f"test-consumer-{uuid.uuid4()}"
+    # Use manual partition assignment instead of group-based subscribe to
+    # avoid kafka-python-ng's selector bug on Windows during rebalance.
+    from kafka import TopicPartition
+
     consumer = KafkaConsumer(
-        TOPIC,
         bootstrap_servers=BOOTSTRAP,
-        group_id=group_id,
-        auto_offset_reset="latest",
         consumer_timeout_ms=10000,
         value_deserializer=lambda v: json.loads(v.decode("utf-8")),
         key_deserializer=lambda k: k.decode("utf-8") if k else None,
     )
+    partitions = consumer.partitions_for_topic(TOPIC)
+    tps = [TopicPartition(TOPIC, p) for p in partitions]
+    consumer.assign(tps)
+    consumer.seek_to_end(*tps)
+    consumer.poll(timeout_ms=500)  # flush any buffered records after seek
 
-    # Publish after consumer is subscribed so auto_offset_reset=latest picks it up
-    consumer.poll(timeout_ms=1000)  # trigger partition assignment
+    # Publish after consumer is positioned so we capture this specific event
     event2 = valid_trade_event(symbol="ETHUSDT", price="3501.00", quantity="0.25")
     publish_test_event(BOOTSTRAP, event2)
 
     consumed = []
-    for msg in consumer:
-        consumed.append(msg)
-        if len(consumed) >= 1:
+    deadline = 10  # seconds
+    import time
+    end = time.monotonic() + deadline
+    while time.monotonic() < end:
+        batch = consumer.poll(timeout_ms=2000)
+        for tp, records in batch.items():
+            consumed.extend(records)
+        if consumed:
             break
 
     consumer.close()

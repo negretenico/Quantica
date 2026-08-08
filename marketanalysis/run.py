@@ -9,7 +9,6 @@ from app.metrics import (
     duplicates_dropped_total,
     clusters_computed_total,
     anomalies_detected_total,
-    errors_total,
     processing_latency,
     observe_tick_to_analysis,
     start_metrics_server,
@@ -40,27 +39,23 @@ def _handle_event(event):
     symbol = event.get("symbol", "unknown")
     start = time.perf_counter()
 
-    try:
-        prediction = mini_batch(event)
-        elapsed = time.perf_counter() - start
-        processing_latency.labels(symbol=symbol).observe(elapsed)
+    prediction = mini_batch(event)
+    elapsed = time.perf_counter() - start
+    processing_latency.labels(symbol=symbol).observe(elapsed)
 
-        if prediction is None:
-            return
+    if prediction is None:
+        return
 
-        _event, label, anomaly_score = prediction
-        clusters_computed_total.labels(
-            symbol=symbol, cluster_id=str(label)
-        ).inc()
+    _event, label, anomaly_score = prediction
+    clusters_computed_total.labels(
+        symbol=symbol, cluster_id=str(label)
+    ).inc()
 
-        if anomaly_score >= Config.ANOMALY_THRESHOLD:
-            anomalies_detected_total.labels(symbol=symbol).inc()
+    if anomaly_score >= Config.ANOMALY_THRESHOLD:
+        anomalies_detected_total.labels(symbol=symbol).inc()
 
-        send_msg(prediction=prediction)
-        observe_tick_to_analysis(event)
-    except Exception:
-        errors_total.inc()
-        logger.exception("Error processing event for symbol=%s", symbol)
+    send_msg(prediction=prediction)
+    observe_tick_to_analysis(event)
 
 
 rabbit_manager.subscribe(handler=_handle_event)

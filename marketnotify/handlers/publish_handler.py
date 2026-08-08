@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 
+from app.metrics import notification_latency
 from shared.notifications import NotificationChannel, NotificationMessage
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,9 @@ class PublishHandler:
         )
 
         try:
+            start = time.time()
             self._channel.send(message)
+            notification_latency.observe(time.time() - start)
             logger.debug("Flushed %d success events to Discord", len(batch))
         except Exception:
             logger.exception("Failed to send success batch notification")
@@ -85,6 +88,8 @@ class PublishHandler:
         )
 
         try:
+            start = time.time()
             self._channel.send(message)
+            notification_latency.observe(time.time() - start)
         except Exception:
             logger.exception("Failed to send failure notification")

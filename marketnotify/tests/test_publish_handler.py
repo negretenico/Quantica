@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, call
 
+from app.metrics import notification_latency
 from handlers.publish_handler import PublishHandler
 from shared.notifications import NotificationMessage
 
@@ -83,3 +84,27 @@ class TestPublishHandler:
         handler, channel = self._make_handler()
         handler.handle({"type": "unknown_event"})
         channel.send.assert_not_called()
+
+    def test_failure_records_latency(self):
+        handler, channel = self._make_handler()
+        before = notification_latency._sum.get()
+        handler.handle({
+            "type": "publish_failure",
+            "source": "markettrade",
+            "error": "timeout",
+            "timestamp_utc": "2026-08-01T12:00:00",
+        })
+        assert notification_latency._sum.get() > before
+
+    def test_flush_records_latency(self):
+        handler, channel = self._make_handler()
+        handler.handle({
+            "type": "publish_success",
+            "source": "markettrade",
+            "symbol": "BTCUSDT",
+            "action": "BUY",
+            "timestamp_utc": "2026-08-01T12:00:00",
+        })
+        before = notification_latency._sum.get()
+        handler._flush_successes()
+        assert notification_latency._sum.get() > before

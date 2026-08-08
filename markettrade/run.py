@@ -17,6 +17,8 @@ from app.metrics import (
     observe_tick_to_trade,
     outcome_record_errors_total,
     outcome_records_total,
+    rate_limited_total,
+    rate_limiter_utilization,
     risk_rejections_total,
     start_metrics_server,
     validation_errors_total,
@@ -31,7 +33,9 @@ from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.models import SignalEvent
 from trade.outcome import DecisionLog
+from trade.outcome_tracker import OutcomeTracker
 from trade.price_lookback import create_lookback
+from trade.rate_limiter import TradeRateLimiter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,13 +53,26 @@ def main():
     outcome_store = get_store(config.blob_store.BACKEND, config.OUTCOME_STORE_PATH)
     risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
     decision_log = DecisionLog(outcome_store, max_size=config.DECISION_LOG_MAX_SIZE)
+    outcome_tracker = OutcomeTracker()
     dedup = DedupFilter()
 
     notify_publisher = RabbitPublisher(
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
-    lookback, price_cache = create_lookback(config)
+    lookback, price_cache = create_lookback(config, outcome_tracker=outcome_tracker)
+
+    rate_limiter = None
+    if config.rate_limiter.ENABLED:
+        rate_limiter = TradeRateLimiter(
+            max_per_minute=config.rate_limiter.MAX_PER_MINUTE,
+            window_seconds=config.rate_limiter.WINDOW_SECONDS,
+        )
+        logger.info(
+            "Rate limiter enabled — max %d per symbol per %.0fs",
+            config.rate_limiter.MAX_PER_MINUTE,
+            config.rate_limiter.WINDOW_SECONDS,
+        )
 
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
@@ -63,6 +80,7 @@ def main():
     _rejected_logged: set[tuple[str, str]] = set()
     _validation_logged: set[tuple[str, str]] = set()
     _near_limit_logged: set[str] = set()
+    _rate_limited_logged: set[str] = set()
 
     def handle_message(payload):
         events_received_total.inc()
@@ -108,6 +126,22 @@ def main():
         if decision["action"] == "HOLD":
             logger.debug("HOLD — skipping risk evaluation for %s", decision["symbol"])
             return
+
+        if rate_limiter is not None:
+            allowed, reason = rate_limiter.check(decision["symbol"])
+            rate_limiter_utilization.labels(symbol=decision["symbol"]).set(
+                len(rate_limiter._windows.get(decision["symbol"], [])) / rate_limiter._max
+            )
+            if not allowed:
+                rate_limited_total.labels(symbol=decision["symbol"]).inc()
+                if decision["symbol"] not in _rate_limited_logged:
+                    logger.warning(
+                        "Rate LIMITED — symbol=%s %s (further suppressed)",
+                        decision["symbol"],
+                        reason,
+                    )
+                    _rate_limited_logged.add(decision["symbol"])
+                return
 
         proposed = ProposedAction(
             symbol=decision["symbol"],

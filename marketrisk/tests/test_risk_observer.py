@@ -1,6 +1,13 @@
 import pytest
 
-from marketrisk.risk.observer import NearLimitObserver
+from marketrisk.risk.models import (
+    ConcentrationAlert,
+    ConcentrationCleared,
+    ConcentrationState,
+    NearLimitAlert,
+    NearLimitCleared,
+)
+from marketrisk.risk.observer import ConcentrationObserver, NearLimitObserver, RiskObserverPipeline
 
 
 class TestNearLimitObserver:
@@ -35,8 +42,10 @@ class TestNearLimitObserver:
         observer.check("BTCUSDT", 4100.0, 5000.0)
         assert observer.is_near_limit("BTCUSDT") is True
 
-        observer.check("BTCUSDT", 3000.0, 5000.0)
+        result = observer.check("BTCUSDT", 3000.0, 5000.0)
         assert observer.is_near_limit("BTCUSDT") is False
+        assert isinstance(result, NearLimitCleared)
+        assert result.symbol == "BTCUSDT"
 
     def test_fires_again_after_clearing(self):
         observer = NearLimitObserver(threshold_pct=0.80)
@@ -83,3 +92,172 @@ class TestNearLimitObserver:
     def test_is_near_limit_false_when_not_tracked(self):
         observer = NearLimitObserver(threshold_pct=0.80)
         assert observer.is_near_limit("BTCUSDT") is False
+
+    def test_active_alerts_returns_copy(self):
+        observer = NearLimitObserver(threshold_pct=0.80)
+        observer.check("BTCUSDT", 4100.0, 5000.0)
+        alerts = observer.active_alerts()
+        assert "BTCUSDT" in alerts
+        assert alerts["BTCUSDT"].ratio == pytest.approx(0.82)
+        alerts.clear()
+        assert observer.is_near_limit("BTCUSDT") is True
+
+
+class TestConcentrationObserver:
+    def _make(self, threshold_pct=0.80, max_correlated=3):
+        near_limit = NearLimitObserver(threshold_pct=threshold_pct)
+        conc = ConcentrationObserver(near_limit, max_correlated=max_correlated)
+        return conc, near_limit
+
+    def _push_near_limit(self, near_limit, conc, symbol, exposure=4100.0, max_exp=5000.0):
+        """Run near-limit check then concentration check, return concentration alert."""
+        near_limit.check(symbol, exposure, max_exp)
+        return conc.check(symbol, exposure, max_exp)
+
+    def test_starts_armed(self):
+        obs, _ = self._make()
+        assert obs.state == ConcentrationState.ARMED
+
+    def test_no_alert_below_threshold(self):
+        obs, nl = self._make(max_correlated=3)
+        assert self._push_near_limit(nl, obs, "BTCUSDT") is None
+        assert self._push_near_limit(nl, obs, "ETHUSDT") is None
+        assert obs.state == ConcentrationState.ARMED
+
+    def test_fires_when_reaching_threshold(self):
+        obs, nl = self._make(max_correlated=3)
+        self._push_near_limit(nl, obs, "BTCUSDT")
+        self._push_near_limit(nl, obs, "ETHUSDT")
+        conc = self._push_near_limit(nl, obs, "SOLUSDT")
+        assert conc is not None
+        assert conc.count == 3
+        assert conc.threshold == 3
+        assert set(conc.near_limit_symbols) == {"BTCUSDT", "ETHUSDT", "SOLUSDT"}
+        assert obs.state == ConcentrationState.FIRED
+
+    def test_does_not_fire_again_while_fired(self):
+        obs, nl = self._make(max_correlated=3)
+        self._push_near_limit(nl, obs, "BTCUSDT")
+        self._push_near_limit(nl, obs, "ETHUSDT")
+        self._push_near_limit(nl, obs, "SOLUSDT")
+        conc = self._push_near_limit(nl, obs, "XRPUSDT")
+        assert conc is None
+        assert obs.state == ConcentrationState.FIRED
+
+    def test_disarms_when_dropping_below_threshold(self):
+        obs, nl = self._make(max_correlated=3)
+        self._push_near_limit(nl, obs, "BTCUSDT")
+        self._push_near_limit(nl, obs, "ETHUSDT")
+        self._push_near_limit(nl, obs, "SOLUSDT")
+        assert obs.state == ConcentrationState.FIRED
+        nl.check("BTCUSDT", 1000.0, 5000.0)
+        result = obs.check("BTCUSDT", 1000.0, 5000.0)
+        assert obs.state == ConcentrationState.DISARMED
+        assert isinstance(result, ConcentrationCleared)
+        assert result.remaining_count == 2
+        assert result.threshold == 3
+
+    def test_re_arms_after_disarmed_and_still_below(self):
+        obs, nl = self._make(max_correlated=3)
+        self._push_near_limit(nl, obs, "BTCUSDT")
+        self._push_near_limit(nl, obs, "ETHUSDT")
+        self._push_near_limit(nl, obs, "SOLUSDT")
+        nl.check("BTCUSDT", 1000.0, 5000.0)
+        obs.check("BTCUSDT", 1000.0, 5000.0)
+        assert obs.state == ConcentrationState.DISARMED
+        nl.check("ETHUSDT", 4200.0, 5000.0)
+        obs.check("ETHUSDT", 4200.0, 5000.0)
+        assert obs.state == ConcentrationState.ARMED
+
+    def test_refires_after_disarm(self):
+        obs, nl = self._make(max_correlated=3)
+        self._push_near_limit(nl, obs, "BTCUSDT")
+        self._push_near_limit(nl, obs, "ETHUSDT")
+        first = self._push_near_limit(nl, obs, "SOLUSDT")
+        assert first is not None
+        # drop BTCUSDT → DISARMED (2 active)
+        nl.check("BTCUSDT", 1000.0, 5000.0)
+        obs.check("BTCUSDT", 1000.0, 5000.0)
+        assert obs.state == ConcentrationState.DISARMED
+        # re-check ETHUSDT still near-limit → ARMED (still 2 active)
+        nl.check("ETHUSDT", 4200.0, 5000.0)
+        obs.check("ETHUSDT", 4200.0, 5000.0)
+        assert obs.state == ConcentrationState.ARMED
+        # ADAUSDT pushes to 3 → FIRED again
+        second = self._push_near_limit(nl, obs, "ADAUSDT")
+        assert second is not None
+        assert obs.state == ConcentrationState.FIRED
+
+    def test_alert_contains_correct_ratios(self):
+        obs, nl = self._make(max_correlated=2)
+        self._push_near_limit(nl, obs, "BTCUSDT", exposure=4100.0, max_exp=5000.0)
+        conc = self._push_near_limit(nl, obs, "ETHUSDT", exposure=4500.0, max_exp=5000.0)
+        assert conc is not None
+        assert conc.symbol_ratios["BTCUSDT"] == pytest.approx(0.82)
+        assert conc.symbol_ratios["ETHUSDT"] == pytest.approx(0.90)
+
+    def test_custom_threshold(self):
+        obs, nl = self._make(max_correlated=2)
+        self._push_near_limit(nl, obs, "BTCUSDT")
+        conc = self._push_near_limit(nl, obs, "ETHUSDT")
+        assert conc is not None
+        assert obs.state == ConcentrationState.FIRED
+
+    def test_single_symbol_never_fires(self):
+        obs, nl = self._make(max_correlated=3)
+        conc = self._push_near_limit(nl, obs, "BTCUSDT", exposure=4999.0, max_exp=5000.0)
+        assert conc is None
+        assert obs.state == ConcentrationState.ARMED
+
+
+class TestRiskObserverPipeline:
+    def test_collects_alerts_from_all_observers(self):
+        nl = NearLimitObserver(threshold_pct=0.80)
+        conc = ConcentrationObserver(nl, max_correlated=2)
+        pipeline = RiskObserverPipeline([nl, conc])
+
+        # first symbol — only near-limit fires
+        alerts = pipeline.check("BTCUSDT", 4100.0, 5000.0)
+        assert len(alerts) == 1
+        assert alerts[0].symbol == "BTCUSDT"
+
+        # second symbol — both near-limit and concentration fire
+        alerts = pipeline.check("ETHUSDT", 4500.0, 5000.0)
+        assert len(alerts) == 2
+
+    def test_returns_empty_when_no_alerts(self):
+        nl = NearLimitObserver(threshold_pct=0.80)
+        conc = ConcentrationObserver(nl, max_correlated=3)
+        pipeline = RiskObserverPipeline([nl, conc])
+
+        alerts = pipeline.check("BTCUSDT", 1000.0, 5000.0)
+        assert alerts == []
+
+    def test_ordering_matters(self):
+        """NearLimitObserver must run before ConcentrationObserver."""
+        nl = NearLimitObserver(threshold_pct=0.80)
+        conc = ConcentrationObserver(nl, max_correlated=2)
+        pipeline = RiskObserverPipeline([nl, conc])
+
+        pipeline.check("BTCUSDT", 4100.0, 5000.0)
+        results = pipeline.check("ETHUSDT", 4500.0, 5000.0)
+
+        assert isinstance(results[0], NearLimitAlert)
+        assert isinstance(results[1], ConcentrationAlert)
+
+    def test_cleared_signals_flow_through(self):
+        """Pipeline collects cleared signals alongside alerts."""
+        nl = NearLimitObserver(threshold_pct=0.80)
+        conc = ConcentrationObserver(nl, max_correlated=2)
+        pipeline = RiskObserverPipeline([nl, conc])
+
+        # fire both
+        pipeline.check("BTCUSDT", 4100.0, 5000.0)
+        pipeline.check("ETHUSDT", 4500.0, 5000.0)
+
+        # drop BTCUSDT — near-limit cleared + concentration cleared
+        results = pipeline.check("BTCUSDT", 1000.0, 5000.0)
+        assert isinstance(results[0], NearLimitCleared)
+        assert results[0].symbol == "BTCUSDT"
+        assert isinstance(results[1], ConcentrationCleared)
+        assert results[1].remaining_count == 1

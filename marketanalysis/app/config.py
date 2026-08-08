@@ -14,6 +14,8 @@ class Config:
     RETRAIN_BUFFER_SIZE = int(os.environ.get('RETRAIN_BUFFER_SIZE', '500'))
     DEDUP_SET_SIZE = int(os.environ.get('DEDUP_SET_SIZE', '10000'))
     ANOMALY_THRESHOLD = float(os.environ.get('ANOMALY_THRESHOLD', '0.9'))
+    MAX_RETRIES = int(os.environ.get('RABBITMQ_MAX_RETRIES', '3'))
+    RETRY_BASE_DELAY = float(os.environ.get('RABBITMQ_RETRY_BASE_DELAY', '1.0'))
 
     def __str__(self):
         return (f"RabbitMQ: {self.RABBITMQ_URL}\n"

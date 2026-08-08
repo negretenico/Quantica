@@ -5,7 +5,6 @@ from app.config import Config
 from app.metrics import (
     duplicates_dropped_total,
     events_received_total,
-    notifications_failed_total,
     notifications_sent_total,
     start_metrics_server,
 )
@@ -36,9 +35,6 @@ def main():
     signal_dedup = DedupFilter()
     notify_dedup = DedupFilter()
 
-    # Track which errors have already been logged to avoid flooding
-    _notify_errors_logged: set[str] = set()
-
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
 
@@ -57,6 +53,9 @@ def main():
         queue=config.SIGNAL_QUEUE,
         exchange=config.SIGNAL_EXCHANGE,
         exchange_type="fanout",
+        max_retries=config.MAX_RETRIES,
+        base_delay_seconds=config.RETRY_BASE_DELAY,
+        dlq_enabled=True,
     ))
     signal_consumer.register_handler(handle_signal)
     signal_consumer.start_consuming()
@@ -67,15 +66,8 @@ def main():
         if notify_dedup.is_duplicate(payload):
             duplicates_dropped_total.labels(queue="notifications.notify").inc()
             return
-        try:
-            publish_handler.handle(payload)
-            notifications_sent_total.inc()
-        except Exception as e:
-            notifications_failed_total.inc()
-            error_key = str(e)
-            if error_key not in _notify_errors_logged:
-                logger.error("Error handling notification: %s (further duplicates suppressed)", e)
-                _notify_errors_logged.add(error_key)
+        publish_handler.handle(payload)
+        notifications_sent_total.inc()
 
     notify_consumer = RabbitConsumer(ConsumerConfig(
         url=config.RABBITMQ_URL,
@@ -83,6 +75,9 @@ def main():
         exchange=config.NOTIFY_EXCHANGE,
         exchange_type="topic",
         routing_key="#",
+        max_retries=config.MAX_RETRIES,
+        base_delay_seconds=config.RETRY_BASE_DELAY,
+        dlq_enabled=True,
     ))
     notify_consumer.register_handler(handle_notification)
     notify_consumer.start_consuming()

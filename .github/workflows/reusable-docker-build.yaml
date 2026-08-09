@@ -68,7 +68,7 @@ jobs:
             type=sha,format=short,prefix=${{ inputs.service_name }}-
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ${{ inputs.working_directory }}
           file: ${{ inputs.working_directory }}/${{ inputs.dockerfile_path }}

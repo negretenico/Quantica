@@ -17,7 +17,7 @@ jobs:
     outputs:
       should-build: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketui == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: dorny/paths-filter@v4
@@ -32,7 +32,7 @@ jobs:
     if: needs.check-changes.outputs.should-build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22

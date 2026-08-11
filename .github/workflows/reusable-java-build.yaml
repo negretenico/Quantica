@@ -82,7 +82,7 @@ jobs:
           fi
           echo "jar_path=$JAR_PATH" >> "$GITHUB_OUTPUT"
       - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{inputs.artifact_name}}
           path: ${{ inputs.working_directory }}/${{ steps.find_jar.outputs.jar_path }}

@@ -16,6 +16,7 @@ from e2e.fixtures import (
     zero_price_event,
 )
 from e2e.rabbitmq_helpers import BackgroundSignalConsumer, consume_signal_event
+from e2e.trade_helpers import poll_trade_blob, publish_analytics_event, wait_for_container
 
 __all__ = [
     "publish_test_event",
@@ -33,4 +34,7 @@ __all__ = [
     "tiny_quantity_event",
     "consume_signal_event",
     "BackgroundSignalConsumer",
+    "publish_analytics_event",
+    "poll_trade_blob",
+    "wait_for_container",
 ]

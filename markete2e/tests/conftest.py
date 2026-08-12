@@ -2,6 +2,7 @@ import pytest
 
 from app.config import Config
 from e2e.helpers import wait_for_kafka, wait_for_markettransformer, wait_for_rabbitmq
+from e2e.trade_helpers import wait_for_container
 
 _config = Config()
 
@@ -32,6 +33,18 @@ def ensure_rabbitmq(rabbitmq_url):
 def ensure_markettransformer():
     """Session-scoped: blocks until markettransformer container reports healthy."""
     wait_for_markettransformer(timeout_seconds=60)
+
+
+@pytest.fixture(scope="session")
+def ensure_markettrade(ensure_rabbitmq):
+    """Session-scoped: blocks until the markettrade container is running."""
+    wait_for_container("quantica-markettrade", timeout_seconds=60)
+
+
+@pytest.fixture(scope="session")
+def trade_blob_dir() -> str:
+    """Host-side path where markettrade writes decision blobs (volume mount)."""
+    return _config.TRADE_BLOB_DIR
 
 
 @pytest.fixture(scope="session")

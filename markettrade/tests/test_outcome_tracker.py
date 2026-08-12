@@ -241,6 +241,7 @@ def test_tracker_invoked_after_lookback_write():
         entry_price=50000.0,
         decision_time=1000.0,
         window=60,
+        anomaly_score=0.85,
     )
 
     with patch("app.metrics.lookback_completed_total", new_callable=MagicMock), \
@@ -255,6 +256,7 @@ def test_tracker_invoked_after_lookback_write():
     assert outcomes[0].direction_correct is True
     assert outcomes[0].entry_price == 50000.0
     assert outcomes[0].outcome_price == 50500.0
+    assert outcomes[0].anomaly_score == 0.85
 
 
 def test_tracker_error_does_not_crash_lookback():

@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from app.config import Config
 from app.metrics import (
+    accumulation_alerts_total,
     concentration_active,
     concentration_alerts_total,
     decisions_total,
@@ -28,13 +29,20 @@ from app.metrics import (
 from app.rabbit_client import SignalRabbitClient
 from marketrisk.risk.engine import RiskEngine
 from marketrisk.risk.models import (
+    AccumulationAlert,
+    AccumulationCleared,
     ConcentrationAlert,
     ConcentrationCleared,
     NearLimitAlert,
     NearLimitCleared,
     ProposedAction,
 )
-from marketrisk.risk.observer import NearLimitObserver, ConcentrationObserver, RiskObserverPipeline
+from marketrisk.risk.observer import (
+    AccumulationObserver,
+    ConcentrationObserver,
+    NearLimitObserver,
+    RiskObserverPipeline,
+)
 from shared.blob import get_store
 from shared.dedup import DedupFilter
 from shared.rabbitmq.publisher import RabbitPublisher
@@ -61,7 +69,12 @@ def main():
     concentration_observer = ConcentrationObserver(
         near_limit_observer, max_correlated=config.risk.CONCENTRATION_THRESHOLD,
     )
-    risk_observer_pipeline = RiskObserverPipeline([near_limit_observer, concentration_observer])
+    accumulation_observer = AccumulationObserver(
+        threshold=config.risk.ACCUMULATION_THRESHOLD,
+    )
+    risk_observer_pipeline = RiskObserverPipeline([
+        near_limit_observer, concentration_observer, accumulation_observer,
+    ])
     store = get_store(config.blob_store.BACKEND, config.blob_store.PATH)
     outcome_store = get_store(config.blob_store.BACKEND, config.OUTCOME_STORE_PATH)
     risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
@@ -95,6 +108,7 @@ def main():
     _rejected_logged: set[tuple[str, str]] = set()
     _validation_logged: set[tuple[str, str]] = set()
     _near_limit_logged: set[str] = set()
+    _accumulation_logged: set[str] = set()
     _rate_limited_logged: set[str] = set()
 
     def handle_message(payload):
@@ -173,6 +187,8 @@ def main():
             symbol=decision["symbol"],
             current_exposure=risk_engine.get_symbol_exposure(decision["symbol"]),
             max_exposure=config.risk.MAX_SYMBOL_EXPOSURE,
+            action=decision["action"],
+            approved=risk_decision.approved,
         )
         for result in risk_results:
             match result:
@@ -195,6 +211,20 @@ def main():
                     concentration_active.set(1)
                 case ConcentrationCleared():
                     concentration_active.set(0)
+                case AccumulationAlert() as alert:
+                    risk_alert_store.write(alert.to_dict())
+                    accumulation_alerts_total.labels(
+                        symbol=alert.symbol, direction=alert.direction,
+                    ).inc()
+                    if alert.symbol not in _accumulation_logged:
+                        logger.warning(
+                            "ACCUMULATION alert — symbol=%s direction=%s count=%d "
+                            "(further alerts suppressed until direction change)",
+                            alert.symbol, alert.direction, alert.consecutive_count,
+                        )
+                        _accumulation_logged.add(alert.symbol)
+                case AccumulationCleared() as cleared:
+                    _accumulation_logged.discard(cleared.symbol)
         near_limit_active_symbols.set(len(near_limit_observer.active_symbols()))
 
         if not risk_decision.approved:

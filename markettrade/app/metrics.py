@@ -143,6 +143,12 @@ concentration_active = Gauge(
     "Whether concentration risk is currently active (1 or 0)",
 )
 
+accumulation_alerts_total = Counter(
+    "markettrade_accumulation_alerts_total",
+    "Accumulation alerts fired",
+    ["symbol", "direction"],
+)
+
 rate_limited_total = Counter(
     "markettrade_rate_limited_total",
     "Decisions rate-limited per symbol",

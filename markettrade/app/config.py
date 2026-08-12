@@ -47,6 +47,13 @@ class LookbackConfig:
 
 
 @dataclass
+class PriceSanityConfig:
+    ENABLED: bool = os.environ.get('PRICE_SANITY_ENABLED', 'true').lower() == 'true'
+    MIN_PRICE: float = float(os.environ.get('PRICE_SANITY_MIN', '0.0001'))
+    MAX_PRICE: float = float(os.environ.get('PRICE_SANITY_MAX', '10000000.0'))
+
+
+@dataclass
 class RateLimiterConfig:
     ENABLED: bool = os.environ.get('RATE_LIMITER_ENABLED', 'true').lower() == 'true'
     MAX_PER_MINUTE: int = int(os.environ.get('RATE_LIMITER_MAX_PER_MINUTE', '10'))
@@ -64,6 +71,7 @@ class Config:
     blob_store: BlobStoreConfig = None
     risk: RiskConfig = None
     lookback: LookbackConfig = None
+    price_sanity: PriceSanityConfig = None
     rate_limiter: RateLimiterConfig = None
     calibration: CalibrationConfig = None
     ANOMALY_SCORE_THRESHOLD: float = float(os.environ.get('ANOMALY_SCORE_THRESHOLD', '0.7'))
@@ -80,6 +88,8 @@ class Config:
             self.risk = RiskConfig()
         if self.lookback is None:
             self.lookback = LookbackConfig()
+        if self.price_sanity is None:
+            self.price_sanity = PriceSanityConfig()
         if self.rate_limiter is None:
             self.rate_limiter = RateLimiterConfig()
         if self.calibration is None:

@@ -161,6 +161,18 @@ rate_limiter_utilization = Gauge(
     ["symbol"],
 )
 
+validation_pipeline_rejections_total = Counter(
+    "markettrade_validation_pipeline_rejections_total",
+    "Events rejected by the validation pipeline",
+    ["stage", "reason"],
+)
+
+validation_pipeline_seconds = Histogram(
+    "markettrade_validation_pipeline_seconds",
+    "Latency of the validation pipeline",
+    buckets=(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1),
+)
+
 calibration_records_total = Counter(
     "markettrade_calibration_records_total",
     "Outcomes recorded in CalibrationEngine",

@@ -2,8 +2,7 @@ import logging
 import time
 import threading
 from datetime import datetime, timezone
-
-from pydantic import ValidationError
+from functools import partial
 
 from app.config import Config
 from app.metrics import (
@@ -25,6 +24,8 @@ from app.metrics import (
     risk_rejections_total,
     start_metrics_server,
     validation_errors_total,
+    validation_pipeline_rejections_total,
+    validation_pipeline_seconds,
 )
 from app.rabbit_client import SignalRabbitClient
 from marketrisk.risk.engine import RiskEngine
@@ -47,12 +48,12 @@ from shared.blob import get_store
 from shared.dedup import DedupFilter
 from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
-from trade.models import SignalEvent
 from trade.outcome import DecisionLog
 from trade.calibration import CalibrationEngine
 from trade.outcome_tracker import OutcomeTracker
 from trade.price_lookback import create_lookback
 from trade.rate_limiter import TradeRateLimiter
+from trade.validation import ValidationPipeline, validate_schema, validate_price_sanity
 
 logging.basicConfig(
     level=logging.INFO,
@@ -90,6 +91,16 @@ def main():
     )
     lookback, price_cache = create_lookback(config, outcome_tracker=outcome_tracker)
 
+    validation_pipeline = ValidationPipeline([
+        validate_schema,
+        partial(
+            validate_price_sanity,
+            enabled=config.price_sanity.ENABLED,
+            min_price=config.price_sanity.MIN_PRICE,
+            max_price=config.price_sanity.MAX_PRICE,
+        ),
+    ])
+
     rate_limiter = None
     if config.rate_limiter.ENABLED:
         rate_limiter = TradeRateLimiter(
@@ -105,8 +116,7 @@ def main():
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
 
-    _rejected_logged: set[tuple[str, str]] = set()
-    _validation_logged: set[tuple[str, str]] = set()
+    _rejection_logged: set[tuple[str, str]] = set()
     _near_limit_logged: set[str] = set()
     _accumulation_logged: set[str] = set()
     _rate_limited_logged: set[str] = set()
@@ -119,21 +129,28 @@ def main():
             logger.debug("Duplicate event dropped: %s", payload.get("symbol"))
             return
 
-        try:
-            event = SignalEvent(**payload)
-        except ValidationError as e:
-            reason = e.errors()[0]["loc"][0] if e.errors() else "unknown"
-            validation_errors_total.labels(reason=reason).inc()
+        with validation_pipeline_seconds.time():
+            vresult = validation_pipeline.run(payload)
+        if not vresult.valid:
+            stage = "schema" if vresult.reason != "price_out_of_range" else "price_sanity"
+            validation_pipeline_rejections_total.labels(
+                stage=stage, reason=vresult.reason,
+            ).inc()
+            # backward compat: keep the original validation_errors_total incrementing
+            validation_errors_total.labels(reason=vresult.reason).inc()
             symbol = payload.get("symbol", "unknown")
-            key = (str(symbol), str(reason))
-            if key not in _validation_logged:
+            key = (stage, str(symbol))
+            if key not in _rejection_logged:
                 logger.warning(
-                    "Validation REJECTED — symbol=%s reason=%s (further duplicates suppressed)",
+                    "Validation REJECTED — stage=%s symbol=%s reason=%s (further duplicates suppressed)",
+                    stage,
                     symbol,
-                    reason,
+                    vresult.reason,
                 )
-                _validation_logged.add(key)
+                _rejection_logged.add(key)
             return
+
+        event = vresult.event
 
         logger.debug(
             "Received signal — symbol=%s type=%s",
@@ -233,14 +250,14 @@ def main():
                 reason=risk_decision.rejection_reason,
             ).inc()
             key = (decision["symbol"], risk_decision.rejection_reason)
-            if key not in _rejected_logged:
+            if key not in _rejection_logged:
                 logger.warning(
                     "Risk REJECTED — symbol=%s action=%s reason=%s (further duplicates suppressed)",
                     decision["symbol"],
                     decision["action"],
                     risk_decision.rejection_reason,
                 )
-                _rejected_logged.add(key)
+                _rejection_logged.add(key)
             return
 
         decision["risk_approved"] = True

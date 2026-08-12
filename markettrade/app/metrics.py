@@ -155,6 +155,23 @@ rate_limiter_utilization = Gauge(
     ["symbol"],
 )
 
+calibration_records_total = Counter(
+    "markettrade_calibration_records_total",
+    "Outcomes recorded in CalibrationEngine",
+    ["bucket"],
+)
+
+calibration_accuracy = Gauge(
+    "markettrade_calibration_accuracy",
+    "Current accuracy rate per anomaly-score bucket",
+    ["bucket"],
+)
+
+calibration_window_size = Gauge(
+    "markettrade_calibration_window_size",
+    "Current number of outcomes in calibration window",
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

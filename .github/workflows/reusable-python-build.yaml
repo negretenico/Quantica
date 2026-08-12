@@ -34,7 +34,7 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ inputs.python_version }}
@@ -61,14 +61,14 @@ jobs:
         run: python -m build
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-dist
           path: ${{ inputs.working_directory }}/dist/*
 
       - name: Attach to GitHub Release
         if: ${{ inputs.create_release }}
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ inputs.working_directory }}/dist/*
         env:

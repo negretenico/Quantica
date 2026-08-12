@@ -8,3 +8,4 @@ class Config:
     KAFKA_TOPIC: str = os.environ.get("KAFKA_TOPIC", "order")
     KAFKA_TIMEOUT_SECONDS: int = int(os.environ.get("KAFKA_TIMEOUT_SECONDS", "30"))
     RABBITMQ_URL: str = os.environ.get("RABBITMQ_URL", "amqp://quantica:quantica@localhost:5672/")
+    TRADE_BLOB_DIR: str = os.environ.get("TRADE_BLOB_DIR", "./decisions/trade")

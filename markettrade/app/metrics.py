@@ -143,6 +143,12 @@ concentration_active = Gauge(
     "Whether concentration risk is currently active (1 or 0)",
 )
 
+accumulation_alerts_total = Counter(
+    "markettrade_accumulation_alerts_total",
+    "Accumulation alerts fired",
+    ["symbol", "direction"],
+)
+
 rate_limited_total = Counter(
     "markettrade_rate_limited_total",
     "Decisions rate-limited per symbol",
@@ -165,6 +171,23 @@ validation_pipeline_seconds = Histogram(
     "markettrade_validation_pipeline_seconds",
     "Latency of the validation pipeline",
     buckets=(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1),
+)
+
+calibration_records_total = Counter(
+    "markettrade_calibration_records_total",
+    "Outcomes recorded in CalibrationEngine",
+    ["bucket"],
+)
+
+calibration_accuracy = Gauge(
+    "markettrade_calibration_accuracy",
+    "Current accuracy rate per anomaly-score bucket",
+    ["bucket"],
+)
+
+calibration_window_size = Gauge(
+    "markettrade_calibration_window_size",
+    "Current number of outcomes in calibration window",
 )
 
 

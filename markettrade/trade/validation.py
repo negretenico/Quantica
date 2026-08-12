@@ -36,22 +36,26 @@ def validate_schema(payload: dict) -> ValidationResult:
 def validate_price_sanity(
     payload: dict, *, enabled: bool, min_price: float, max_price: float
 ) -> ValidationResult:
-    """Check that price is within configured bounds.
-
-    Only checks if the price field exists and is numeric -- schema validation
-    catches missing or non-numeric values upstream.
-    """
+    """Check that price is present, numeric, and within configured bounds."""
     if not enabled:
         return ValidationResult(valid=True)
 
     price = payload.get("price")
     if price is None:
-        return ValidationResult(valid=True)
+        return ValidationResult(
+            valid=False,
+            reason="price_missing",
+            detail="price field is absent",
+        )
 
     try:
         price_f = float(price)
     except (TypeError, ValueError):
-        return ValidationResult(valid=True)
+        return ValidationResult(
+            valid=False,
+            reason="price_invalid",
+            detail=f"price={price!r} is not numeric",
+        )
 
     if price_f < min_price or price_f > max_price:
         return ValidationResult(

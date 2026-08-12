@@ -92,7 +92,7 @@ class TestValidatePriceSanity:
         )
         assert result.valid is True
 
-    def test_missing_price_passes(self):
+    def test_missing_price_rejects(self):
         payload = _valid_payload()
         del payload["price"]
         result = validate_price_sanity(
@@ -101,17 +101,18 @@ class TestValidatePriceSanity:
             min_price=0.0001,
             max_price=10000000.0,
         )
-        assert result.valid is True
+        assert result.valid is False
+        assert result.reason == "price_missing"
 
-    def test_non_numeric_price_passes(self):
-        """Non-numeric price is not this validator's concern (schema catches it)."""
+    def test_non_numeric_price_rejects(self):
         result = validate_price_sanity(
             _valid_payload(price="abc"),
             enabled=True,
             min_price=0.0001,
             max_price=10000000.0,
         )
-        assert result.valid is True
+        assert result.valid is False
+        assert result.reason == "price_invalid"
 
 
 # --- Pipeline composition ---

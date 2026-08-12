@@ -1,5 +1,13 @@
 import pytest
-from marketrisk.risk.models import ConcentrationAlert, ConcentrationState, NearLimitAlert, ProposedAction, RiskDecision
+from marketrisk.risk.models import (
+    AccumulationAlert,
+    AccumulationCleared,
+    ConcentrationAlert,
+    ConcentrationState,
+    NearLimitAlert,
+    ProposedAction,
+    RiskDecision,
+)
 
 
 class TestProposedAction:
@@ -165,3 +173,70 @@ class TestConcentrationAlert:
             timestamp_utc="2026-08-07T12:00:00+00:00",
         )
         assert ConcentrationAlert(**kwargs) == ConcentrationAlert(**kwargs)
+
+
+class TestAccumulationAlert:
+    def test_construction_and_field_access(self):
+        alert = AccumulationAlert(
+            symbol="BTCUSDT",
+            direction="BUY",
+            consecutive_count=10,
+            threshold=10,
+            timestamp_utc="2026-08-11T12:00:00+00:00",
+        )
+        assert alert.symbol == "BTCUSDT"
+        assert alert.direction == "BUY"
+        assert alert.consecutive_count == 10
+        assert alert.threshold == 10
+
+    def test_frozen_prevents_mutation(self):
+        alert = AccumulationAlert("BTCUSDT", "BUY", 10, 10, "2026-08-11T12:00:00+00:00")
+        with pytest.raises(Exception):
+            alert.symbol = "ETHUSDT"  # type: ignore[misc]
+
+    def test_to_dict_returns_all_fields(self):
+        alert = AccumulationAlert("BTCUSDT", "BUY", 10, 10, "2026-08-11T12:00:00+00:00")
+        assert alert.to_dict() == {
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "consecutive_count": 10,
+            "threshold": 10,
+            "timestamp_utc": "2026-08-11T12:00:00+00:00",
+        }
+
+    def test_equality_is_value_based(self):
+        a = AccumulationAlert("BTCUSDT", "BUY", 10, 10, "2026-08-11T12:00:00+00:00")
+        b = AccumulationAlert("BTCUSDT", "BUY", 10, 10, "2026-08-11T12:00:00+00:00")
+        assert a == b
+
+
+class TestAccumulationCleared:
+    def test_construction_and_field_access(self):
+        cleared = AccumulationCleared(
+            symbol="BTCUSDT",
+            previous_direction="BUY",
+            new_direction="SELL",
+            timestamp_utc="2026-08-11T12:00:00+00:00",
+        )
+        assert cleared.symbol == "BTCUSDT"
+        assert cleared.previous_direction == "BUY"
+        assert cleared.new_direction == "SELL"
+
+    def test_frozen_prevents_mutation(self):
+        cleared = AccumulationCleared("BTCUSDT", "BUY", "SELL", "2026-08-11T12:00:00+00:00")
+        with pytest.raises(Exception):
+            cleared.symbol = "ETHUSDT"  # type: ignore[misc]
+
+    def test_to_dict_returns_all_fields(self):
+        cleared = AccumulationCleared("BTCUSDT", "BUY", "SELL", "2026-08-11T12:00:00+00:00")
+        assert cleared.to_dict() == {
+            "symbol": "BTCUSDT",
+            "previous_direction": "BUY",
+            "new_direction": "SELL",
+            "timestamp_utc": "2026-08-11T12:00:00+00:00",
+        }
+
+    def test_equality_is_value_based(self):
+        a = AccumulationCleared("BTCUSDT", "BUY", "SELL", "2026-08-11T12:00:00+00:00")
+        b = AccumulationCleared("BTCUSDT", "BUY", "SELL", "2026-08-11T12:00:00+00:00")
+        assert a == b

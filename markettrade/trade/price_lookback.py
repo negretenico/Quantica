@@ -100,6 +100,7 @@ class LookbackTask:
     entry_price: float
     decision_time: float
     window: int
+    anomaly_score: float = 0.0
 
     def __lt__(self, other):
         return self.due_time < other.due_time
@@ -151,6 +152,7 @@ class PriceLookback:
                 entry_price=decision["entry_price"],
                 decision_time=decision_time,
                 window=window,
+                anomaly_score=decision.get("anomaly_score", 0.0),
             )
             self._queue.put(task)
             lookback_scheduled_total.labels(
@@ -217,6 +219,7 @@ class PriceLookback:
             "outcome_price": price,
             "recorded_at": datetime.now(timezone.utc).isoformat(),
             "price_source": source,
+            "anomaly_score": task.anomaly_score,
         }
 
         try:

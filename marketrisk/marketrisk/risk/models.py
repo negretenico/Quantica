@@ -82,3 +82,26 @@ class ConcentrationCleared:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class AccumulationAlert:
+    symbol: str
+    direction: str
+    consecutive_count: int
+    threshold: int
+    timestamp_utc: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class AccumulationCleared:
+    symbol: str
+    previous_direction: str
+    new_direction: str
+    timestamp_utc: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)

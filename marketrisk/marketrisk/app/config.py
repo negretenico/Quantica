@@ -13,3 +13,4 @@ class Config:
     MAX_DRAWDOWN_PCT: float = float(os.environ.get('MAX_DRAWDOWN_PCT', '0.20'))
     NEAR_LIMIT_THRESHOLD_PCT: float = float(os.environ.get('NEAR_LIMIT_THRESHOLD_PCT', '0.80'))
     CONCENTRATION_THRESHOLD: int = int(os.environ.get('CONCENTRATION_THRESHOLD', '3'))
+    ACCUMULATION_THRESHOLD: int = int(os.environ.get('ACCUMULATION_THRESHOLD', '10'))

@@ -4,6 +4,8 @@ import logging
 from datetime import datetime, timezone
 
 from marketrisk.risk.models import (
+    AccumulationAlert,
+    AccumulationCleared,
     ConcentrationAlert,
     ConcentrationCleared,
     ConcentrationState,
@@ -25,7 +27,7 @@ class NearLimitObserver:
         self._threshold_pct = threshold_pct
         self._active_alerts: dict[str, NearLimitAlert] = {}
 
-    def check(self, symbol: str, current_exposure: float, max_exposure: float) -> NearLimitAlert | NearLimitCleared | None:
+    def check(self, symbol: str, current_exposure: float, max_exposure: float, **_kwargs) -> NearLimitAlert | NearLimitCleared | None:
         if max_exposure <= 0:
             return None
 
@@ -78,7 +80,7 @@ class ConcentrationObserver:
         self._state = ConcentrationState.ARMED
 
     def check(
-        self, symbol: str, current_exposure: float, max_exposure: float,
+        self, symbol: str, current_exposure: float, max_exposure: float, **_kwargs,
     ) -> ConcentrationAlert | ConcentrationCleared | None:
         return self._transition()
 
@@ -146,6 +148,64 @@ class ConcentrationObserver:
         return self._state
 
 
+class AccumulationObserver:
+    """Detects one-directional accumulation: N consecutive same-direction approvals.
+
+    Tracks per-symbol. Fires once when consecutive_count reaches the threshold.
+    Resets counter and re-arms when the opposite direction is approved.
+    """
+
+    def __init__(self, threshold: int = 10) -> None:
+        self._threshold = threshold
+        self._counters: dict[str, tuple[str, int]] = {}
+        self._fired: set[str] = set()
+
+    def check(
+        self, symbol: str, current_exposure: float, max_exposure: float,
+        *, action: str | None = None, approved: bool = False, **_kwargs,
+    ) -> AccumulationAlert | AccumulationCleared | None:
+        if action is None or not approved:
+            return None
+
+        current = self._counters.get(symbol)
+
+        if current is not None and current[0] != action:
+            previous_direction = current[0]
+            self._counters[symbol] = (action, 1)
+            was_fired = symbol in self._fired
+            self._fired.discard(symbol)
+            if was_fired:
+                return AccumulationCleared(
+                    symbol=symbol,
+                    previous_direction=previous_direction,
+                    new_direction=action,
+                    timestamp_utc=datetime.now(timezone.utc).isoformat(),
+                )
+            return None
+
+        if current is None:
+            self._counters[symbol] = (action, 1)
+        else:
+            self._counters[symbol] = (action, current[1] + 1)
+
+        _, count = self._counters[symbol]
+
+        if count >= self._threshold and symbol not in self._fired:
+            self._fired.add(symbol)
+            return AccumulationAlert(
+                symbol=symbol,
+                direction=action,
+                consecutive_count=count,
+                threshold=self._threshold,
+                timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            )
+
+        return None
+
+    def get_count(self, symbol: str) -> tuple[str, int] | None:
+        return self._counters.get(symbol)
+
+
 class RiskObserverPipeline:
     """Runs risk observers in registration order and collects alerts.
 
@@ -160,10 +220,10 @@ class RiskObserverPipeline:
     def __init__(self, observers: list) -> None:
         self._observers = list(observers)
 
-    def check(self, symbol: str, current_exposure: float, max_exposure: float) -> list:
+    def check(self, symbol: str, current_exposure: float, max_exposure: float, **kwargs) -> list:
         alerts = []
         for observer in self._observers:
-            alert = observer.check(symbol, current_exposure, max_exposure)
+            alert = observer.check(symbol, current_exposure, max_exposure, **kwargs)
             if alert is not None:
                 alerts.append(alert)
         return alerts

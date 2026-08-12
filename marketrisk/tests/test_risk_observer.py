@@ -1,13 +1,20 @@
 import pytest
 
 from marketrisk.risk.models import (
+    AccumulationAlert,
+    AccumulationCleared,
     ConcentrationAlert,
     ConcentrationCleared,
     ConcentrationState,
     NearLimitAlert,
     NearLimitCleared,
 )
-from marketrisk.risk.observer import ConcentrationObserver, NearLimitObserver, RiskObserverPipeline
+from marketrisk.risk.observer import (
+    AccumulationObserver,
+    ConcentrationObserver,
+    NearLimitObserver,
+    RiskObserverPipeline,
+)
 
 
 class TestNearLimitObserver:
@@ -210,6 +217,109 @@ class TestConcentrationObserver:
         assert obs.state == ConcentrationState.ARMED
 
 
+class TestAccumulationObserver:
+    def _check(self, observer, symbol, action, approved=True):
+        return observer.check(symbol, 0.0, 5000.0, action=action, approved=approved)
+
+    def test_no_alert_below_threshold(self):
+        obs = AccumulationObserver(threshold=10)
+        for _ in range(9):
+            assert self._check(obs, "BTCUSDT", "BUY") is None
+
+    def test_fires_at_threshold(self):
+        obs = AccumulationObserver(threshold=10)
+        for _ in range(9):
+            self._check(obs, "BTCUSDT", "BUY")
+        result = self._check(obs, "BTCUSDT", "BUY")
+        assert isinstance(result, AccumulationAlert)
+        assert result.symbol == "BTCUSDT"
+        assert result.direction == "BUY"
+        assert result.consecutive_count == 10
+        assert result.threshold == 10
+
+    def test_fire_once(self):
+        obs = AccumulationObserver(threshold=10)
+        for _ in range(10):
+            self._check(obs, "BTCUSDT", "BUY")
+        assert self._check(obs, "BTCUSDT", "BUY") is None
+
+    def test_direction_change_resets_and_clears(self):
+        obs = AccumulationObserver(threshold=10)
+        for _ in range(10):
+            self._check(obs, "BTCUSDT", "BUY")
+        result = self._check(obs, "BTCUSDT", "SELL")
+        assert isinstance(result, AccumulationCleared)
+        assert result.symbol == "BTCUSDT"
+        assert result.previous_direction == "BUY"
+        assert result.new_direction == "SELL"
+
+    def test_direction_change_without_fired_returns_none(self):
+        obs = AccumulationObserver(threshold=10)
+        for _ in range(5):
+            self._check(obs, "BTCUSDT", "BUY")
+        assert self._check(obs, "BTCUSDT", "SELL") is None
+        assert obs.get_count("BTCUSDT") == ("SELL", 1)
+
+    def test_refires_after_reset(self):
+        obs = AccumulationObserver(threshold=3)
+        for _ in range(3):
+            self._check(obs, "BTCUSDT", "BUY")
+        # direction change resets counter to SELL=1
+        self._check(obs, "BTCUSDT", "SELL")
+        # SELL=2
+        self._check(obs, "BTCUSDT", "SELL")
+        # SELL=3 — fires
+        result = self._check(obs, "BTCUSDT", "SELL")
+        assert isinstance(result, AccumulationAlert)
+        assert result.direction == "SELL"
+        assert result.consecutive_count == 3
+
+    def test_multiple_symbols_independent(self):
+        obs = AccumulationObserver(threshold=3)
+        for _ in range(3):
+            self._check(obs, "BTCUSDT", "BUY")
+        for _ in range(2):
+            self._check(obs, "ETHUSDT", "BUY")
+        assert obs.get_count("BTCUSDT") == ("BUY", 3)
+        assert obs.get_count("ETHUSDT") == ("BUY", 2)
+
+    def test_rejected_trades_ignored(self):
+        obs = AccumulationObserver(threshold=3)
+        for _ in range(5):
+            assert self._check(obs, "BTCUSDT", "BUY", approved=False) is None
+        assert obs.get_count("BTCUSDT") is None
+
+    def test_no_action_returns_none(self):
+        obs = AccumulationObserver(threshold=3)
+        result = obs.check("BTCUSDT", 0.0, 5000.0)
+        assert result is None
+
+    def test_sell_accumulation(self):
+        obs = AccumulationObserver(threshold=3)
+        for _ in range(2):
+            self._check(obs, "BTCUSDT", "SELL")
+        result = self._check(obs, "BTCUSDT", "SELL")
+        assert isinstance(result, AccumulationAlert)
+        assert result.direction == "SELL"
+
+    def test_alternating_directions_never_fire(self):
+        obs = AccumulationObserver(threshold=3)
+        for _ in range(20):
+            assert self._check(obs, "BTCUSDT", "BUY") is None
+            assert self._check(obs, "BTCUSDT", "SELL") is None
+
+    def test_custom_threshold(self):
+        obs = AccumulationObserver(threshold=2)
+        self._check(obs, "BTCUSDT", "BUY")
+        result = self._check(obs, "BTCUSDT", "BUY")
+        assert isinstance(result, AccumulationAlert)
+        assert result.consecutive_count == 2
+
+    def test_get_count_unknown_symbol(self):
+        obs = AccumulationObserver(threshold=10)
+        assert obs.get_count("UNKNOWN") is None
+
+
 class TestRiskObserverPipeline:
     def test_collects_alerts_from_all_observers(self):
         nl = NearLimitObserver(threshold_pct=0.80)
@@ -261,3 +371,23 @@ class TestRiskObserverPipeline:
         assert results[0].symbol == "BTCUSDT"
         assert isinstance(results[1], ConcentrationCleared)
         assert results[1].remaining_count == 1
+
+    def test_kwargs_forwarded_to_accumulation_observer(self):
+        nl = NearLimitObserver(threshold_pct=0.80)
+        conc = ConcentrationObserver(nl, max_correlated=3)
+        accum = AccumulationObserver(threshold=2)
+        pipeline = RiskObserverPipeline([nl, conc, accum])
+
+        pipeline.check("BTCUSDT", 1000.0, 5000.0, action="BUY", approved=True)
+        results = pipeline.check("BTCUSDT", 1000.0, 5000.0, action="BUY", approved=True)
+        assert any(isinstance(r, AccumulationAlert) for r in results)
+
+    def test_existing_observers_unaffected_by_kwargs(self):
+        nl = NearLimitObserver(threshold_pct=0.80)
+        conc = ConcentrationObserver(nl, max_correlated=2)
+        accum = AccumulationObserver(threshold=100)
+        pipeline = RiskObserverPipeline([nl, conc, accum])
+
+        alerts = pipeline.check("BTCUSDT", 4100.0, 5000.0, action="BUY", approved=True)
+        assert len(alerts) == 1
+        assert isinstance(alerts[0], NearLimitAlert)

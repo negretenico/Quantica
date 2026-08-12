@@ -5,6 +5,7 @@ import com.negretenico.quantica.markettransformer.model.BinanceStreamResponse;
 import com.negretenico.quantica.markettransformer.model.KafkaProperties;
 import io.micrometer.core.aop.TimedAspect;
 import io.micrometer.core.instrument.MeterRegistry;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
@@ -12,21 +13,31 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.MicrometerConsumerListener;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.Map;
 
+@Slf4j
 @Configuration
 public class KafkaConsumerConfig {
 	private final KafkaProperties kafkaProperties;
 	private final ObjectMapper objectMapper;
 	private final MeterRegistry meterRegistry;
+	private final KafkaTemplate<byte[], byte[]> dltKafkaTemplate;
 
-	public KafkaConsumerConfig(KafkaProperties kafkaProperties, ObjectMapper objectMapper, MeterRegistry meterRegistry) {
+	public KafkaConsumerConfig(KafkaProperties kafkaProperties,
+			ObjectMapper objectMapper,
+			MeterRegistry meterRegistry,
+			KafkaTemplate<byte[], byte[]> dltKafkaTemplate) {
 		this.kafkaProperties = kafkaProperties;
 		this.objectMapper = objectMapper;
 		this.meterRegistry = meterRegistry;
+		this.dltKafkaTemplate = dltKafkaTemplate;
 	}
 
 	@Bean
@@ -53,9 +64,24 @@ public class KafkaConsumerConfig {
 	}
 
 	@Bean
+	public DefaultErrorHandler kafkaErrorHandler() {
+		DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(dltKafkaTemplate);
+		KafkaProperties.ErrorHandler errorHandlerConfig = kafkaProperties.errorHandler();
+		DefaultErrorHandler errorHandler = new DefaultErrorHandler(
+				recoverer,
+				new FixedBackOff(errorHandlerConfig.retryIntervalMs(), errorHandlerConfig.maxRetries())
+		);
+		errorHandler.setRetryListeners((record, ex, deliveryAttempt) ->
+				log.warn("Kafka retry attempt {} for topic={} partition={} offset={}",
+						deliveryAttempt, record.topic(), record.partition(), record.offset()));
+		return errorHandler;
+	}
+
+	@Bean
 	public ConcurrentKafkaListenerContainerFactory<String, BinanceStreamResponse> kafkaListenerContainerFactory() {
 		ConcurrentKafkaListenerContainerFactory<String, BinanceStreamResponse> factory = new ConcurrentKafkaListenerContainerFactory<>();
 		factory.setConsumerFactory(consumerFactory());
+		factory.setCommonErrorHandler(kafkaErrorHandler());
 		return factory;
 	}
 }

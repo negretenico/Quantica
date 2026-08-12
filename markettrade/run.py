@@ -49,6 +49,7 @@ from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.models import SignalEvent
 from trade.outcome import DecisionLog
+from trade.calibration import CalibrationEngine
 from trade.outcome_tracker import OutcomeTracker
 from trade.price_lookback import create_lookback
 from trade.rate_limiter import TradeRateLimiter
@@ -79,6 +80,8 @@ def main():
     risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
     decision_log = DecisionLog(outcome_store, max_size=config.DECISION_LOG_MAX_SIZE)
     outcome_tracker = OutcomeTracker()
+    calibration_engine = CalibrationEngine(window_size=config.calibration.WINDOW_SIZE)
+    outcome_tracker.add_on_outcome(calibration_engine.record)
     dedup = DedupFilter()
 
     notify_publisher = RabbitPublisher(

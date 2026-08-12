@@ -54,12 +54,18 @@ class RateLimiterConfig:
 
 
 @dataclass
+class CalibrationConfig:
+    WINDOW_SIZE: int = int(os.environ.get('CALIBRATION_WINDOW_SIZE', '200'))
+
+
+@dataclass
 class Config:
     rabbitmq: RabbitMQConfig = None
     blob_store: BlobStoreConfig = None
     risk: RiskConfig = None
     lookback: LookbackConfig = None
     rate_limiter: RateLimiterConfig = None
+    calibration: CalibrationConfig = None
     ANOMALY_SCORE_THRESHOLD: float = float(os.environ.get('ANOMALY_SCORE_THRESHOLD', '0.7'))
     DECISION_LOG_MAX_SIZE: int = int(os.environ.get('DECISION_LOG_MAX_SIZE', '1000'))
     OUTCOME_STORE_PATH: str = os.environ.get('OUTCOME_STORE_PATH', './decisions/outcomes')
@@ -76,6 +82,8 @@ class Config:
             self.lookback = LookbackConfig()
         if self.rate_limiter is None:
             self.rate_limiter = RateLimiterConfig()
+        if self.calibration is None:
+            self.calibration = CalibrationConfig()
 
     def __str__(self):
         return (

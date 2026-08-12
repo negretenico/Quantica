@@ -1,6 +1,7 @@
 import logging
 import threading
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -17,12 +18,17 @@ class OutcomeRecord:
     pnl_pct: float
     direction_correct: bool
     recorded_at: str
+    anomaly_score: float = 0.0
 
 
 class OutcomeTracker:
     def __init__(self, max_outcomes: int = 5000):
         self._outcomes: deque[OutcomeRecord] = deque(maxlen=max_outcomes)
         self._lock = threading.Lock()
+        self._on_outcome: list[Callable[[OutcomeRecord], None]] = []
+
+    def add_on_outcome(self, callback: Callable[[OutcomeRecord], None]) -> None:
+        self._on_outcome.append(callback)
 
     def evaluate(self, lookback_record: dict) -> None:
         """Evaluate a raw lookback record: compute pnl and directional correctness."""
@@ -40,6 +46,7 @@ class OutcomeTracker:
             window_seconds = lookback_record["window_seconds"]
             decision_time = lookback_record["decision_time"]
             recorded_at = lookback_record["recorded_at"]
+            anomaly_score = lookback_record.get("anomaly_score", 0.0)
         except (KeyError, TypeError) as e:
             outcome_tracker_errors_total.inc()
             logger.warning("Failed to parse lookback record: %s", e)
@@ -62,10 +69,17 @@ class OutcomeTracker:
             pnl_pct=round(pnl_pct, 6),
             direction_correct=direction_correct,
             recorded_at=recorded_at,
+            anomaly_score=anomaly_score,
         )
 
         with self._lock:
             self._outcomes.append(rec)
+
+        for cb in self._on_outcome:
+            try:
+                cb(rec)
+            except Exception:
+                logger.exception("on_outcome callback failed")
 
         outcome_tracker_total.labels(
             symbol=rec.symbol,

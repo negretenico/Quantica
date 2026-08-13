@@ -29,7 +29,7 @@ class NearLimitAlert:
     timestamp_utc: str
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return {"alert_type": "near_limit", **asdict(self)}
 
 
 @dataclass(frozen=True)
@@ -66,6 +66,7 @@ class ConcentrationAlert:
 
     def to_dict(self) -> dict:
         return {
+            "alert_type": "concentration",
             "near_limit_symbols": list(self.near_limit_symbols),
             "symbol_ratios": dict(self.symbol_ratios),
             "count": self.count,
@@ -93,7 +94,7 @@ class AccumulationAlert:
     timestamp_utc: str
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return {"alert_type": "accumulation", **asdict(self)}
 
 
 @dataclass(frozen=True)

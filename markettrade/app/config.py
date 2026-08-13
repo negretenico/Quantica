@@ -77,7 +77,7 @@ class Config:
     ANOMALY_SCORE_THRESHOLD: float = float(os.environ.get('ANOMALY_SCORE_THRESHOLD', '0.7'))
     DECISION_LOG_MAX_SIZE: int = int(os.environ.get('DECISION_LOG_MAX_SIZE', '1000'))
     OUTCOME_STORE_PATH: str = os.environ.get('OUTCOME_STORE_PATH', './decisions/outcomes')
-    RISK_ALERT_STORE_PATH: str = os.environ.get('RISK_ALERT_STORE_PATH', './decisions/risk')
+    RISK_ALERT_STORE_PATH: str = os.environ.get('RISK_ALERT_STORE_PATH', './decisions/risk-alerts')
 
     def __post_init__(self):
         if self.rabbitmq is None:

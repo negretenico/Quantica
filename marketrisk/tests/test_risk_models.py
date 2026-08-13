@@ -99,6 +99,7 @@ class TestNearLimitAlert:
         alert = NearLimitAlert("BTCUSDT", 4200.0, 5000.0, 0.84, "2026-08-04T12:00:00+00:00")
         d = alert.to_dict()
         assert d == {
+            "alert_type": "near_limit",
             "symbol": "BTCUSDT",
             "current_exposure": 4200.0,
             "max_exposure": 5000.0,
@@ -157,6 +158,7 @@ class TestConcentrationAlert:
         )
         d = alert.to_dict()
         assert d == {
+            "alert_type": "concentration",
             "near_limit_symbols": ["BTCUSDT", "ETHUSDT"],
             "symbol_ratios": {"BTCUSDT": 0.85, "ETHUSDT": 0.90},
             "count": 2,
@@ -197,6 +199,7 @@ class TestAccumulationAlert:
     def test_to_dict_returns_all_fields(self):
         alert = AccumulationAlert("BTCUSDT", "BUY", 10, 10, "2026-08-11T12:00:00+00:00")
         assert alert.to_dict() == {
+            "alert_type": "accumulation",
             "symbol": "BTCUSDT",
             "direction": "BUY",
             "consecutive_count": 10,

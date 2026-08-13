@@ -34,7 +34,10 @@ public class RabbitQueueDepthBinder implements MeterBinder {
 	@Override
 	public void bindTo(MeterRegistry registry) {
 		// Alert: depth > 1000 indicates downstream consumer falling behind
-		for (String queueName : List.of("signal.analysis", "signal.bard", "signal.trade", "signal.notify")) {
+		for (String queueName : List.of(
+				"signal.analysis", "signal.bard", "signal.trade", "signal.notify",
+				"signal.analysis.dlq", "signal.bard.dlq", "signal.trade.dlq", "signal.notify.dlq"
+		)) {
 			Gauge.builder("rabbitmq.queue.messages", this, binder -> binder.fetchDepth(queueName))
 					.tag("queue", queueName)
 					.description("Number of messages in queue")

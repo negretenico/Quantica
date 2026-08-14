@@ -47,6 +47,19 @@ class RabbitQueueDepthBinderTest {
 	}
 
 	@Test
+	void returnsDlqQueueDepth() {
+		mockWebServer.enqueue(new MockResponse()
+				.setBody("{\"messages\": 7}")
+				.addHeader("Content-Type", "application/json"));
+
+		double depth = registry.get("rabbitmq.queue.messages")
+				.tag("queue", "signal.trade.dlq")
+				.gauge().value();
+
+		assertThat(depth).isEqualTo(7.0);
+	}
+
+	@Test
 	void returnsZeroOnServerError() {
 		mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 

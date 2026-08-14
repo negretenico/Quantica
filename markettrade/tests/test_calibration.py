@@ -209,6 +209,35 @@ def _mock_tracker_metrics():
     )
 
 
+# --- count() method ---
+
+
+def test_count_empty_engine():
+    engine = CalibrationEngine()
+    assert engine.count() == 0
+
+
+def test_count_per_bucket():
+    with _mock_calibration_metrics()[0], _mock_calibration_metrics()[1], _mock_calibration_metrics()[2]:
+        engine = CalibrationEngine()
+        engine.record(_outcome(anomaly_score=0.75))
+        engine.record(_outcome(anomaly_score=0.75))
+        engine.record(_outcome(anomaly_score=0.85))
+        engine.record(_outcome(anomaly_score=0.95))
+
+        assert engine.count(BUCKET_LOW) == 2
+        assert engine.count(BUCKET_MID) == 1
+        assert engine.count(BUCKET_HIGH) == 1
+        assert engine.count() == 4
+
+
+def test_count_empty_bucket():
+    with _mock_calibration_metrics()[0], _mock_calibration_metrics()[1], _mock_calibration_metrics()[2]:
+        engine = CalibrationEngine()
+        engine.record(_outcome(anomaly_score=0.85))
+        assert engine.count(BUCKET_LOW) == 0
+
+
 def test_calibration_receives_outcome_from_tracker_callback():
     with _mock_tracker_metrics()[0], _mock_tracker_metrics()[1], _mock_tracker_metrics()[2], \
          _mock_calibration_metrics()[0], _mock_calibration_metrics()[1], _mock_calibration_metrics()[2]:

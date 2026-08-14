@@ -63,6 +63,9 @@ class RateLimiterConfig:
 @dataclass
 class CalibrationConfig:
     WINDOW_SIZE: int = int(os.environ.get('CALIBRATION_WINDOW_SIZE', '200'))
+    DRIFT_THRESHOLD: float = float(os.environ.get('CALIBRATION_DRIFT_THRESHOLD', '0.40'))
+    OVERFIT_THRESHOLD: float = float(os.environ.get('CALIBRATION_OVERFIT_THRESHOLD', '0.85'))
+    MIN_SAMPLES: int = int(os.environ.get('CALIBRATION_MIN_SAMPLES', '20'))
 
 
 @dataclass

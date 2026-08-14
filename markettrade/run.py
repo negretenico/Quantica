@@ -49,7 +49,8 @@ from shared.dedup import DedupFilter
 from shared.rabbitmq.publisher import RabbitPublisher
 from trade.decision import decide
 from trade.outcome import DecisionLog
-from trade.calibration import CalibrationEngine
+from trade.calibration import CalibrationEngine, BUCKETS, _bucket_label, _bucket_for
+from shared.monitor import metric_monitor
 from trade.outcome_tracker import OutcomeTracker
 from trade.price_lookback import create_lookback
 from trade.rate_limiter import TradeRateLimiter
@@ -81,14 +82,57 @@ def main():
     risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
     decision_log = DecisionLog(outcome_store, max_size=config.DECISION_LOG_MAX_SIZE)
     outcome_tracker = OutcomeTracker()
-    calibration_engine = CalibrationEngine(window_size=config.calibration.WINDOW_SIZE)
-    outcome_tracker.add_on_outcome(calibration_engine.record)
-    dedup = DedupFilter()
-
     notify_publisher = RabbitPublisher(
         url=config.rabbitmq.URL,
         exchange="notifications",
     )
+    calibration_engine = CalibrationEngine(window_size=config.calibration.WINDOW_SIZE)
+
+    @metric_monitor(
+        publisher=notify_publisher,
+        routing_key="alert.markettrade",
+        prefix="CALIBRATION",
+        thresholds={
+            "floor": config.calibration.DRIFT_THRESHOLD,
+            "ceiling": config.calibration.OVERFIT_THRESHOLD,
+            "min_samples": config.calibration.MIN_SAMPLES,
+        },
+        source="markettrade",
+    )
+    def record_and_monitor(outcome):
+        from app.metrics import (
+            calibration_drift,
+            calibration_overfit,
+            outcome_correct_total,
+            outcome_incorrect_total,
+            calibration_alerts_total,
+        )
+
+        calibration_engine.record(outcome)
+
+        bucket = _bucket_for(outcome.anomaly_score)
+        label = _bucket_label(bucket) if bucket else "none"
+        if outcome.direction_correct:
+            outcome_correct_total.labels(bucket=label).inc()
+        else:
+            outcome_incorrect_total.labels(bucket=label).inc()
+
+        metrics = {}
+        for b in BUCKETS:
+            bl = _bucket_label(b)
+            acc = calibration_engine.accuracy(b)
+            cnt = calibration_engine.count(b)
+            if acc is not None:
+                metrics[bl] = (acc, cnt)
+                is_drifting = acc < config.calibration.DRIFT_THRESHOLD and cnt >= config.calibration.MIN_SAMPLES
+                is_overfit = acc > config.calibration.OVERFIT_THRESHOLD and cnt >= config.calibration.MIN_SAMPLES
+                calibration_drift.labels(bucket=bl).set(1 if is_drifting else 0)
+                calibration_overfit.labels(bucket=bl).set(1 if is_overfit else 0)
+
+        return metrics
+
+    outcome_tracker.add_on_outcome(record_and_monitor)
+    dedup = DedupFilter()
     lookback, price_cache = create_lookback(config, outcome_tracker=outcome_tracker)
 
     validation_pipeline = ValidationPipeline([

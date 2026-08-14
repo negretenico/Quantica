@@ -190,6 +190,36 @@ calibration_window_size = Gauge(
     "Current number of outcomes in calibration window",
 )
 
+calibration_drift = Gauge(
+    "markettrade_calibration_drift",
+    "1 when bucket accuracy is below drift threshold",
+    ["bucket"],
+)
+
+calibration_overfit = Gauge(
+    "markettrade_calibration_overfit",
+    "1 when bucket accuracy exceeds overfit threshold",
+    ["bucket"],
+)
+
+outcome_correct_total = Counter(
+    "markettrade_outcome_correct_total",
+    "Total correct directional outcomes",
+    ["bucket"],
+)
+
+outcome_incorrect_total = Counter(
+    "markettrade_outcome_incorrect_total",
+    "Total incorrect directional outcomes",
+    ["bucket"],
+)
+
+calibration_alerts_total = Counter(
+    "markettrade_calibration_alerts_total",
+    "Calibration alerts fired",
+    ["bucket", "type"],
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

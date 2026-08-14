@@ -8,6 +8,7 @@ from app.metrics import (
     notifications_sent_total,
     start_metrics_server,
 )
+from handlers.alert_handler import AlertHandler
 from handlers.publish_handler import PublishHandler
 from handlers.signal_counter import SignalCounter
 from health.digest import HealthDigestThread
@@ -32,6 +33,7 @@ def main():
     channel = DiscordWebhookChannel(config.DISCORD_WEBHOOK_URL)
     signal_counter = SignalCounter()
     publish_handler = PublishHandler(channel)
+    alert_handler = AlertHandler(channel)
     signal_dedup = DedupFilter()
     notify_dedup = DedupFilter()
 
@@ -66,7 +68,11 @@ def main():
         if notify_dedup.is_duplicate(payload):
             duplicates_dropped_total.labels(queue="notifications.notify").inc()
             return
-        publish_handler.handle(payload)
+        event_type = payload.get("type", "")
+        if event_type in ("alert", "alert_cleared"):
+            alert_handler.handle(payload)
+        else:
+            publish_handler.handle(payload)
         notifications_sent_total.inc()
 
     notify_consumer = RabbitConsumer(ConsumerConfig(

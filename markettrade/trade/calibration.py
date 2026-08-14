@@ -56,6 +56,15 @@ class CalibrationEngine:
             if acc is not None:
                 calibration_accuracy.labels(bucket=_bucket_label(b)).set(acc)
 
+    def count(self, bucket: tuple[float, float] | None = None) -> int:
+        with self._lock:
+            outcomes = list(self._outcomes)
+
+        if bucket is not None:
+            outcomes = [o for o in outcomes if _bucket_for(o.anomaly_score) == bucket]
+
+        return len(outcomes)
+
     def accuracy(self, bucket: tuple[float, float] | None = None) -> float | None:
         with self._lock:
             outcomes = list(self._outcomes)

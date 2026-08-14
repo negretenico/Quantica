@@ -34,7 +34,11 @@ logger = logging.getLogger(__name__)
 
 event_buffer = EventBuffer()
 summary_buffer = SummaryBuffer(maxlen=Config.MAX_SUMMARY_BUFFER)
-openai_client = OpenAIClient(Config.OPEN_AI_TOKEN)
+if Config.MODEL_BACKEND == "fake":
+    from model.fake_openai_client import FakeOpenAIClient
+    openai_client = FakeOpenAIClient()
+else:
+    openai_client = OpenAIClient(Config.OPEN_AI_TOKEN)
 publisher = build_publisher()
 notify_publisher = RabbitPublisher(
     url=Config.RABBITMQ_URL,
@@ -126,13 +130,17 @@ def window_trigger():
 def synthesis_trigger():
     """Fires at SYNTHESIS_HOUR ET, drains summary_buffer, runs synthesis, queues narrative for disk."""
     while True:
-        now = datetime.datetime.now(_ET)
-        target = now.replace(hour=Config.SYNTHESIS_HOUR, minute=0, second=0, microsecond=0)
-        if now >= target:
-            target += datetime.timedelta(days=1)
-        sleep_secs = (target - now).total_seconds()
-        logger.info(f"synthesis_trigger: next synthesis in {sleep_secs / 3600:.1f}h at market close")
-        threading.Event().wait(timeout=sleep_secs)
+        if Config.SYNTHESIS_DELAY_SECONDS > 0:
+            logger.info(f"synthesis_trigger: delay mode — firing in {Config.SYNTHESIS_DELAY_SECONDS}s")
+            threading.Event().wait(timeout=Config.SYNTHESIS_DELAY_SECONDS)
+        else:
+            now = datetime.datetime.now(_ET)
+            target = now.replace(hour=Config.SYNTHESIS_HOUR, minute=0, second=0, microsecond=0)
+            if now >= target:
+                target += datetime.timedelta(days=1)
+            sleep_secs = (target - now).total_seconds()
+            logger.info(f"synthesis_trigger: next synthesis in {sleep_secs / 3600:.1f}h at market close")
+            threading.Event().wait(timeout=sleep_secs)
         summaries = summary_buffer.drain()
         summary_buffer_size.set(0)
         if not summaries:

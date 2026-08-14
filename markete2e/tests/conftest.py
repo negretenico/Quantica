@@ -48,6 +48,18 @@ def trade_blob_dir() -> str:
 
 
 @pytest.fixture(scope="session")
+def ensure_marketbard(ensure_rabbitmq):
+    """Session-scoped: blocks until the marketbard container is running."""
+    wait_for_container("quantica-marketbard", timeout_seconds=60)
+
+
+@pytest.fixture(scope="session")
+def bard_blob_dir() -> str:
+    """Host-side path where marketbard writes story blobs (volume mount)."""
+    return _config.BARD_BLOB_DIR
+
+
+@pytest.fixture(scope="session")
 def ensure_infra(ensure_kafka, ensure_rabbitmq, ensure_markettransformer):
     """Session-scoped: waits for Kafka, RabbitMQ, and markettransformer."""
     pass

@@ -24,6 +24,12 @@ duplicates_dropped_total = Counter(
     ["queue"],
 )
 
+grafana_alerts_received_total = Counter(
+    "marketnotify_grafana_alerts_received_total",
+    "Total Grafana alert webhook events received",
+    ["status"],
+)
+
 notification_latency = Histogram(
     "marketnotify_notification_latency_seconds",
     "Time to send a notification via Discord webhook",

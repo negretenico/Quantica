@@ -223,6 +223,22 @@ services:
       start_period: 15s
       retries: 3
 
+  marketdlq:
+    build:
+      context: ./marketdlq
+      additional_contexts:
+        shared: ./shared
+    container_name: quantica-marketdlq
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@quantica-rabbitmq/
+    ports:
+      - "8004:8000"
+
   marketserver:
     build:
       context: ./marketserver

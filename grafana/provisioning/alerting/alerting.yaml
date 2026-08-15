@@ -1,0 +1,335 @@
+# Grafana Unified Alerting provisioning
+# Fires alerts when any Quantica service becomes unreachable (up == 0 for 1 minute)
+# and pushes notifications to Discord via webhook.
+
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: discord
+    receivers:
+      - uid: discord-webhook
+        type: discord
+        settings:
+          url: ${GF_CONTACT_DISCORD_URL}
+          title: "Quantica Alert: {{ .CommonLabels.alertname }}"
+          message: |
+            **Status:** {{ .Status }}
+            **Alert:** {{ .CommonLabels.alertname }}
+            {{ range .Alerts }}
+            - **Service:** {{ .Labels.job }}
+            - **Instance:** {{ .Labels.instance }}
+            - **Summary:** {{ .Annotations.summary }}
+            - **Started:** {{ .StartsAt }}
+            {{ end }}
+        disableResolveMessage: false
+
+policies:
+  - orgId: 1
+    receiver: discord
+    group_by:
+      - alertname
+      - job
+    group_wait: 30s
+    group_interval: 1m
+    repeat_interval: 4h
+
+groups:
+  - orgId: 1
+    name: service-health
+    folder: Quantica
+    interval: 30s
+    rules:
+      - uid: service-down-marketlistener
+        title: "Service Down: marketlistener"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="marketlistener"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+        for: 1m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: "marketlistener is down — Prometheus scrape target unreachable"
+        labels:
+          severity: critical
+          service: marketlistener
+
+      - uid: service-down-markettransformer
+        title: "Service Down: markettransformer"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="markettransformer"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+        for: 1m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: "markettransformer is down — Prometheus scrape target unreachable"
+        labels:
+          severity: critical
+          service: markettransformer
+
+      - uid: service-down-marketanalysis
+        title: "Service Down: marketanalysis"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="marketanalysis"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+        for: 1m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: "marketanalysis is down — Prometheus scrape target unreachable"
+        labels:
+          severity: critical
+          service: marketanalysis
+
+      - uid: service-down-marketbard
+        title: "Service Down: marketbard"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="marketbard"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+        for: 1m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: "marketbard is down — Prometheus scrape target unreachable"
+        labels:
+          severity: critical
+          service: marketbard
+
+      - uid: service-down-markettrade
+        title: "Service Down: markettrade"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="markettrade"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+        for: 1m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: "markettrade is down — Prometheus scrape target unreachable"
+        labels:
+          severity: critical
+          service: markettrade
+
+      - uid: service-down-marketnotify
+        title: "Service Down: marketnotify"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="marketnotify"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+        for: 1m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: "marketnotify is down — Prometheus scrape target unreachable"
+        labels:
+          severity: critical
+          service: marketnotify
+
+      - uid: service-down-marketserver
+        title: "Service Down: marketserver"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="marketserver"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+        for: 1m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: "marketserver is down — Prometheus scrape target unreachable"
+        labels:
+          severity: critical
+          service: marketserver

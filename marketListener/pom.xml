@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.negretenico.quantica.marketListener</groupId>
     <artifactId>marketlistener</artifactId>
-    <version>4.18.1-SNAPSHOT</version>
+    <version>4.18.2-SNAPSHOT</version>
     <name>marketListener</name>
     <description>Market listener</description>
     <licenses>

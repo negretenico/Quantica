@@ -95,7 +95,11 @@ build-e2e:
 	cd markete2e && py -m pip install -e .
 
 test-e2e:
-	cd markete2e && py -m pytest tests/ -v -m e2e
+	$(MAKE) e2e-up
+	cd markete2e && py -m pip install -e . --quiet && py -m pytest tests/ -v -m e2e --timeout=300; \
+	status=$$?; \
+	$(MAKE) e2e-down; \
+	exit $$status
 
 test-backtest:
 	py -m pytest scripts/backtest/tests/ -v

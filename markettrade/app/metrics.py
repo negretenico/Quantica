@@ -220,6 +220,22 @@ calibration_alerts_total = Counter(
     ["bucket", "type"],
 )
 
+outcome_flush_total = Counter(
+    "markettrade_outcome_flush_total",
+    "Number of outcome flush operations",
+)
+
+outcome_flush_size = Histogram(
+    "markettrade_outcome_flush_size",
+    "Number of records per outcome flush",
+    buckets=(1, 2, 5, 10, 20, 50),
+)
+
+outcome_flush_errors_total = Counter(
+    "markettrade_outcome_flush_errors_total",
+    "Errors writing individual outcome records during flush",
+)
+
 
 def observe_tick_to_trade(event: dict):
     event_time_ms = event.get("eventTime")

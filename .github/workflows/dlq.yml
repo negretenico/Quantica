@@ -1,0 +1,35 @@
+name: CI — marketdlq
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "marketdlq/**"
+      - "shared/**"
+  pull_request:
+    paths:
+      - "marketdlq/**"
+      - "shared/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install shared
+        run: pip install -e shared/
+
+      - name: Install dependencies
+        run: pip install -r marketdlq/requirements.txt
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run tests
+        run: cd marketdlq && python -m pytest tests/ -v

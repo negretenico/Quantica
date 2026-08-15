@@ -1,0 +1,194 @@
+{
+  "title": "Errors",
+  "uid": "quantica-errors",
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Messages Rejected (markettransformer)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(quantica_messages_rejected_total[1m])",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "marketanalysis Errors/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketanalysis_errors_total[1m])",
+          "legendFormat": "errors/sec"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "marketanalysis Duplicates Dropped/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketanalysis_duplicates_dropped_total[1m])",
+          "legendFormat": "duplicates/sec"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "marketbard Duplicates Dropped/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketbard_duplicates_dropped_total[1m])",
+          "legendFormat": "{{source}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "markettrade Duplicates Dropped/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_duplicates_dropped_total[1m])",
+          "legendFormat": "duplicates/sec"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "markettrade Validation Errors/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_validation_errors_total[1m])",
+          "legendFormat": "{{reason}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Validation Pipeline Rejections/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_validation_pipeline_rejections_total[1m])",
+          "legendFormat": "{{stage}} / {{reason}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Outcome Record Errors/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_outcome_record_errors_total[1m])",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Lookback Failed/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 48, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_lookback_failed_total[1m])",
+          "legendFormat": "{{symbol}} / {{window}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Lookback Dropped/sec",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 56, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_lookback_dropped_total[1m])",
+          "legendFormat": "dropped/sec"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Rate Limited/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 60, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_rate_limited_total[1m])",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Outcome Tracker Errors/sec",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 56, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_outcome_tracker_errors_total[1m])",
+          "legendFormat": "errors/sec"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "DLQ Depth",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 68, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rabbitmq_queue_messages{queue=~\".*\\\\.dlq\"}",
+          "legendFormat": "{{queue}}"
+        }
+      ]
+    }
+  ]
+}

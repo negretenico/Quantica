@@ -1,0 +1,208 @@
+{
+  "title": "Load",
+  "uid": "quantica-load",
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Kafka Records Consumed/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "kafka_consumer_fetch_manager_records_consumed_rate",
+          "legendFormat": "{{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Messages Produced/sec by Symbol",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(quantica_messages_produced_total[1m])",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Messages Consumed/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(quantica_messages_consumed_total[1m])",
+          "legendFormat": "{{topic}} / {{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "marketanalysis Events Consumed/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketanalysis_events_consumed_total[1m])",
+          "legendFormat": "events/sec"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Clusters Computed/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketanalysis_clusters_computed_total[1m])",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Anomalies Detected/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketanalysis_anomalies_detected_total[1m])",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "marketbard Signals Received/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketbard_signals_received_total[1m])",
+          "legendFormat": "signals/sec"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "marketbard Analytics Received/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 24, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketbard_analytics_received_total[1m])",
+          "legendFormat": "analytics/sec"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Windows Processed/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 24, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketbard_windows_processed_total[1m])",
+          "legendFormat": "{{category}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Syntheses Completed",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 32, "w": 8, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(marketbard_syntheses_completed_total[1m])",
+          "legendFormat": "syntheses/sec"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "markettrade Events Received/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 32, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_events_received_total[1m])",
+          "legendFormat": "events/sec"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Decisions/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 32, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_decisions_total[1m])",
+          "legendFormat": "{{symbol}} / {{action}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Outcome Records/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_outcome_records_total[1m])",
+          "legendFormat": "{{symbol}} / {{action}}"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Lookback Completed/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_lookback_completed_total[1m])",
+          "legendFormat": "{{source}}"
+        }
+      ]
+    }
+  ]
+}

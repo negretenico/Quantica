@@ -1,0 +1,219 @@
+{
+  "title": "Risk",
+  "uid": "quantica-risk",
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Risk Evaluations/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_risk_evaluations_total[1m])",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Risk Rejections/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_risk_rejections_total[1m])",
+          "legendFormat": "{{symbol}} / {{reason}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Exposure Ratio",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "markettrade_risk_exposure_ratio",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Sized Quantity Distribution p50/p95",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.5, sum(rate(markettrade_risk_sized_quantity_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(markettrade_risk_sized_quantity_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Near Limit Alerts/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_near_limit_alerts_total[1m])",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Near Limit Active Symbols",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 16, "w": 4, "h": 4 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "markettrade_near_limit_active_symbols",
+          "legendFormat": "active"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Near Limit Ratio",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "markettrade_near_limit_ratio",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Concentration Alerts/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 6, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_concentration_alerts_total[1m])",
+          "legendFormat": "alerts/sec"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Concentration Active",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "markettrade_concentration_active",
+          "legendFormat": "active"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Accumulation Alerts/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_accumulation_alerts_total[1m])",
+          "legendFormat": "{{symbol}} / {{direction}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Outcome Correctness Rate",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "markettrade_outcome_tracker_correctness_rate",
+          "legendFormat": "{{window}} / {{action}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Outcome Tracker Decisions/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_outcome_tracker_total[1m])",
+          "legendFormat": "{{action}} / {{direction_correct}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Calibration Accuracy",
+      "type": "bargauge",
+      "gridPos": { "x": 0, "y": 40, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "markettrade_calibration_accuracy",
+          "legendFormat": "{{bucket}}"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Calibration Window Size",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 40, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "markettrade_calibration_window_size",
+          "legendFormat": "window size"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Calibration Records/sec",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 40, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(markettrade_calibration_records_total[1m])",
+          "legendFormat": "{{bucket}}"
+        }
+      ]
+    }
+  ]
+}

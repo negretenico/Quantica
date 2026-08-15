@@ -1,0 +1,319 @@
+{
+  "title": "Latency",
+  "uid": "quantica-latency",
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "WSS Receive Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_wss_receive_seconds{quantile=\"0.5\"}",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_wss_receive_seconds{quantile=\"0.95\"}",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_wss_receive_seconds{quantile=\"0.99\"}",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Kafka Produce Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_kafka_produce_seconds{quantile=\"0.5\"}",
+          "legendFormat": "p50 {{topic}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_kafka_produce_seconds{quantile=\"0.95\"}",
+          "legendFormat": "p95 {{topic}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_kafka_produce_seconds{quantile=\"0.99\"}",
+          "legendFormat": "p99 {{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Kafka Consume Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_kafka_consume_seconds{quantile=\"0.5\"}",
+          "legendFormat": "p50 {{topic}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_kafka_consume_seconds{quantile=\"0.95\"}",
+          "legendFormat": "p95 {{topic}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_kafka_consume_seconds{quantile=\"0.99\"}",
+          "legendFormat": "p99 {{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "RabbitMQ Publish Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_rabbit_publish_seconds{quantile=\"0.5\"}",
+          "legendFormat": "p50 {{symbol}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_rabbit_publish_seconds{quantile=\"0.95\"}",
+          "legendFormat": "p95 {{symbol}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_rabbit_publish_seconds{quantile=\"0.99\"}",
+          "legendFormat": "p99 {{symbol}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Detector Latency \u2014 Aggressive Buyer/Seller",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.5\",detector=\"aggressive_buyer_seller\"}",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.95\",detector=\"aggressive_buyer_seller\"}",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.99\",detector=\"aggressive_buyer_seller\"}",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Detector Latency \u2014 Large Trade",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.5\",detector=\"large_trade_detected\"}",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.95\",detector=\"large_trade_detected\"}",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.99\",detector=\"large_trade_detected\"}",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Detector Latency \u2014 Price Spike",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 16, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.5\",detector=\"price_spike\"}",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.95\",detector=\"price_spike\"}",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "quantica_stage_detector_seconds{quantile=\"0.99\",detector=\"price_spike\"}",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "ML Processing Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.5, sum(rate(marketanalysis_processing_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(marketanalysis_processing_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.99, sum(rate(marketanalysis_processing_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Tick-to-Analysis Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.5, sum(rate(marketanalysis_tick_to_analysis_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(marketanalysis_tick_to_analysis_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.99, sum(rate(marketanalysis_tick_to_analysis_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Tick-to-Ingest Latency (bard) p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.5, sum(rate(marketbard_tick_to_ingest_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(marketbard_tick_to_ingest_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.99, sum(rate(marketbard_tick_to_ingest_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Tick-to-Trade Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.5, sum(rate(markettrade_tick_to_trade_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(markettrade_tick_to_trade_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.99, sum(rate(markettrade_tick_to_trade_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Validation Pipeline Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.5, sum(rate(markettrade_validation_pipeline_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(markettrade_validation_pipeline_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.99, sum(rate(markettrade_validation_pipeline_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Lookback Fetch Latency p50/p95 by source",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.5, sum(rate(markettrade_lookback_fetch_seconds_bucket[5m])) by (le, source))",
+          "legendFormat": "p50 {{source}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(markettrade_lookback_fetch_seconds_bucket[5m])) by (le, source))",
+          "legendFormat": "p95 {{source}}"
+        }
+      ]
+    }
+  ]
+}

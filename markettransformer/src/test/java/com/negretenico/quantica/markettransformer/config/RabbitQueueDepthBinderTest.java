@@ -16,6 +16,7 @@ class RabbitQueueDepthBinderTest {
 
 	private MockWebServer mockWebServer;
 	private SimpleMeterRegistry registry;
+	private RabbitQueueDepthBinder binder;
 
 	@BeforeEach
 	void setup() throws IOException {
@@ -25,7 +26,8 @@ class RabbitQueueDepthBinderTest {
 				.baseUrl(mockWebServer.url("/").toString())
 				.build();
 		registry = new SimpleMeterRegistry();
-		new RabbitQueueDepthBinder(webClient).bindTo(registry);
+		binder = new RabbitQueueDepthBinder(webClient);
+		binder.bindTo(registry);
 	}
 
 	@AfterEach

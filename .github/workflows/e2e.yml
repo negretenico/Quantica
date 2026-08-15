@@ -1,0 +1,74 @@
+name: E2E Tests
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # nightly at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Create .env for docker compose
+        run: |
+          cat <<'EOF' > .env
+          RABBITMQ_USER=quantica
+          RABBITMQ_PASS=quantica
+          KAFKA_CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qg
+          BINANCE_SYMBOLS=btcusdt@trade
+          GITHUB_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}
+          OPEN_AI_TOKEN=unused
+          GH_TOKEN=unused
+          GITHUB_REPO=negretenico/Quantica
+          DISCORD_WEBHOOK_URL=
+          EOF
+
+      - name: Start e2e stack
+        run: docker compose -f docker-compose.yaml -f docker-compose.test.yaml up -d --build --remove-orphans
+
+      - name: Wait for services healthy
+        run: |
+          echo "Waiting for containers to become healthy..."
+          timeout 180 bash -c '
+            until docker compose -f docker-compose.yaml -f docker-compose.test.yaml ps --format json \
+              | python3 -c "
+          import sys, json
+          lines = sys.stdin.read().strip().split(\"\n\")
+          services = [json.loads(l) for l in lines if l.strip()]
+          unhealthy = [s[\"Service\"] for s in services if \"health\" in s.get(\"Health\", \"\").lower() or s.get(\"State\") != \"running\"]
+          healthy_count = sum(1 for s in services if s.get(\"Health\", \"\") == \"healthy\" or (\"Health\" not in s and s.get(\"State\") == \"running\"))
+          print(f\"{healthy_count}/{len(services)} services ready\")
+          sys.exit(0 if not unhealthy or healthy_count >= len(services) - 2 else 1)
+          "; do
+              sleep 5
+            done
+          '
+
+      - name: Install e2e test dependencies
+        run: |
+          pip install -e markete2e/
+          pip install pytest pytest-timeout
+
+      - name: Run e2e tests
+        timeout-minutes: 5
+        run: cd markete2e && python -m pytest tests/ -v -m e2e --timeout=300
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yaml -f docker-compose.test.yaml logs --tail=200
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f docker-compose.yaml -f docker-compose.test.yaml down -v --remove-orphans

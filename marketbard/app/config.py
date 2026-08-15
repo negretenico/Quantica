@@ -15,7 +15,7 @@ class Config:
     MAX_SUMMARY_BUFFER = int(os.environ.get('MAX_SUMMARY_BUFFER', '50'))
     WINDOW_SUMMARY_MAX_TOKENS = int(os.environ.get('WINDOW_SUMMARY_MAX_TOKENS', '150'))
     SYNTHESIS_MAX_TOKENS = int(os.environ.get('SYNTHESIS_MAX_TOKENS', '800'))
-    SYNTHESIS_HOUR = int(os.environ.get('SYNTHESIS_HOUR', '16'))
+    SYNTHESIS_HOUR = int(os.environ.get('SYNTHESIS_HOUR', '4'))
     MAX_EVENTS_PER_WINDOW = int(os.environ.get('MAX_EVENTS_PER_WINDOW', '5000'))
     PUBLISHER_BACKEND = os.environ.get('PUBLISHER_BACKEND', 'disk')
     BLOB_LOCAL_DIR    = os.environ.get('BLOB_LOCAL_DIR', '/app/decisions/bard')

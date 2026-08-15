@@ -36,6 +36,10 @@ services:
       MAX_EVENTS_PER_WINDOW: "50"
       MODEL_BACKEND: "fake"
       SYNTHESIS_DELAY_SECONDS: "90"
+    healthcheck:
+      interval: 5s
+      start_period: 10s
+      retries: 2
     volumes:
       - test-bard-decisions:/app/decisions/bard
 
@@ -45,6 +49,10 @@ services:
       MAX_TRADE_QUANTITY: "100.0"
       MAX_SYMBOL_EXPOSURE: "500.0"
       MAX_DRAWDOWN_PCT: "0.50"
+    healthcheck:
+      interval: 5s
+      start_period: 10s
+      retries: 2
     volumes:
       - test-trade-decisions:/app/decisions
 
@@ -52,8 +60,16 @@ services:
     environment:
       DISCORD_WEBHOOK_URL: ""
       HEALTH_DIGEST_INTERVAL_MINUTES: "1"
+    healthcheck:
+      interval: 5s
+      start_period: 10s
+      retries: 2
 
   marketserver:
+    healthcheck:
+      interval: 5s
+      start_period: 10s
+      retries: 2
     volumes:
       - test-bard-decisions:/data/bard
       - test-trade-decisions:/data/trade

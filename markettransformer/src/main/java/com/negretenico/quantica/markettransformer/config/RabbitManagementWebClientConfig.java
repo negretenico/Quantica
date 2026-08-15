@@ -8,7 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 class RabbitManagementWebClientConfig {
 
 	@Bean
-	WebClient rabbitManagementWebClient(RabbitManagementProperties props, WebClient.Builder builder) {
-		return builder.baseUrl(props.url()).build();
+	WebClient rabbitManagementWebClient(RabbitManagementProperties props) {
+		return WebClient.builder().baseUrl(props.url()).build();
 	}
 }

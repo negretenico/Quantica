@@ -1,0 +1,112 @@
+{
+  "title": "Queue Health",
+  "uid": "quantica-queue-health",
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Kafka Consumer Lag",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "kafka_consumer_fetch_manager_records_lag_max",
+          "legendFormat": "{{topic}} / p{{partition}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "RabbitMQ Signal Queue Depth",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0 }
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rabbitmq_queue_messages{queue=~\"signal\\\\.(analysis|bard|trade|notify)\"}",
+          "legendFormat": "{{queue}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "RabbitMQ Analytics Queue Depth",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0 }
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rabbitmq_queue_messages{queue=\"analytics.bard\"}",
+          "legendFormat": "analytics.bard"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "RabbitMQ DLQ Depth",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0 }
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rabbitmq_queue_messages{queue=~\".*\\\\.dlq\"}",
+          "legendFormat": "{{queue}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "marketbard Event Buffer Size",
+      "type": "gauge",
+      "gridPos": { "x": 0, "y": 32, "w": 6, "h": 6 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "marketbard_event_buffer_size",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "marketbard Summary Buffer Size",
+      "type": "gauge",
+      "gridPos": { "x": 6, "y": 32, "w": 6, "h": 6 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "marketbard_summary_buffer_size",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Rate Limiter Utilization",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 38, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "markettrade_rate_limiter_utilization",
+          "legendFormat": "{{symbol}}"
+        }
+      ]
+    }
+  ]
+}

@@ -81,6 +81,8 @@ class Config:
     ANOMALY_SCORE_THRESHOLD: float = float(os.environ.get('ANOMALY_SCORE_THRESHOLD', '0.7'))
     DECISION_LOG_MAX_SIZE: int = int(os.environ.get('DECISION_LOG_MAX_SIZE', '1000'))
     OUTCOME_STORE_PATH: str = os.environ.get('OUTCOME_STORE_PATH', './decisions/outcomes')
+    OUTCOME_FLUSH_COUNT: int = int(os.environ.get('OUTCOME_FLUSH_COUNT', '10'))
+    OUTCOME_FLUSH_INTERVAL: float = float(os.environ.get('OUTCOME_FLUSH_INTERVAL', '60.0'))
     RISK_ALERT_STORE_PATH: str = os.environ.get('RISK_ALERT_STORE_PATH', './decisions/risk-alerts')
 
     def __post_init__(self):

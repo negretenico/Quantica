@@ -3,14 +3,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "markettrade"
+name = "marketdlq"
 version = "4.19.0.dev0"
-description = "Market trade service"
+description = "DLQ monitor — logs warnings and creates GitHub issues on dead-lettered messages"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
     "pika==1.4.2",
-    "pydantic==2.13.4",
+    "prometheus-client==0.26.0",
     "python-dotenv==1.2.2",
+    "requests>=2.31.0",
 ]
 
 [tool.hatch.build.targets.wheel]

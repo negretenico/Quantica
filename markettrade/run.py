@@ -52,6 +52,7 @@ from trade.outcome import DecisionLog
 from trade.calibration import CalibrationEngine, BUCKETS, _bucket_label, _bucket_for
 from shared.monitor import metric_monitor
 from trade.outcome_tracker import OutcomeTracker
+from trade.outcome_writer import OutcomeWriter
 from trade.price_lookback import create_lookback
 from trade.rate_limiter import TradeRateLimiter
 from trade.validation import ValidationPipeline, validate_schema, validate_price_sanity
@@ -82,6 +83,12 @@ def main():
     risk_alert_store = get_store(config.blob_store.BACKEND, config.RISK_ALERT_STORE_PATH)
     decision_log = DecisionLog(outcome_store, max_size=config.DECISION_LOG_MAX_SIZE)
     outcome_tracker = OutcomeTracker()
+    outcome_writer = OutcomeWriter(
+        store=outcome_store,
+        flush_count=config.OUTCOME_FLUSH_COUNT,
+        flush_interval_seconds=config.OUTCOME_FLUSH_INTERVAL,
+    )
+    outcome_tracker.add_on_outcome(outcome_writer.write)
     notify_publisher = RabbitPublisher(
         url=config.rabbitmq.URL,
         exchange="notifications",

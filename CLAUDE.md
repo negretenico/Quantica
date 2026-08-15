@@ -14,6 +14,7 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `marketbard` | Python 3.11 | LLM storytelling → disk | RabbitMQ `signal.bard` queue + `analytics.bard` queue → `decisions/bard/` |
 | `markettrade` | Python 3.13 | Trade execution worker | RabbitMQ `signal.trade` queue → blob store |
 | `marketrisk` | Python 3.13 | **Internal library** — risk cap evaluation | consumed by `markettrade` (not a runnable binary) |
+| `marketdlq` | Python 3.13 | DLQ monitor — logs warnings, creates GitHub issues | RabbitMQ `dlq` exchange → GitHub Issues API |
 | `marketserver` | Python 3.13 / Flask | REST API serving blob data | reads `decisions/bard/` + `decisions/trade/` → HTTP |
 | `marketui` | TypeScript / Next.js 15 | Dashboard UI | fetches from `marketserver` HTTP API |
 

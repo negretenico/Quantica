@@ -23,7 +23,7 @@ prometheus-client==0.26.0
 MarkupSafe==2.1.5
 mpmath==1.4.1
 networkx==3.6.1
-numpy==2.3.2
+numpy==2.5.2
 openai==1.107.0
 packaging==25.0
 pillow==11.3.0

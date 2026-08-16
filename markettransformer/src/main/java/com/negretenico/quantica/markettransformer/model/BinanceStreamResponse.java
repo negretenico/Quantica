@@ -1,6 +1,7 @@
 package com.negretenico.quantica.markettransformer.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
  * "m": true               // Is buyer market maker (true=sell, false=buy)
  * }
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record BinanceStreamResponse(
 		@JsonProperty("e") String eventType,
 		@JsonProperty("E") long eventTime,

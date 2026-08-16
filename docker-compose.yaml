@@ -97,7 +97,6 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       KAFKA_BOOTSTRAP: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
       BINANCE_SYMBOLS: ${BINANCE_SYMBOLS:-btcusdt@trade}
       KAFKA_ORDER_TOPIC_REPLICATION_FACTOR: 2
     ports:
@@ -120,7 +119,6 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: local
       KAFKA_BOOTSTRAP: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
       SPRING_RABBITMQ_HOST: quantica-rabbitmq
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS}

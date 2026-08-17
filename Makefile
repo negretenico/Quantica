@@ -1,4 +1,4 @@
-.PHONY: up down e2e-up e2e-down e2e-logs dev-ui run-server run-notify run-dlq build test build-listener build-transformer build-analysis build-bard build-risk build-trade build-notify build-dlq build-server build-ui build-e2e test-listener test-transformer test-analysis test-bard test-risk test-trade test-notify test-dlq test-server test-ui test-e2e test-backtest test-shared tunnel info logs health
+.PHONY: up down e2e-up e2e-down e2e-logs dev-ui run-server run-notify run-dlq run-mcp build test build-listener build-transformer build-analysis build-bard build-risk build-trade build-notify build-dlq build-server build-ui build-mcp build-e2e test-listener test-transformer test-analysis test-bard test-risk test-trade test-notify test-dlq test-server test-ui test-mcp test-e2e test-backtest test-shared tunnel info logs health
 
 up:
 	docker compose up -d --build --remove-orphans
@@ -27,7 +27,10 @@ run-notify:
 run-dlq:
 	cd marketdlq && py run.py
 
-build: build-listener build-transformer build-analysis build-bard build-risk build-trade build-notify build-dlq build-server build-ui
+run-mcp:
+	cd marketmcp && py run.py
+
+build: build-listener build-transformer build-analysis build-bard build-risk build-trade build-notify build-dlq build-server build-ui build-mcp
 
 build-listener:
 	cd marketListener && mvn clean package -DskipTests
@@ -56,10 +59,13 @@ build-dlq:
 build-server:
 	cd marketserver && py -m pip install -r requirements.txt
 
+build-mcp:
+	cd marketmcp && py -m pip install -r requirements.txt
+
 build-ui:
 	cd marketui && npm ci && npm run build
 
-test: test-listener test-transformer test-analysis test-bard test-risk test-trade test-notify test-dlq test-server test-ui
+test: test-listener test-transformer test-analysis test-bard test-risk test-trade test-notify test-dlq test-server test-ui test-mcp
 
 test-listener:
 	cd marketListener && mvn test
@@ -87,6 +93,9 @@ test-dlq:
 
 test-server:
 	cd marketserver && py -m pytest tests/ -v
+
+test-mcp:
+	cd marketmcp && py -m pytest tests/ -v
 
 test-ui:
 	cd marketui && npx vitest run
@@ -124,6 +133,7 @@ info:
 	@echo   Tunnel [API]          https://quantica-api.com
 	@echo   marketnotify          [internal - Discord webhooks]
 	@echo   marketdlq             [internal - DLQ monitor]
+	@echo   marketmcp             [internal - MCP server]
 	@echo   marketui              http://localhost:3001
 	@echo   Prometheus            http://localhost:9090
 	@echo   Prometheus [Tunnel]   https://prometheus.quantica-api.com

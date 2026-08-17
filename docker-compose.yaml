@@ -241,6 +241,21 @@ services:
     ports:
       - "8004:8000"
 
+  marketmcp:
+    build:
+      context: ./marketmcp
+      additional_contexts:
+        shared: ./shared
+    container_name: quantica-marketmcp
+    restart: unless-stopped
+    depends_on:
+      marketserver:
+        condition: service_healthy
+    environment:
+      MARKETSERVER_BASE_URL: http://quantica-marketserver:5001
+    ports:
+      - "8005:8000"
+
   marketserver:
     build:
       context: ./marketserver

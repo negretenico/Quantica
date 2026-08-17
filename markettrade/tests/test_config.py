@@ -12,3 +12,10 @@ def test_config_defaults():
     assert config.risk.MAX_TRADE_QUANTITY == 1000.0
     assert config.risk.MAX_SYMBOL_EXPOSURE == 5000.0
     assert config.risk.MAX_DRAWDOWN_PCT == 0.20
+
+
+def test_config_str_does_not_raise():
+    config = Config()
+    result = str(config)
+    assert "Exchange:" in result
+    assert "analytics" in result

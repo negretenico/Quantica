@@ -1,6 +1,6 @@
 {
   "name": "marketui",
-  "version": "4.20.5",
+  "version": "4.20.6",
   "private": true,
   "scripts": {
     "dev": "next dev",

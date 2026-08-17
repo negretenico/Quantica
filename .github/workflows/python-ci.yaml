@@ -1,0 +1,239 @@
+name: Python CI/CD
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+on:
+  push:
+    paths:
+      - 'marketanalysis/**'
+      - 'marketbard/**'
+      - 'markettrade/**'
+      - 'marketrisk/**'
+      - 'marketserver/**'
+      - 'shared/**'
+    branches: [ main, develop ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      analysis: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketanalysis == 'true' || steps.changes.outputs.shared == 'true' }}
+      bard: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketbard == 'true' || steps.changes.outputs.shared == 'true' }}
+      trade: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.markettrade == 'true' || steps.changes.outputs.shared == 'true' }}
+      risk: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketrisk == 'true' || steps.changes.outputs.shared == 'true' }}
+      server: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketserver == 'true' || steps.changes.outputs.shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v4
+        id: changes
+        with:
+          filters: |
+            marketanalysis:
+              - 'marketanalysis/**'
+            marketbard:
+              - 'marketbard/**'
+            markettrade:
+              - 'markettrade/**'
+            marketrisk:
+              - 'marketrisk/**'
+            marketserver:
+              - 'marketserver/**'
+            shared:
+              - 'shared/**'
+
+  # --- Analysis ---
+  analysis-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.analysis == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketanalysis
+      python_version: '3.13'
+      skip_tests: false
+      artifact_name: marketanalysis-dist
+    secrets: inherit
+
+  analysis-docker-context:
+    needs: [check-changes, analysis-build]
+    if: needs.check-changes.outputs.analysis == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Download artifact from analysis-build
+        uses: actions/download-artifact@v8
+        with:
+          name: marketanalysis-dist
+          path: ./marketanalysis/
+
+  analysis-docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.analysis == 'true'
+    needs: [check-changes, analysis-docker-context]
+    with:
+      working_directory: ./marketanalysis
+      dockerfile_path: ./Dockerfile
+      service_name: marketanalysis
+      artifact_name: marketanalysis-dist
+      build_contexts: shared=./shared
+    secrets: inherit
+
+  # --- Bard ---
+  bard-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.bard == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketbard
+      python_version: '3.13'
+      skip_tests: false
+      artifact_name: marketbard-dist
+    secrets: inherit
+
+  bard-docker-context:
+    needs: [check-changes, bard-build]
+    if: needs.check-changes.outputs.bard == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Download artifact from bard-build
+        uses: actions/download-artifact@v8
+        with:
+          name: marketbard-dist
+          path: ./marketbard/
+
+  bard-docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.bard == 'true'
+    needs: [check-changes, bard-docker-context]
+    with:
+      working_directory: ./marketbard
+      dockerfile_path: ./Dockerfile
+      service_name: marketbard
+      artifact_name: marketbard-dist
+      build_contexts: shared=./shared
+    secrets: inherit
+
+  # --- Trade ---
+  trade-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.trade == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./markettrade
+      python_version: '3.13'
+      skip_tests: false
+      test_command: 'pytest tests/'
+      artifact_name: markettrade-dist
+    secrets: inherit
+
+  trade-docker-context:
+    needs: [check-changes, trade-build]
+    if: needs.check-changes.outputs.trade == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Download artifact from trade-build
+        uses: actions/download-artifact@v8
+        with:
+          name: markettrade-dist
+          path: ./markettrade/
+
+  trade-docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.trade == 'true'
+    needs: [check-changes, trade-docker-context]
+    with:
+      working_directory: ./markettrade
+      dockerfile_path: ./Dockerfile
+      service_name: markettrade
+      artifact_name: markettrade-dist
+      build_contexts: |
+        shared=./shared
+        marketrisk=./marketrisk
+    secrets: inherit
+
+  # --- Risk (internal library, no Docker) ---
+  risk-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.risk == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketrisk
+      python_version: '3.13'
+      skip_tests: false
+      test_command: 'pytest tests/'
+      artifact_name: marketrisk-dist
+    secrets: inherit
+
+  # --- Server ---
+  server-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.server == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketserver
+      python_version: '3.13'
+      skip_tests: false
+      test_command: 'pytest tests/ -v'
+      artifact_name: marketserver-dist
+    secrets: inherit
+
+  server-docker-context:
+    needs: [check-changes, server-build]
+    if: needs.check-changes.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Download artifact from server-build
+        uses: actions/download-artifact@v8
+        with:
+          name: marketserver-dist
+          path: ./marketserver/
+
+  server-docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.server == 'true'
+    needs: [check-changes, server-docker-context]
+    with:
+      working_directory: ./marketserver
+      dockerfile_path: ./Dockerfile
+      service_name: marketserver
+      artifact_name: marketserver-dist
+      build_contexts: shared=./shared
+    secrets: inherit
+
+  # --- Gate ---
+  build-gate:
+    needs: [check-changes, analysis-build, bard-build, trade-build, risk-build, server-build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build results
+        run: |
+          FAIL=0
+
+          check_result() {
+            local name="$1" needed="$2" result="$3"
+            if [[ "$needed" == "true" && "$result" != "success" ]]; then
+              echo "$name build failed (result: $result)"
+              FAIL=1
+            fi
+          }
+
+          check_result "Analysis"    "${{ needs.check-changes.outputs.analysis }}"  "${{ needs.analysis-build.result }}"
+          check_result "Bard"        "${{ needs.check-changes.outputs.bard }}"       "${{ needs.bard-build.result }}"
+          check_result "Trade"       "${{ needs.check-changes.outputs.trade }}"      "${{ needs.trade-build.result }}"
+          check_result "Risk"        "${{ needs.check-changes.outputs.risk }}"       "${{ needs.risk-build.result }}"
+          check_result "Server"      "${{ needs.check-changes.outputs.server }}"     "${{ needs.server-build.result }}"
+
+          if [[ "$FAIL" == "1" ]]; then exit 1; fi
+          echo "All Python builds OK"

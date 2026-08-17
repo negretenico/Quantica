@@ -2,10 +2,10 @@ kafka:
   bootstrap: ${KAFKA_BOOTSTRAP}
 spring:
   rabbitmq:
-    host: ${RABBITMQ_HOST}
+    host: ${SPRING_RABBITMQ_HOST}
     port: 5672
-    username: ${RABBITMQ_USERNAME}
-    password: ${RABBITMQ_PASSWORD}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
 rabbitmq:
   management:
     url: ${RABBITMQ_MANAGEMENT_URL}

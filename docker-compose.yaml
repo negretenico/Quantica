@@ -118,7 +118,7 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: prod
       KAFKA_BOOTSTRAP: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
       SPRING_KAFKA_BOOTSTRAP_SERVERS: quantica-kafka-broker-1:29092,quantica-kafka-broker-2:29092
       SPRING_RABBITMQ_HOST: quantica-rabbitmq

@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: 'pytest'
+      artifact_name:
+        description: 'Name for the uploaded artifact'
+        required: false
+        type: string
+        default: 'python-dist'
       skip_tests:
         required: false
         type: boolean
@@ -63,7 +68,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: python-dist
+          name: ${{ inputs.artifact_name }}
           path: ${{ inputs.working_directory }}/dist/*
 
       - name: Attach to GitHub Release

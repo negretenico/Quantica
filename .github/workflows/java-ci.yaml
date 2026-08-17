@@ -1,0 +1,134 @@
+name: Java CI/CD
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+on:
+  push:
+    paths:
+      - 'marketListener/**'
+      - 'markettransformer/**'
+      - 'shared/**'
+    branches: [ main, develop ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      listener: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketListener == 'true' || steps.changes.outputs.shared == 'true' }}
+      transformer: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.markettransformer == 'true' || steps.changes.outputs.shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v4
+        id: changes
+        with:
+          filters: |
+            marketListener:
+              - 'marketListener/**'
+            markettransformer:
+              - 'markettransformer/**'
+            shared:
+              - 'shared/**'
+
+  # --- Listener ---
+  listener-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.listener == 'true'
+    uses: ./.github/workflows/reusable-java-build.yaml
+    with:
+      working_directory: ./marketListener
+      java_version: '21'
+      skip_tests: false
+      artifact_name: marketListener-jar
+      publish: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  listener-docker-context:
+    needs: [check-changes, listener-build]
+    if: needs.check-changes.outputs.listener == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Download artifact from listener-build
+        uses: actions/download-artifact@v8
+        with:
+          name: marketListener-jar
+          path: ./marketListener/
+
+  listener-docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.listener == 'true'
+    needs: [check-changes, listener-docker-context]
+    with:
+      working_directory: ./marketListener
+      dockerfile_path: ./Dockerfile
+      service_name: marketListener
+      artifact_name: marketListener-jar
+    secrets: inherit
+
+  # --- Transformer ---
+  transformer-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.transformer == 'true'
+    uses: ./.github/workflows/reusable-java-build.yaml
+    with:
+      working_directory: ./markettransformer
+      java_version: '21'
+      skip_tests: false
+      artifact_name: markettransformer-jar
+      publish: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  transformer-docker-context:
+    needs: [check-changes, transformer-build]
+    if: needs.check-changes.outputs.transformer == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Download artifact from transformer-build
+        uses: actions/download-artifact@v8
+        with:
+          name: markettransformer-jar
+          path: ./markettransformer/
+
+  transformer-docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.transformer == 'true'
+    needs: [check-changes, transformer-docker-context]
+    with:
+      working_directory: ./markettransformer
+      dockerfile_path: ./Dockerfile
+      service_name: markettransformer
+      artifact_name: markettransformer-jar
+    secrets: inherit
+
+  # --- Gate ---
+  build-gate:
+    needs: [check-changes, listener-build, transformer-build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build results
+        run: |
+          LISTENER_NEEDED="${{ needs.check-changes.outputs.listener }}"
+          LISTENER_RESULT="${{ needs.listener-build.result }}"
+          TRANSFORMER_NEEDED="${{ needs.check-changes.outputs.transformer }}"
+          TRANSFORMER_RESULT="${{ needs.transformer-build.result }}"
+
+          FAIL=0
+          if [[ "$LISTENER_NEEDED" == "true" && "$LISTENER_RESULT" != "success" ]]; then
+            echo "Listener build failed (result: $LISTENER_RESULT)"
+            FAIL=1
+          fi
+          if [[ "$TRANSFORMER_NEEDED" == "true" && "$TRANSFORMER_RESULT" != "success" ]]; then
+            echo "Transformer build failed (result: $TRANSFORMER_RESULT)"
+            FAIL=1
+          fi
+          if [[ "$FAIL" == "1" ]]; then exit 1; fi
+          echo "OK (listener needed=$LISTENER_NEEDED result=$LISTENER_RESULT, transformer needed=$TRANSFORMER_NEEDED result=$TRANSFORMER_RESULT)"

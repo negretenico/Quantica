@@ -105,7 +105,7 @@ class Config:
         return (
             f"RabbitMQ: {self.rabbitmq.URL}\n"
             f"Queue: {self.rabbitmq.QUEUE}\n"
-            f"Signal Exchange: {self.rabbitmq.SIGNAL_EXCHANGE}\n"
+            f"Exchange: {self.rabbitmq.EXCHANGE}\n"
             f"Blob Store Path: {self.blob_store.PATH}\n"
             f"Blob Store Backend: {self.blob_store.BACKEND}"
         )

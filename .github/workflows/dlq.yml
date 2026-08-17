@@ -1,20 +1,25 @@
-name: CI — marketdlq
+name: CI — Python Workers (dlq, mcp)
 
 on:
   push:
     branches: [main]
     paths:
       - "marketdlq/**"
+      - "marketmcp/**"
       - "shared/**"
   pull_request:
     paths:
       - "marketdlq/**"
+      - "marketmcp/**"
       - "shared/**"
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [marketdlq, marketmcp]
     steps:
       - uses: actions/checkout@v7
 
@@ -26,10 +31,10 @@ jobs:
         run: pip install -e shared/
 
       - name: Install dependencies
-        run: pip install -r marketdlq/requirements.txt
+        run: pip install -r ${{ matrix.module }}/requirements.txt
 
       - name: Install test dependencies
         run: pip install pytest
 
       - name: Run tests
-        run: cd marketdlq && python -m pytest tests/ -v
+        run: cd ${{ matrix.module }} && python -m pytest tests/ -v

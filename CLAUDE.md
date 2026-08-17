@@ -90,7 +90,7 @@ When adding a new standalone module (runnable binary, not an internal library), 
 1. **`Makefile`** — add `build-<name>`, `test-<name>`, and `run-<name>` targets. Include them in the `build` and `test` aggregates. Add to `make info` service list. Add to `.PHONY`.
 2. **`bump.sh`** — add the module to the appropriate version loop (Python, Java, or Node).
 3. **`pyproject.toml` / `pom.xml` / `package.json`** — create one so `bump.sh` can update the version.
-4. **`.github/workflows/<name>.yml`** — add a CI workflow that runs tests on push to `main` and on PRs, scoped to the module's paths (and `shared/**` if it depends on shared).
+4. **`.github/workflows/`** — add the module to an existing CI workflow (prefer matrix strategy) rather than creating a standalone workflow. Scope path triggers to include the new module's directory (and `shared/**` if it depends on shared).
 5. **`docker-compose.yaml`** — add the service if it runs in the container stack.
 6. **Module Map** in this file — add a row to the table.
 

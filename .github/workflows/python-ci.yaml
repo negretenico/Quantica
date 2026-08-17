@@ -11,6 +11,8 @@ on:
       - 'markettrade/**'
       - 'marketrisk/**'
       - 'marketserver/**'
+      - 'marketdlq/**'
+      - 'marketmcp/**'
       - 'shared/**'
     branches: [ main, develop ]
   pull_request:
@@ -25,6 +27,8 @@ jobs:
       trade: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.markettrade == 'true' || steps.changes.outputs.shared == 'true' }}
       risk: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketrisk == 'true' || steps.changes.outputs.shared == 'true' }}
       server: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketserver == 'true' || steps.changes.outputs.shared == 'true' }}
+      dlq: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketdlq == 'true' || steps.changes.outputs.shared == 'true' }}
+      mcp: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketmcp == 'true' || steps.changes.outputs.shared == 'true' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -43,6 +47,10 @@ jobs:
               - 'marketrisk/**'
             marketserver:
               - 'marketserver/**'
+            marketdlq:
+              - 'marketdlq/**'
+            marketmcp:
+              - 'marketmcp/**'
             shared:
               - 'shared/**'
 
@@ -211,9 +219,83 @@ jobs:
       build_contexts: shared=./shared
     secrets: inherit
 
+  # --- DLQ ---
+  dlq-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.dlq == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketdlq
+      python_version: '3.13'
+      skip_tests: false
+      artifact_name: marketdlq-dist
+    secrets: inherit
+
+  dlq-docker-context:
+    needs: [check-changes, dlq-build]
+    if: needs.check-changes.outputs.dlq == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Download artifact from dlq-build
+        uses: actions/download-artifact@v8
+        with:
+          name: marketdlq-dist
+          path: ./marketdlq/
+
+  dlq-docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.dlq == 'true'
+    needs: [check-changes, dlq-docker-context]
+    with:
+      working_directory: ./marketdlq
+      dockerfile_path: ./Dockerfile
+      service_name: marketdlq
+      artifact_name: marketdlq-dist
+      build_contexts: shared=./shared
+    secrets: inherit
+
+  # --- MCP ---
+  mcp-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.mcp == 'true'
+    uses: ./.github/workflows/reusable-python-build.yaml
+    with:
+      working_directory: ./marketmcp
+      python_version: '3.13'
+      skip_tests: false
+      artifact_name: marketmcp-dist
+    secrets: inherit
+
+  mcp-docker-context:
+    needs: [check-changes, mcp-build]
+    if: needs.check-changes.outputs.mcp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Download artifact from mcp-build
+        uses: actions/download-artifact@v8
+        with:
+          name: marketmcp-dist
+          path: ./marketmcp/
+
+  mcp-docker-deploy:
+    uses: ./.github/workflows/reusable-docker-build.yaml
+    if: needs.check-changes.outputs.mcp == 'true'
+    needs: [check-changes, mcp-docker-context]
+    with:
+      working_directory: ./marketmcp
+      dockerfile_path: ./Dockerfile
+      service_name: marketmcp
+      artifact_name: marketmcp-dist
+      build_contexts: shared=./shared
+    secrets: inherit
+
   # --- Gate ---
   build-gate:
-    needs: [check-changes, analysis-build, bard-build, trade-build, risk-build, server-build]
+    needs: [check-changes, analysis-build, bard-build, trade-build, risk-build, server-build, dlq-build, mcp-build]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -234,6 +316,8 @@ jobs:
           check_result "Trade"       "${{ needs.check-changes.outputs.trade }}"      "${{ needs.trade-build.result }}"
           check_result "Risk"        "${{ needs.check-changes.outputs.risk }}"       "${{ needs.risk-build.result }}"
           check_result "Server"      "${{ needs.check-changes.outputs.server }}"     "${{ needs.server-build.result }}"
+          check_result "DLQ"         "${{ needs.check-changes.outputs.dlq }}"        "${{ needs.dlq-build.result }}"
+          check_result "MCP"         "${{ needs.check-changes.outputs.mcp }}"        "${{ needs.mcp-build.result }}"
 
           if [[ "$FAIL" == "1" ]]; then exit 1; fi
           echo "All Python builds OK"

@@ -18,6 +18,7 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `markete2e` | Python 3.x | E2E test harness — publishes known events, asserts pipeline output | Kafka `order` + RabbitMQ `signal` / `analytics` → blob store polling |
 | `marketdlq` | Python 3.13 | DLQ monitor — logs warnings, creates GitHub issues | RabbitMQ `dlq` exchange → GitHub Issues API |
 | `marketserver` | Python 3.13 / Flask | REST API serving blob data | reads `decisions/bard/` + `decisions/trade/` → HTTP |
+| `marketmcp` | Python 3.13 | MCP server — LLM tool interface to pipeline data | HTTP from `marketserver` → MCP stdio |
 | `marketui` | TypeScript / Next.js 15 | Dashboard UI | fetches from `marketserver` HTTP API |
 
 ### RabbitMQ Architecture
@@ -89,7 +90,7 @@ When adding a new standalone module (runnable binary, not an internal library), 
 1. **`Makefile`** — add `build-<name>`, `test-<name>`, and `run-<name>` targets. Include them in the `build` and `test` aggregates. Add to `make info` service list. Add to `.PHONY`.
 2. **`bump.sh`** — add the module to the appropriate version loop (Python, Java, or Node).
 3. **`pyproject.toml` / `pom.xml` / `package.json`** — create one so `bump.sh` can update the version.
-4. **`.github/workflows/<name>.yml`** — add a CI workflow that runs tests on push to `main` and on PRs, scoped to the module's paths (and `shared/**` if it depends on shared).
+4. **`.github/workflows/`** — add the module to an existing CI workflow (prefer matrix strategy) rather than creating a standalone workflow. Scope path triggers to include the new module's directory (and `shared/**` if it depends on shared).
 5. **`docker-compose.yaml`** — add the service if it runs in the container stack.
 6. **Module Map** in this file — add a row to the table.
 

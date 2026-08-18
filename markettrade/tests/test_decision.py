@@ -14,15 +14,13 @@ def _event(**overrides):
     base = {
         "symbol": "BTCUSDT",
         "type": "LARGE_TRADE",
-        "cluster_id": 2,
-        "anomaly_score": 0.9,
         "price": "42000.00",
     }
     base.update(overrides)
     return SignalEvent(**base)
 
 
-# --- BUY cases ---
+# --- BUY cases (enriched) ---
 
 def test_large_trade_high_anomaly_is_buy():
     result = decide(_event(type="LARGE_TRADE", anomaly_score=0.9))
@@ -34,14 +32,14 @@ def test_dominant_side_high_anomaly_is_buy():
     assert result["action"] == "BUY"
 
 
-# --- SELL case ---
+# --- SELL case (enriched) ---
 
 def test_price_spike_high_anomaly_is_sell():
     result = decide(_event(type="PRICE_SPIKE", anomaly_score=0.95))
     assert result["action"] == "SELL"
 
 
-# --- HOLD cases ---
+# --- HOLD cases (enriched) ---
 
 def test_low_anomaly_is_hold():
     result = decide(_event(type="LARGE_TRADE", anomaly_score=0.5))
@@ -55,6 +53,25 @@ def test_anomaly_at_threshold_is_hold():
 
 def test_unknown_signal_type_above_threshold_is_hold():
     result = decide(_event(type="UNKNOWN_TYPE", anomaly_score=0.99))
+    assert result["action"] == "HOLD"
+
+
+# --- Un-enriched cases (no anomaly_score) ---
+
+def test_unenriched_buy_signal():
+    result = decide(_event(type="LARGE_TRADE"))
+    assert result["action"] == "BUY"
+    assert result["anomaly_score"] is None
+    assert result["cluster_id"] is None
+
+
+def test_unenriched_sell_signal():
+    result = decide(_event(type="PRICE_SPIKE"))
+    assert result["action"] == "SELL"
+
+
+def test_unenriched_unknown_type_is_hold():
+    result = decide(_event(type="UNKNOWN_TYPE"))
     assert result["action"] == "HOLD"
 
 
@@ -73,6 +90,12 @@ def test_output_values_mapped_correctly():
     assert result["cluster_id"] == 3
     assert result["anomaly_score"] == 0.85
     assert result["entry_price"] == 3000.50
+
+
+def test_output_values_unenriched():
+    result = decide(_event(symbol="ETHUSDT", type="LARGE_TRADE", price="3000.50"))
+    assert result["cluster_id"] is None
+    assert result["anomaly_score"] is None
 
 
 # --- Configurable threshold ---

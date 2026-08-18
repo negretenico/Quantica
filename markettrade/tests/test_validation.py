@@ -8,8 +8,6 @@ def _event(**overrides):
     base = {
         "symbol": "BTCUSDT",
         "type": "LARGE_TRADE",
-        "cluster_id": 2,
-        "anomaly_score": 0.9,
         "price": "42000.00",
     }
     base.update(overrides)
@@ -98,13 +96,11 @@ def test_float_price_accepted():
     assert event.price == 42000.0
 
 
-# --- anomaly_score ---
+# --- anomaly_score (optional) ---
 
-def test_missing_anomaly_score_rejected():
-    data = _event()
-    del data["anomaly_score"]
-    with pytest.raises(ValidationError):
-        SignalEvent(**data)
+def test_missing_anomaly_score_defaults_to_none():
+    event = SignalEvent(**_event())
+    assert event.anomaly_score is None
 
 
 def test_non_numeric_anomaly_score_rejected():
@@ -164,13 +160,11 @@ def test_string_quantity_coerced():
     assert event.quantity == 150.5
 
 
-# --- cluster_id ---
+# --- cluster_id (optional) ---
 
-def test_missing_cluster_id_rejected():
-    data = _event()
-    del data["cluster_id"]
-    with pytest.raises(ValidationError):
-        SignalEvent(**data)
+def test_missing_cluster_id_defaults_to_none():
+    event = SignalEvent(**_event())
+    assert event.cluster_id is None
 
 
 def test_non_int_cluster_id_rejected():
@@ -195,6 +189,12 @@ def test_full_valid_event_accepted():
     assert event.symbol == "BTCUSDT"
     assert event.type == "LARGE_TRADE"
     assert event.price == 42000.0
+    assert event.anomaly_score is None
+    assert event.cluster_id is None
+    assert event.quantity == 0
+
+
+def test_enriched_event_accepted():
+    event = SignalEvent(**_event(anomaly_score=0.9, cluster_id=2))
     assert event.anomaly_score == 0.9
     assert event.cluster_id == 2
-    assert event.quantity == 0

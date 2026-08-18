@@ -30,6 +30,17 @@ def _event(**overrides):
     return SignalEvent(**base)
 
 
+def _unenriched_event(**overrides):
+    base = {
+        "symbol": "BTCUSDT",
+        "type": "LARGE_TRADE",
+        "price": 42000.0,
+        "quantity": 100.0,
+    }
+    base.update(overrides)
+    return SignalEvent(**base)
+
+
 class TestDedupStep:
     def test_unique_event_passes(self):
         from trade.pipeline.steps.dedup import DedupStep

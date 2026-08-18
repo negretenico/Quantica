@@ -10,9 +10,9 @@ class DecisionRecord:
     symbol: str
     action: str
     entry_price: float
-    anomaly_score: float
+    anomaly_score: float | None
     signal_type: str
-    cluster_id: int
+    cluster_id: int | None
     timestamp_utc: str
 
     @classmethod

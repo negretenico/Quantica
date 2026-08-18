@@ -12,7 +12,7 @@ dependencies = [
     "pika==1.4.2",
     "numpy==2.3.2",
     "scikit-learn==1.9.0",
-    "scipy==1.16.1",
+    "scipy==1.16.3",
     "python-dotenv==1.2.2",
 ]
 

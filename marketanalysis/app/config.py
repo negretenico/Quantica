@@ -14,6 +14,8 @@ class Config:
     RETRAIN_BUFFER_SIZE = int(os.environ.get('RETRAIN_BUFFER_SIZE', '500'))
     DEDUP_SET_SIZE = int(os.environ.get('DEDUP_SET_SIZE', '10000'))
     ANOMALY_THRESHOLD = float(os.environ.get('ANOMALY_THRESHOLD', '0.9'))
+    NOTIFICATIONS_EXCHANGE = os.environ.get('NOTIFICATIONS_EXCHANGE', 'notifications')
+    ALERT_THROTTLE_WINDOW_SECONDS = int(os.environ.get('ALERT_THROTTLE_WINDOW_SECONDS', '300'))
     MAX_RETRIES = int(os.environ.get('RABBITMQ_MAX_RETRIES', '3'))
     RETRY_BASE_DELAY = float(os.environ.get('RABBITMQ_RETRY_BASE_DELAY', '1.0'))
 

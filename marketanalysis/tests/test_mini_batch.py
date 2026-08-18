@@ -2,6 +2,7 @@ import bisect
 from collections import deque
 from unittest.mock import patch, MagicMock
 
+import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
@@ -9,8 +10,10 @@ from model.mini_batch import (
     flatten_event,
     _percentile_rank,
     _record_distance,
+    _validate_features,
     _do_retrain,
     mini_batch,
+    InvalidFeaturesError,
 )
 import model.mini_batch as mb
 
@@ -259,3 +262,65 @@ class TestRetainBufferBounding:
     def _warmup(self):
         for i in range(5):
             mini_batch({"symbol": "X", "price": str(i), "quantity": "1"})
+
+
+# ---------------------------------------------------------------------------
+# _validate_features
+# ---------------------------------------------------------------------------
+
+class TestValidateFeatures:
+    def test_accepts_clean_matrix(self):
+        X = csr_matrix(np.array([[1.0, 2.0, 3.0]]))
+        _validate_features(X, "BTCUSDT")  # should not raise
+
+    def test_rejects_nan(self):
+        X = csr_matrix(np.array([[1.0, float("nan"), 3.0]]))
+        with pytest.raises(InvalidFeaturesError, match="NaN or Inf"):
+            _validate_features(X, "BTCUSDT")
+
+    def test_rejects_inf(self):
+        X = csr_matrix(np.array([[1.0, float("inf"), 3.0]]))
+        with pytest.raises(InvalidFeaturesError, match="NaN or Inf"):
+            _validate_features(X, "BTCUSDT")
+
+    def test_rejects_neg_inf(self):
+        X = csr_matrix(np.array([[float("-inf"), 2.0]]))
+        with pytest.raises(InvalidFeaturesError, match="NaN or Inf"):
+            _validate_features(X, "ETHUSDT")
+
+    def test_empty_sparse_matrix_passes(self):
+        X = csr_matrix((1, 5))  # all zeros, no stored data
+        _validate_features(X)  # should not raise
+
+    def test_includes_symbol_in_message(self):
+        X = csr_matrix(np.array([[float("nan")]]))
+        with pytest.raises(InvalidFeaturesError, match="SOLUSDT"):
+            _validate_features(X, "SOLUSDT")
+
+
+class TestMiniBatchValidation:
+    def test_raises_on_nan_features(self, small_warmup):
+        with patch.object(mb.vectorizer, "transform") as mock_transform:
+            mock_transform.return_value = csr_matrix(np.array([[float("nan"), 1.0]]))
+            with pytest.raises(InvalidFeaturesError):
+                mini_batch({"symbol": "BTCUSDT", "price": "100", "quantity": "1"})
+
+
+# ---------------------------------------------------------------------------
+# _record_distance — edge cases
+# ---------------------------------------------------------------------------
+
+class TestRecordDistanceEdgeCases:
+    def test_zero_max_is_noop(self, monkeypatch):
+        monkeypatch.setattr(mb, "_DISTANCE_BUFFER_MAX", 0)
+        mb._distance_buffer = []
+        _record_distance(1.0)
+        assert mb._distance_buffer == []
+
+    def test_max_one_keeps_single_element(self, monkeypatch):
+        monkeypatch.setattr(mb, "_DISTANCE_BUFFER_MAX", 1)
+        mb._distance_buffer = []
+        _record_distance(5.0)
+        assert mb._distance_buffer == [5.0]
+        _record_distance(3.0)
+        assert len(mb._distance_buffer) == 1

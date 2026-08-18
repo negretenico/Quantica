@@ -7,10 +7,9 @@ from shared.rabbitmq.consumer import RabbitConsumer, ConsumerConfig
 def _make_consumer():
     return RabbitConsumer(ConsumerConfig(
         url="amqp://guest:guest@localhost/",
-        queue="analytics.trade",
-        exchange="analytics",
-        exchange_type="topic",
-        routing_key="signal.analytics.#",
+        queue="signal.trade",
+        exchange="signal",
+        exchange_type="fanout",
     ))
 
 
@@ -23,8 +22,8 @@ def test_exchange_declare(mock_connection_cls):
     consumer._connect_and_consume()
 
     mock_channel.exchange_declare.assert_any_call(
-        exchange="analytics",
-        exchange_type="topic",
+        exchange="signal",
+        exchange_type="fanout",
         durable=True,
     )
 
@@ -38,9 +37,9 @@ def test_queue_bind(mock_connection_cls):
     consumer._connect_and_consume()
 
     mock_channel.queue_bind.assert_any_call(
-        queue="analytics.trade",
-        exchange="analytics",
-        routing_key="signal.analytics.#",
+        queue="signal.trade",
+        exchange="signal",
+        routing_key=None,
     )
 
 

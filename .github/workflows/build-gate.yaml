@@ -1,0 +1,296 @@
+name: Build Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      listener: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketListener == 'true' }}
+      transformer: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.markettransformer == 'true' }}
+      analysis: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketanalysis == 'true' || steps.changes.outputs.shared == 'true' }}
+      bard: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketbard == 'true' || steps.changes.outputs.shared == 'true' }}
+      trade: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.markettrade == 'true' || steps.changes.outputs.shared == 'true' }}
+      risk: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketrisk == 'true' || steps.changes.outputs.shared == 'true' }}
+      server: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketserver == 'true' || steps.changes.outputs.shared == 'true' }}
+      dlq: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketdlq == 'true' || steps.changes.outputs.shared == 'true' }}
+      mcp: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketmcp == 'true' || steps.changes.outputs.shared == 'true' }}
+      notify: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketnotify == 'true' || steps.changes.outputs.shared == 'true' }}
+      ui: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.marketui == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v4
+        id: changes
+        with:
+          filters: |
+            marketListener:
+              - 'marketListener/**'
+            markettransformer:
+              - 'markettransformer/**'
+            marketanalysis:
+              - 'marketanalysis/**'
+            marketbard:
+              - 'marketbard/**'
+            markettrade:
+              - 'markettrade/**'
+            marketrisk:
+              - 'marketrisk/**'
+            marketserver:
+              - 'marketserver/**'
+            marketdlq:
+              - 'marketdlq/**'
+            marketmcp:
+              - 'marketmcp/**'
+            marketnotify:
+              - 'marketnotify/**'
+            marketui:
+              - 'marketui/**'
+            shared:
+              - 'shared/**'
+
+  # --- Java modules ---
+  test-listener:
+    needs: check-changes
+    if: needs.check-changes.outputs.listener == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/cache@v6
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Test marketListener
+        working-directory: ./marketListener
+        run: mvn test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-transformer:
+    needs: check-changes
+    if: needs.check-changes.outputs.transformer == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/cache@v6
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Test markettransformer
+        working-directory: ./markettransformer
+        run: mvn test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- Python modules ---
+  test-analysis:
+    needs: check-changes
+    if: needs.check-changes.outputs.analysis == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install and test
+        run: |
+          pip install -e shared/
+          pip install -r marketanalysis/requirements.txt
+          pip install pytest
+          cd marketanalysis && python -m pytest tests/ -v
+
+  test-bard:
+    needs: check-changes
+    if: needs.check-changes.outputs.bard == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install and test
+        run: |
+          pip install -e shared/
+          pip install -r marketbard/requirements.txt
+          pip install pytest
+          cd marketbard && python -m pytest tests/ -v
+
+  test-trade:
+    needs: check-changes
+    if: needs.check-changes.outputs.trade == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install and test
+        run: |
+          pip install -e shared/
+          pip install -e marketrisk/
+          pip install -r markettrade/requirements.txt
+          pip install pytest
+          cd markettrade && python -m pytest tests/
+
+  test-risk:
+    needs: check-changes
+    if: needs.check-changes.outputs.risk == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install and test
+        run: |
+          pip install -r marketrisk/requirements.txt
+          pip install pytest
+          cd marketrisk && python -m pytest tests/
+
+  test-server:
+    needs: check-changes
+    if: needs.check-changes.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install and test
+        run: |
+          pip install -e shared/
+          pip install -r marketserver/requirements.txt
+          pip install pytest
+          cd marketserver && python -m pytest tests/ -v
+
+  test-dlq:
+    needs: check-changes
+    if: needs.check-changes.outputs.dlq == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install and test
+        run: |
+          pip install -e shared/
+          pip install -r marketdlq/requirements.txt
+          pip install pytest
+          cd marketdlq && python -m pytest tests/ -v
+
+  test-mcp:
+    needs: check-changes
+    if: needs.check-changes.outputs.mcp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install and test
+        run: |
+          pip install -e shared/
+          pip install -r marketmcp/requirements.txt
+          pip install pytest
+          cd marketmcp && python -m pytest tests/ -v
+
+  test-notify:
+    needs: check-changes
+    if: needs.check-changes.outputs.notify == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install and test
+        run: |
+          pip install -e shared/
+          pip install -r marketnotify/requirements.txt
+          pip install pytest
+          cd marketnotify && python -m pytest tests/ -v
+
+  # --- UI ---
+  test-ui:
+    needs: check-changes
+    if: needs.check-changes.outputs.ui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: marketui/package-lock.json
+      - name: Install and test
+        run: |
+          cd marketui && npm ci && npx vitest run
+
+  # --- Unified gate ---
+  build-gate:
+    needs:
+      - check-changes
+      - test-listener
+      - test-transformer
+      - test-analysis
+      - test-bard
+      - test-trade
+      - test-risk
+      - test-server
+      - test-dlq
+      - test-mcp
+      - test-notify
+      - test-ui
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate all module test results
+        run: |
+          FAIL=0
+
+          check_result() {
+            local name="$1" needed="$2" result="$3"
+            if [[ "$needed" == "true" && "$result" != "success" ]]; then
+              echo "FAIL: $name tests failed (result: $result)"
+              FAIL=1
+            else
+              echo "OK:   $name (needed=$needed, result=$result)"
+            fi
+          }
+
+          check_result "Listener"    "${{ needs.check-changes.outputs.listener }}"    "${{ needs.test-listener.result }}"
+          check_result "Transformer" "${{ needs.check-changes.outputs.transformer }}" "${{ needs.test-transformer.result }}"
+          check_result "Analysis"    "${{ needs.check-changes.outputs.analysis }}"    "${{ needs.test-analysis.result }}"
+          check_result "Bard"        "${{ needs.check-changes.outputs.bard }}"        "${{ needs.test-bard.result }}"
+          check_result "Trade"       "${{ needs.check-changes.outputs.trade }}"       "${{ needs.test-trade.result }}"
+          check_result "Risk"        "${{ needs.check-changes.outputs.risk }}"        "${{ needs.test-risk.result }}"
+          check_result "Server"      "${{ needs.check-changes.outputs.server }}"      "${{ needs.test-server.result }}"
+          check_result "DLQ"         "${{ needs.check-changes.outputs.dlq }}"         "${{ needs.test-dlq.result }}"
+          check_result "MCP"         "${{ needs.check-changes.outputs.mcp }}"         "${{ needs.test-mcp.result }}"
+          check_result "Notify"      "${{ needs.check-changes.outputs.notify }}"      "${{ needs.test-notify.result }}"
+          check_result "UI"          "${{ needs.check-changes.outputs.ui }}"          "${{ needs.test-ui.result }}"
+
+          if [[ "$FAIL" == "1" ]]; then
+            echo ""
+            echo "One or more module tests failed. Merge is blocked."
+            exit 1
+          fi
+          echo ""
+          echo "All module tests passed. Merge is allowed."

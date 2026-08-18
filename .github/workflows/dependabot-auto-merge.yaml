@@ -12,13 +12,54 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
     steps:
-      - name: Enable auto-merge
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip auto-merge for high-risk major/minor bumps
+        id: risk-check
+        run: |
+          DEP="${{ steps.metadata.outputs.dependency-names }}"
+          UPDATE="${{ steps.metadata.outputs.update-type }}"
+          HIGH_RISK="numpy scipy scikit-learn pika"
+
+          echo "Dependency: $DEP"
+          echo "Update type: $UPDATE"
+
+          BLOCKED=false
+          if [[ "$UPDATE" == "version-update:semver-major" || "$UPDATE" == "version-update:semver-minor" ]]; then
+            for pkg in $HIGH_RISK; do
+              if echo "$DEP" | grep -qi "$pkg"; then
+                echo "BLOCKED: $pkg major/minor bump requires manual review"
+                BLOCKED=true
+                break
+              fi
+            done
+          fi
+
+          echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge (patch or low-risk only)
+        if: steps.risk-check.outputs.blocked != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr merge --auto --squash "$PR_URL"
-      - name: Approve PR
+
+      - name: Approve PR (patch or low-risk only)
+        if: steps.risk-check.outputs.blocked != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr review --approve "$PR_URL"
-    env:
-      PR_URL: ${{ github.event.pull_request.html_url }}
+
+      - name: Add label for blocked PRs
+        if: steps.risk-check.outputs.blocked == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr edit "$PR_URL" --add-label "manual-review-required" || true
+          gh pr comment "$PR_URL" --body "This PR bumps a high-risk dependency (major/minor). Auto-merge is disabled — manual review required."

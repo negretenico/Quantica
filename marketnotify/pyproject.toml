@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marketnotify"
-version = "4.21.1.dev0"
+version = "4.21.2.dev0"
 description = "Discord notification worker for Quantica pipeline"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [

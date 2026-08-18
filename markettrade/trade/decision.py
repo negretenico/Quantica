@@ -11,7 +11,10 @@ def decide(event: SignalEvent, config: Config = None) -> dict:
     if config is None:
         config = Config()
 
-    match (event.anomaly_score > config.ANOMALY_SCORE_THRESHOLD, event.type):
+    enriched = event.anomaly_score is not None
+    actionable = not enriched or event.anomaly_score > config.ANOMALY_SCORE_THRESHOLD
+
+    match (actionable, event.type):
         case (True, s) if s in _BUY_SIGNALS:
             action = "BUY"
         case (True, s) if s in _SELL_SIGNALS:

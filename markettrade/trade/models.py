@@ -12,8 +12,8 @@ class SignalEvent(BaseModel):
             v = v.strip()
         return v
     price: float = Field(gt=0)
-    anomaly_score: float = Field(ge=0, le=1)
-    cluster_id: int
+    anomaly_score: float | None = Field(default=None, ge=0, le=1)
+    cluster_id: int | None = None
     quantity: float = Field(default=0, ge=0)
     eventTime: int | None = None
     reason: str | None = None

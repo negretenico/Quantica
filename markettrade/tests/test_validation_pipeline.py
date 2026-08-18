@@ -13,8 +13,6 @@ def _valid_payload(**overrides):
     base = {
         "symbol": "BTCUSDT",
         "type": "LARGE_TRADE",
-        "cluster_id": 2,
-        "anomaly_score": 0.9,
         "price": "42000.00",
         "quantity": "100.0",
     }

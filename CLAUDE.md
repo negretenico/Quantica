@@ -12,7 +12,7 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 | `markettransformer` | Java 21 / Spring Boot 3.x | Raw trades → enriched signals | Kafka `order` → RabbitMQ `signal` fanout exchange |
 | `marketanalysis` | Python 3.11 / Flask | Clustering + anomaly detection | RabbitMQ `signal.analysis` queue → RabbitMQ `analytics` topic exchange |
 | `marketbard` | Python 3.11 | LLM storytelling → disk | RabbitMQ `signal.bard` queue + `analytics.bard` queue → `decisions/bard/` |
-| `markettrade` | Python 3.13 | Trade execution worker | RabbitMQ `analytics.trade` queue (via `analytics` topic exchange) → blob store + `notifications` topic exchange |
+| `markettrade` | Python 3.13 | Trade execution worker | RabbitMQ `signal.trade` queue (via `signal` fanout exchange) → blob store + `notifications` topic exchange |
 | `marketnotify` | Python 3.13 | Discord notification worker | RabbitMQ `signal.notify` queue + `notifications.notify` queue → Discord webhook |
 | `marketrisk` | Python 3.13 | **Internal library** — risk cap evaluation | consumed by `markettrade` (not a runnable binary) |
 | `markete2e` | Python 3.x | E2E test harness — publishes known events, asserts pipeline output | Kafka `order` + RabbitMQ `signal` / `analytics` → blob store polling |
@@ -27,12 +27,13 @@ Real-time market data pipeline: Binance WebSocket → Kafka → multi-module enr
 - `signal.analysis` → `marketanalysis` (declared by marketanalysis on startup)
 - `signal.bard` → `marketbard` (declared by marketbard on startup)
 - `signal.notify` → `marketnotify` (declared by marketnotify on startup)
+- `signal.trade` → `markettrade` (declared by markettrade on startup)
 
 `marketanalysis` publishes ML-enriched events (with `cluster_id` + `anomaly_score`) to a RabbitMQ **topic exchange** (`analytics`) using routing key `signal.analytics.{symbol}`.
 
 `marketbard` subscribes to the `analytics` exchange via a single `analytics.bard` queue (routing key `signal.analytics.#`), maintaining an in-memory enrichment cache keyed by symbol. When a raw signal arrives on `signal.bard`, it is enriched from the cache before being added to the event buffer.
 
-`markettrade` subscribes to the `analytics` exchange via an `analytics.trade` queue (routing key `signal.analytics.#`). It processes ML-enriched events for trade execution and publishes risk alerts to the `notifications` topic exchange (routing key `alert.markettrade`).
+`markettrade` subscribes to the `signal` fanout exchange via a `signal.trade` queue. It processes raw signals directly for trade execution (independent of `marketanalysis`) and publishes risk alerts to the `notifications` topic exchange (routing key `alert.markettrade`). When enrichment fields (`anomaly_score`, `cluster_id`) are present, the anomaly threshold gates decisions; when absent, decisions are based purely on signal type.
 
 `marketnotify` consumes from two sources: the `signal` fanout exchange (via `signal.notify` queue for event volume counting) and the `notifications` topic exchange (via `notifications.notify` queue, routing key `#`, for alert/publish dispatch to Discord webhooks).
 
@@ -69,8 +70,8 @@ cd marketnotify     && py run.py
 
 | Exchange | Type | Queues | Routing key | Schema |
 |---|---|---|---|---|
-| `signal` | fanout | `signal.analysis`, `signal.bard`, `signal.notify` | n/a (fanout) | `SignalEvent` JSON |
-| `analytics` | topic | `analytics.bard`, `analytics.trade` | `signal.analytics.{symbol}` | `SignalEvent` + `cluster_id`, `anomaly_score` |
+| `signal` | fanout | `signal.analysis`, `signal.bard`, `signal.notify`, `signal.trade` | n/a (fanout) | `SignalEvent` JSON |
+| `analytics` | topic | `analytics.bard` | `signal.analytics.{symbol}` | `SignalEvent` + `cluster_id`, `anomaly_score` |
 | `notifications` | topic | `notifications.notify` | `alert.markettrade`, `#` (marketnotify) | risk alerts JSON |
 
 **Consumer-owned queues.** Each consumer declares and binds its own queue on startup. `markettransformer` declares only the `signal` exchange — it has no knowledge of downstream queues.

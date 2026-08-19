@@ -39,10 +39,10 @@ build-transformer:
 	cd markettransformer && mvn clean package -DskipTests
 
 build-analysis:
-	cd marketanalysis && py -m pip install -r requirements.txt
+	cd marketanalysis && py -m pip install -e .
 
 build-bard:
-	cd marketbard && py -m pip install -r requirements.txt
+	cd marketbard && py -m pip install -e .
 
 build-risk:
 	cd marketrisk && py -m pip install -e .
@@ -51,16 +51,16 @@ build-trade:
 	cd markettrade && py -m pip install -e .
 
 build-notify:
-	cd marketnotify && py -m pip install -r requirements.txt
+	cd marketnotify && py -m pip install -e .
 
 build-dlq:
-	cd marketdlq && py -m pip install -r requirements.txt
+	cd marketdlq && py -m pip install -e .
 
 build-server:
-	cd marketserver && py -m pip install -r requirements.txt
+	cd marketserver && py -m pip install -e .
 
 build-mcp:
-	cd marketmcp && py -m pip install -r requirements.txt
+	cd marketmcp && py -m pip install -e .
 
 build-ui:
 	cd marketui && npm ci && npm run build

@@ -8,10 +8,12 @@ version = "4.21.3.dev0"
 description = "Market bard service"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
-    "pika==1.3.2",
+    "boto3",
     "openai>=1.0.0",
+    "pika>=1.3.2",
+    "prometheus-client>=0.26.0",
     "PyGithub>=2.0.0",
-    "python-dotenv==1.1.1",
+    "python-dotenv>=1.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]

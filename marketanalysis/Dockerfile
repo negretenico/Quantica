@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
 COPY --from=shared . /shared/
 RUN pip install --no-cache-dir /shared/
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml .
+RUN pip install --no-cache-dir .
 
 COPY . .
 

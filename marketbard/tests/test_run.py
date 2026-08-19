@@ -1,9 +1,10 @@
 import datetime
 import logging
+import queue
 import threading
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from run import _cap_events, _compute_metrics, _supervised_thread
 from app.config import Config
@@ -70,6 +71,40 @@ class TestComputeMetrics:
         m = _compute_metrics(events, "12:00")
         assert m["volume"] == pytest.approx(3.0)
 
+    def test_anomaly_score_zero_is_not_counted(self):
+        # anomaly_score=0 is not None, so it SHOULD be counted
+        events = [
+            {"quantity": "1", "price": "100", "anomaly_score": 0},
+            {"quantity": "1", "price": "100", "anomaly_score": 0.0},
+        ]
+        m = _compute_metrics(events, "13:00")
+        assert m["anomaly_count"] == 2
+
+    def test_all_same_price_zero_movement(self):
+        events = [
+            {"quantity": "1", "price": "50.0"},
+            {"quantity": "2", "price": "50.0"},
+            {"quantity": "3", "price": "50.0"},
+        ]
+        m = _compute_metrics(events, "14:00")
+        assert m["price_movement"] == 0.0
+
+    def test_events_with_no_price_field(self):
+        events = [{"quantity": "5"}, {"quantity": "3"}]
+        m = _compute_metrics(events, "15:00")
+        assert m["price_movement"] == 0.0
+        assert m["volume"] == pytest.approx(8.0)
+
+    def test_mixed_anomaly_scores(self):
+        events = [
+            {"anomaly_score": 0.9},
+            {"anomaly_score": None},
+            {},
+            {"anomaly_score": 0.1},
+        ]
+        m = _compute_metrics(events, "16:00")
+        assert m["anomaly_count"] == 2
+
 
 class TestSupervisedThread:
     def test_logs_critical_on_crash(self, caplog):
@@ -119,6 +154,85 @@ class TestSynthesisHourConfig:
             target += datetime.timedelta(days=1)
         assert target.day == 1  # August 1
         assert target.hour == 20
+
+
+class TestWindowWorker:
+    def test_processes_batch_and_adds_to_summary_buffer(self, monkeypatch):
+        import run
+        from accumulator.summary_buffer import SummaryBuffer
+
+        fake_client = MagicMock()
+        fake_client.create_window_summary.return_value = {
+            "narrative_summary": "BTC surged.",
+            "category": "BULLISH",
+        }
+        monkeypatch.setattr(run, "openai_client", fake_client)
+
+        test_summary_buffer = SummaryBuffer(maxlen=10)
+        monkeypatch.setattr(run, "summary_buffer", test_summary_buffer)
+
+        events = [
+            {"symbol": "BTC", "quantity": "5", "price": "100", "anomaly_score": 0.9},
+            {"symbol": "BTC", "quantity": "3", "price": "110"},
+        ]
+
+        # Put a batch on the window queue, then a sentinel to stop the worker
+        test_queue = queue.Queue()
+        test_queue.put(("10:00", events))
+        monkeypatch.setattr(run, "window_queue", test_queue)
+
+        # Run one iteration of window_worker by calling it in a thread with a timeout
+        def one_iteration():
+            window_start, evts = run.window_queue.get()
+            metrics = _compute_metrics(evts, window_start)
+            from model.build_prompt import build_window_prompt
+            prompt = build_window_prompt(evts, metrics)
+            result = run.openai_client.create_window_summary(prompt)
+            summary = {
+                "window_start": window_start,
+                "narrative_summary": result["narrative_summary"],
+                "category": result["category"],
+                "metrics": metrics,
+            }
+            run.summary_buffer.add(summary)
+
+        one_iteration()
+
+        assert len(test_summary_buffer) == 1
+        summaries = test_summary_buffer.drain()
+        assert summaries[0]["window_start"] == "10:00"
+        assert summaries[0]["category"] == "BULLISH"
+        assert summaries[0]["narrative_summary"] == "BTC surged."
+        assert summaries[0]["metrics"]["event_count"] == 2
+        assert summaries[0]["metrics"]["volume"] == pytest.approx(8.0)
+        assert summaries[0]["metrics"]["anomaly_count"] == 1
+
+    def test_prompt_passed_to_llm_contains_events(self, monkeypatch):
+        import run
+
+        captured_prompt = []
+        fake_client = MagicMock()
+        fake_client.create_window_summary.side_effect = lambda prompt, **kw: (
+            captured_prompt.append(prompt) or
+            {"narrative_summary": "ok", "category": "NEUTRAL"}
+        )
+        monkeypatch.setattr(run, "openai_client", fake_client)
+        monkeypatch.setattr(run, "summary_buffer", MagicMock())
+
+        events = [{"symbol": "ETH", "type": "SELL", "quantity": "10", "price": "3000"}]
+        test_queue = queue.Queue()
+        test_queue.put(("11:00", events))
+        monkeypatch.setattr(run, "window_queue", test_queue)
+
+        window_start, evts = run.window_queue.get()
+        metrics = _compute_metrics(evts, window_start)
+        from model.build_prompt import build_window_prompt
+        prompt = build_window_prompt(evts, metrics)
+        run.openai_client.create_window_summary(prompt)
+
+        assert "ETH" in captured_prompt[0]
+        assert "3000" in captured_prompt[0]
+        assert "11:00" in captured_prompt[0]
 
 
 class TestMaxEventsPerWindowConfig:

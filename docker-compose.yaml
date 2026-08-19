@@ -293,7 +293,7 @@ services:
     ports:
       - "3001:3001"
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:3001/ || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q http://0.0.0.0:3001/ || exit 1"]
       interval: 30s
       timeout: 10s
       start_period: 30s

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marketdlq"
-version = "4.21.5.dev0"
+version = "4.21.6.dev0"
 description = "DLQ monitor — logs warnings and creates GitHub issues on dead-lettered messages"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [

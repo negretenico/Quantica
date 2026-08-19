@@ -61,3 +61,43 @@ class TestEventBuffer:
 
         assert not errors
         assert len(buf) == 400
+
+    def test_concurrent_add_and_drain(self):
+        buf = EventBuffer()
+        drained: list[list] = []
+        errors = []
+
+        def adder():
+            try:
+                for i in range(200):
+                    buf.add({"id": i})
+            except Exception as e:
+                errors.append(e)
+
+        def drainer():
+            try:
+                for _ in range(20):
+                    drained.append(buf.drain())
+            except Exception as e:
+                errors.append(e)
+
+        t1 = threading.Thread(target=adder)
+        t2 = threading.Thread(target=drainer)
+        t1.start()
+        t2.start()
+        t1.join(timeout=5)
+        t2.join(timeout=5)
+
+        # Final drain to catch any remaining
+        drained.append(buf.drain())
+
+        assert not errors
+        total = sum(len(batch) for batch in drained)
+        assert total == 200
+
+    def test_preserves_insertion_order(self):
+        buf = EventBuffer()
+        for i in range(50):
+            buf.add({"seq": i})
+        events = buf.drain()
+        assert [e["seq"] for e in events] == list(range(50))

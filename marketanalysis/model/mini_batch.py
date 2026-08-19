@@ -20,12 +20,12 @@ class InvalidFeaturesError(ValueError):
 
 _ET = ZoneInfo("America/New_York")
 
-vectorizer = FeatureHasher(input_type='dict', n_features=64)
+vectorizer = FeatureHasher(input_type='dict', n_features=Config.N_FEATURES)
 
 model = MiniBatchKMeans(
-    n_clusters=4,
-    random_state=0,
-    batch_size=1,
+    n_clusters=Config.N_CLUSTERS,
+    random_state=Config.RANDOM_STATE,
+    batch_size=Config.BATCH_SIZE,
     n_init="auto"
 )
 
@@ -90,7 +90,7 @@ def _do_retrain():
             logger.info("retrain: buffer empty, skipping")
             return
         X = vstack(list(_retrain_buffer))
-        model = MiniBatchKMeans(n_clusters=4, random_state=0, batch_size=1, n_init="auto")
+        model = MiniBatchKMeans(n_clusters=Config.N_CLUSTERS, random_state=Config.RANDOM_STATE, batch_size=Config.BATCH_SIZE, n_init="auto")
         model.partial_fit(X)
         # Recompute distance buffer from new clusters
         dists = model.transform(X)
@@ -101,11 +101,11 @@ def _do_retrain():
 def _schedule_retrain():
     while True:
         now = datetime.datetime.now(_ET)
-        target = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        target = now.replace(hour=Config.RETRAIN_HOUR, minute=Config.RETRAIN_MINUTE, second=0, microsecond=0)
         if now >= target:
             target += datetime.timedelta(days=1)
         sleep_secs = (target - now).total_seconds()
-        logger.info(f"retrain: next scheduled in {sleep_secs / 3600:.1f}h at 09:30 ET")
+        logger.info(f"retrain: next scheduled in {sleep_secs / 3600:.1f}h at {Config.RETRAIN_HOUR:02d}:{Config.RETRAIN_MINUTE:02d} ET")
         threading.Event().wait(timeout=sleep_secs)
         _do_retrain()
 

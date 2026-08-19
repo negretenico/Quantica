@@ -27,7 +27,8 @@ def _reset_global_state():
     mb._distance_buffer.clear()
     # Re-init the model so cluster centers are not carried across tests
     from sklearn.cluster import MiniBatchKMeans
-    mb.model = MiniBatchKMeans(n_clusters=4, random_state=0, batch_size=1, n_init="auto")
+    from app.config import Config
+    mb.model = MiniBatchKMeans(n_clusters=Config.N_CLUSTERS, random_state=Config.RANDOM_STATE, batch_size=Config.BATCH_SIZE, n_init="auto")
     yield
 
 
@@ -142,7 +143,8 @@ class TestDoRetrain:
     def test_retrains_and_rebuilds_distance_buffer(self):
         # Seed retrain buffer with some sparse rows
         from sklearn.feature_extraction import FeatureHasher
-        h = FeatureHasher(input_type="dict", n_features=64)
+        from app.config import Config
+        h = FeatureHasher(input_type="dict", n_features=Config.N_FEATURES)
         for i in range(10):
             X = h.transform([{"price": float(i), "qty": float(i * 2)}])
             mb._retrain_buffer.append(X)
@@ -208,7 +210,8 @@ class TestMiniBatchInference:
     def test_label_is_valid_cluster_id(self, small_warmup):
         self._warmup()
         _, label, _ = mini_batch({"symbol": "X", "price": "50", "quantity": "1"})
-        assert label in range(4)  # n_clusters=4
+        from app.config import Config
+        assert label in range(Config.N_CLUSTERS)
 
     def test_anomaly_score_is_between_zero_and_one(self, small_warmup):
         self._warmup()

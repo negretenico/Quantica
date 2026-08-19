@@ -294,7 +294,7 @@ jobs:
     secrets: inherit
 
   # --- Gate ---
-  build-gate:
+  python-build-gate:
     needs: [check-changes, analysis-build, bard-build, trade-build, risk-build, server-build, dlq-build, mcp-build]
     if: always()
     runs-on: ubuntu-latest

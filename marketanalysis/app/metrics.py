@@ -31,6 +31,24 @@ errors_total = Counter(
     "Errors during event processing",
 )
 
+validation_failures_total = Counter(
+    "marketanalysis_validation_failures_total",
+    "Feature vectors rejected for NaN/Inf",
+    ["symbol"],
+)
+
+alerts_published_total = Counter(
+    "marketanalysis_alerts_published_total",
+    "Alerts published to notifications exchange",
+    ["alert_type"],
+)
+
+alerts_throttled_total = Counter(
+    "marketanalysis_alerts_throttled_total",
+    "Alerts suppressed by throttling",
+    ["alert_type"],
+)
+
 processing_latency = Histogram(
     "marketanalysis_processing_seconds",
     "Time spent in mini_batch + publish per event",

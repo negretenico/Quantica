@@ -143,6 +143,7 @@ make health  # quick container health overview
 
 ## Python Conventions (marketanalysis, marketbard, markettrade)
 
+- **`pyproject.toml` for dependencies** — all Python modules declare dependencies in `pyproject.toml` using `>=` version floors (not `==` pins). Do **not** use `requirements.txt`. Dependabot bumps direct deps in `pyproject.toml`; pip resolves transitive deps automatically. Dockerfiles use `pip install .`, Makefile uses `pip install -e .`, CI uses `pip install .`.
 - **Module-per-concern** — `app/`, `model/`, `redis_cache/`, `apache_kafka/`, `gh/` are each a package with `__init__.py`.
 - **`Config` class** in `app/config.py` reads all env vars — no inline `os.getenv` scattered through code.
 - **Threading** for concurrent workers — `threading.Thread(target=..., daemon=True)`.

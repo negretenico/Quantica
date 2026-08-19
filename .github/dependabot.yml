@@ -6,6 +6,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      maven-listener:
+        patterns: ["*"]
 
   # Java — markettransformer
   - package-ecosystem: "maven"
@@ -13,6 +17,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      maven-transformer:
+        patterns: ["*"]
 
   # Python — marketanalysis
   - package-ecosystem: "pip"
@@ -20,6 +28,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      pip-analysis:
+        patterns: ["*"]
     ignore:
       - dependency-name: "numpy"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
@@ -36,6 +48,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      pip-bard:
+        patterns: ["*"]
     ignore:
       - dependency-name: "pika"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
@@ -46,6 +62,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      pip-trade:
+        patterns: ["*"]
     ignore:
       - dependency-name: "numpy"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
@@ -62,6 +82,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      pip-risk:
+        patterns: ["*"]
     ignore:
       - dependency-name: "numpy"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
@@ -76,6 +100,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      pip-notify:
+        patterns: ["*"]
     ignore:
       - dependency-name: "pika"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
@@ -86,6 +114,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      pip-server:
+        patterns: ["*"]
 
   # Python — shared
   - package-ecosystem: "pip"
@@ -93,6 +125,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      pip-shared:
+        patterns: ["*"]
     ignore:
       - dependency-name: "pika"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
@@ -103,6 +139,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      npm-ui:
+        patterns: ["*"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -110,6 +150,10 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns: ["*"]
 
   # Docker
   - package-ecosystem: "docker"
@@ -117,3 +161,7 @@ updates:
     schedule:
       interval: "weekly"
     rebase-strategy: "auto"
+    open-pull-requests-limit: 3
+    groups:
+      docker:
+        patterns: ["*"]

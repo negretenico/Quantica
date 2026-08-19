@@ -8,7 +8,7 @@ version = "2.1.2.dev0"
 description = "Market risk service"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
-    "python-dotenv==1.2.2",
+    "python-dotenv>=1.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]

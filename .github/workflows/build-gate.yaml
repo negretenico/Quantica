@@ -111,7 +111,7 @@ jobs:
       - name: Install and test
         run: |
           pip install -e shared/
-          pip install -r marketanalysis/requirements.txt
+          pip install -e marketanalysis/
           pip install pytest
           cd marketanalysis && python -m pytest tests/ -v
 
@@ -127,7 +127,7 @@ jobs:
       - name: Install and test
         run: |
           pip install -e shared/
-          pip install -r marketbard/requirements.txt
+          pip install -e marketbard/
           pip install pytest
           cd marketbard && python -m pytest tests/ -v
 
@@ -144,7 +144,7 @@ jobs:
         run: |
           pip install -e shared/
           pip install -e marketrisk/
-          pip install -r markettrade/requirements.txt
+          pip install -e markettrade/
           pip install pytest
           cd markettrade && python -m pytest tests/
 
@@ -159,7 +159,7 @@ jobs:
           python-version: '3.13'
       - name: Install and test
         run: |
-          pip install -r marketrisk/requirements.txt
+          pip install -e marketrisk/
           pip install pytest
           cd marketrisk && python -m pytest tests/
 
@@ -175,7 +175,7 @@ jobs:
       - name: Install and test
         run: |
           pip install -e shared/
-          pip install -r marketserver/requirements.txt
+          pip install -e marketserver/
           pip install pytest
           cd marketserver && python -m pytest tests/ -v
 
@@ -191,7 +191,7 @@ jobs:
       - name: Install and test
         run: |
           pip install -e shared/
-          pip install -r marketdlq/requirements.txt
+          pip install -e marketdlq/
           pip install pytest
           cd marketdlq && python -m pytest tests/ -v
 
@@ -207,7 +207,7 @@ jobs:
       - name: Install and test
         run: |
           pip install -e shared/
-          pip install -r marketmcp/requirements.txt
+          pip install -e marketmcp/
           pip install pytest
           cd marketmcp && python -m pytest tests/ -v
 
@@ -223,7 +223,7 @@ jobs:
       - name: Install and test
         run: |
           pip install -e shared/
-          pip install -r marketnotify/requirements.txt
+          pip install -e marketnotify/
           pip install pytest
           cd marketnotify && python -m pytest tests/ -v
 

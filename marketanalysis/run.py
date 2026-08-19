@@ -9,12 +9,16 @@ from app.metrics import (
     duplicates_dropped_total,
     clusters_computed_total,
     anomalies_detected_total,
+    errors_total,
+    validation_failures_total,
     processing_latency,
     observe_tick_to_analysis,
     start_metrics_server,
 )
-from model.mini_batch import mini_batch
+from model.mini_batch import mini_batch, InvalidFeaturesError
 from analysis.outbound import send_msg
+from analysis.alerter import PipelineAlerter
+from rabbitmq.publisher import RabbitPublisher
 from shared.dedup import DedupFilter
 
 logging.basicConfig(
@@ -26,6 +30,14 @@ logger = logging.getLogger(__name__)
 app = create_app()
 
 _dedup = DedupFilter(maxlen=Config.DEDUP_SET_SIZE)
+
+_alert_publisher = RabbitPublisher(
+    url=Config.RABBITMQ_URL,
+    exchange=Config.NOTIFICATIONS_EXCHANGE,
+)
+_alerter = PipelineAlerter(publisher=_alert_publisher)
+
+_logged_failures: set[tuple[str, str]] = set()
 
 
 def _handle_event(event):
@@ -39,7 +51,24 @@ def _handle_event(event):
     symbol = event.get("symbol", "unknown")
     start = time.perf_counter()
 
-    prediction = mini_batch(event)
+    try:
+        prediction = mini_batch(event)
+    except InvalidFeaturesError as exc:
+        errors_total.inc()
+        validation_failures_total.labels(symbol=symbol).inc()
+        if (symbol, "validation_error") not in _logged_failures:
+            logger.warning("Validation failure for %s: %s", symbol, exc)
+            _logged_failures.add((symbol, "validation_error"))
+        _alerter.send_alert(symbol, "validation_error", str(exc))
+        raise
+    except Exception as exc:
+        errors_total.inc()
+        if (symbol, "ml_failure") not in _logged_failures:
+            logger.error("ML pipeline error for %s: %s", symbol, exc)
+            _logged_failures.add((symbol, "ml_failure"))
+        _alerter.send_alert(symbol, "ml_failure", str(exc))
+        raise
+
     elapsed = time.perf_counter() - start
     processing_latency.labels(symbol=symbol).observe(elapsed)
 
@@ -54,7 +83,13 @@ def _handle_event(event):
     if anomaly_score >= Config.ANOMALY_THRESHOLD:
         anomalies_detected_total.labels(symbol=symbol).inc()
 
-    send_msg(prediction=prediction)
+    try:
+        send_msg(prediction=prediction)
+    except Exception as exc:
+        errors_total.inc()
+        _alerter.send_alert(symbol, "ml_failure", f"Publish failed: {exc}")
+        raise
+
     observe_tick_to_analysis(event)
 
 

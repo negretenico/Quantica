@@ -8,9 +8,15 @@ import datetime
 import logging
 from zoneinfo import ZoneInfo
 
+import numpy as np
+
 from app.config import Config
 
 logger = logging.getLogger(__name__)
+
+
+class InvalidFeaturesError(ValueError):
+    """Raised when a feature vector contains NaN or Inf values."""
 
 _ET = ZoneInfo("America/New_York")
 
@@ -57,11 +63,21 @@ def _percentile_rank(sorted_distances: list[float], value: float) -> float:
     return rank / n
 
 
+def _validate_features(X, symbol: str = "unknown"):
+    """Raise InvalidFeaturesError if sparse matrix *X* contains NaN or Inf."""
+    data = X.data if hasattr(X, "data") else np.asarray(X).ravel()
+    if len(data) > 0 and not np.all(np.isfinite(data)):
+        raise InvalidFeaturesError(
+            f"Feature vector for {symbol} contains NaN or Inf values"
+        )
+
+
 def _record_distance(raw_dist: float):
     """Insert *raw_dist* into the sorted distance buffer, evicting the oldest if full."""
     global _distance_buffer
+    if _DISTANCE_BUFFER_MAX <= 0:
+        return
     if len(_distance_buffer) >= _DISTANCE_BUFFER_MAX:
-        # Drop the median element to keep the buffer bounded without skewing extremes
         mid = len(_distance_buffer) // 2
         _distance_buffer.pop(mid)
     bisect.insort(_distance_buffer, raw_dist)
@@ -110,6 +126,8 @@ def mini_batch(data_point):
     with _lock:
         clean_point = flatten_event(data_point)
         X = vectorizer.transform([clean_point])
+        symbol = data_point.get("symbol", "unknown")
+        _validate_features(X, symbol)
 
         if not _warmed_up:
             _warmup_rows.append(X)

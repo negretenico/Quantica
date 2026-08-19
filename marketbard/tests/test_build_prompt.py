@@ -67,6 +67,17 @@ class TestBuildWindowPrompt:
         prompt = build_window_prompt(events, metrics)
         assert "[ANOMALY]" not in prompt
 
+    def test_anomaly_marker_present_when_score_is_zero(self, metrics):
+        # anomaly_score=0 is not None, so [ANOMALY] should still appear
+        events = [{"symbol": "BTC", "anomaly_score": 0}]
+        prompt = build_window_prompt(events, metrics)
+        assert "[ANOMALY]" in prompt
+
+    def test_anomaly_marker_present_when_score_is_zero_float(self, metrics):
+        events = [{"symbol": "BTC", "anomaly_score": 0.0}]
+        prompt = build_window_prompt(events, metrics)
+        assert "[ANOMALY]" in prompt
+
     def test_contains_analyst_system_instruction(self, metrics):
         prompt = build_window_prompt([], metrics)
         assert "financial market analyst" in prompt
@@ -79,6 +90,29 @@ class TestBuildWindowPrompt:
         prompt = build_window_prompt(events, metrics)
         assert "BTC" in prompt
         assert "ETH" in prompt
+
+    def test_empty_events_still_has_metrics(self, metrics):
+        prompt = build_window_prompt([], metrics)
+        assert "Window: 09:30" in prompt
+        assert "Volume: 150.5000" in prompt
+
+    def test_event_missing_all_optional_fields(self, metrics):
+        events = [{}]
+        prompt = build_window_prompt(events, metrics)
+        # Should not crash, gracefully handles missing fields
+        assert "Window: 09:30" in prompt
+
+    def test_zero_volume_formatted(self):
+        metrics = {
+            "window_start": "14:00",
+            "volume": 0.0,
+            "price_movement": 0.0,
+            "anomaly_count": 0,
+        }
+        prompt = build_window_prompt([], metrics)
+        assert "Volume: 0.0000" in prompt
+        assert "Price movement: 0.0000" in prompt
+        assert "Anomaly count: 0" in prompt
 
 
 class TestBuildSynthesisPrompt:
@@ -132,6 +166,63 @@ class TestBuildSynthesisPrompt:
         prompt = build_synthesis_prompt([])
         assert "0 raw events" in prompt
         assert "0 anomalies" in prompt
+
+    def test_missing_event_count_defaults_to_zero(self):
+        summaries = [
+            {
+                "window_start": "10:00",
+                "narrative_summary": "Some activity.",
+                "category": "NEUTRAL",
+                "metrics": {"volume": 10.0, "price_movement": 1.0, "anomaly_count": 0},
+            },
+        ]
+        prompt = build_synthesis_prompt(summaries)
+        assert "0 raw events" in prompt
+
+    def test_single_summary(self):
+        summaries = [
+            {
+                "window_start": "12:00",
+                "narrative_summary": "Quiet session.",
+                "category": "NEUTRAL",
+                "metrics": {
+                    "event_count": 30,
+                    "volume": 50.0,
+                    "price_movement": 2.0,
+                    "anomaly_count": 0,
+                },
+            },
+        ]
+        prompt = build_synthesis_prompt(summaries)
+        assert "30 raw events" in prompt
+        assert "0 anomalies" in prompt
+        assert "12:00" in prompt
+        assert "Quiet session" in prompt
+
+    def test_anomaly_totals_accumulated_across_windows(self):
+        summaries = [
+            {
+                "window_start": "09:30",
+                "narrative_summary": "A",
+                "category": "BULLISH",
+                "metrics": {"event_count": 10, "volume": 5.0, "price_movement": 1.0, "anomaly_count": 2},
+            },
+            {
+                "window_start": "09:40",
+                "narrative_summary": "B",
+                "category": "BEARISH",
+                "metrics": {"event_count": 20, "volume": 15.0, "price_movement": 3.0, "anomaly_count": 5},
+            },
+            {
+                "window_start": "09:50",
+                "narrative_summary": "C",
+                "category": "NEUTRAL",
+                "metrics": {"event_count": 5, "volume": 2.0, "price_movement": 0.5, "anomaly_count": 1},
+            },
+        ]
+        prompt = build_synthesis_prompt(summaries)
+        assert "35 raw events" in prompt
+        assert "8 anomalies" in prompt
 
     def test_contains_analyst_system_instruction(self, summaries):
         prompt = build_synthesis_prompt(summaries)

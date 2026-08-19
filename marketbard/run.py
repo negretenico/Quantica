@@ -79,7 +79,8 @@ def signal_event_handler(event):
     enriched = _enrichment_cache.get(symbol)
     if enriched:
         event = {**event, "cluster_id": enriched.get("cluster_id"), "anomaly_score": enriched.get("anomaly_score")}
-        logger.info(f"Enriched signal: symbol={symbol} cluster={enriched.get('cluster_id')} anomaly={enriched.get('anomaly_score'):.4f}")
+        anomaly = enriched.get('anomaly_score')
+        logger.info(f"Enriched signal: symbol={symbol} cluster={enriched.get('cluster_id')} anomaly={anomaly:.4f}" if anomaly is not None else f"Enriched signal: symbol={symbol} cluster={enriched.get('cluster_id')} anomaly=None")
     event_buffer.add(event)
     event_buffer_size.set(len(event_buffer))
 

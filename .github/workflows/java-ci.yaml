@@ -109,7 +109,7 @@ jobs:
     secrets: inherit
 
   # --- Gate ---
-  build-gate:
+  java-build-gate:
     needs: [check-changes, listener-build, transformer-build]
     if: always()
     runs-on: ubuntu-latest

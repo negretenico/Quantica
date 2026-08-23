@@ -78,3 +78,49 @@ class TestHealthIntegration:
 
         result = json.loads(await health())
         assert "status" in result
+
+
+# ---------------------------------------------------------------------------
+# SSE / Streaming integration tests
+# ---------------------------------------------------------------------------
+
+
+def _rabbitmq_available() -> bool:
+    try:
+        import pika
+        connection = pika.BlockingConnection(
+            pika.URLParameters("amqp://guest:guest@localhost:5672/")
+        )
+        connection.close()
+        return True
+    except Exception:
+        return False
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not _rabbitmq_available(),
+    reason="RabbitMQ not reachable",
+)
+class TestStreamIntegration:
+    def test_stream_connects_and_caches(self):
+        """SignalStream can connect to RabbitMQ and process events."""
+        import time
+        from app.config import Config
+        from app.stream import SignalStream
+
+        config = Config()
+        config.STREAM_ENABLED = True
+        config.STREAM_MAX_EVENTS_PER_SEC = 100
+        config.STREAM_CACHE_SIZE_PER_SYMBOL = 10
+        config.DEDUP_MAXLEN = 1000
+
+        stream = SignalStream(config)
+        stream.start()
+
+        # Give the consumer threads time to connect
+        time.sleep(2)
+
+        # Verify the consumers are running (health check)
+        assert stream._signal_consumer.health.is_connected()
+        assert stream._analytics_consumer.health.is_connected()

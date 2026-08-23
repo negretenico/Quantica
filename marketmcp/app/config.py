@@ -18,6 +18,7 @@ class Config:
     RISK_MAX_SYMBOL_EXPOSURE: float = field(default_factory=lambda: float(_env("RISK_MAX_SYMBOL_EXPOSURE", "1.0")))
     TRADE_HISTORY_DAYS_DEFAULT: int = field(default_factory=lambda: int(_env("TRADE_HISTORY_DAYS_DEFAULT", "7")))
     MAX_QUERY_DAYS: int = field(default_factory=lambda: int(_env("MAX_QUERY_DAYS", "30")))
+    RESOURCE_CACHE_TTL_SECONDS: int = field(default_factory=lambda: int(_env("RESOURCE_CACHE_TTL_SECONDS", "15")))
 
     def __str__(self):
         return (
@@ -26,5 +27,6 @@ class Config:
             f"Log Level: {self.LOG_LEVEL}\n"
             f"Risk Max Symbol Exposure: {self.RISK_MAX_SYMBOL_EXPOSURE}\n"
             f"Trade History Days Default: {self.TRADE_HISTORY_DAYS_DEFAULT}\n"
-            f"Max Query Days: {self.MAX_QUERY_DAYS}"
+            f"Max Query Days: {self.MAX_QUERY_DAYS}\n"
+            f"Resource Cache TTL: {self.RESOURCE_CACHE_TTL_SECONDS}s"
         )

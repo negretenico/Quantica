@@ -15,6 +15,7 @@ from app.config import Config
 from app.metrics import tool_latency_seconds, tool_requests_total, mcp_errors_total
 from mcp_server.client import MarketServerClient
 from mcp_server.server import mcp
+from mcp_server.utils import compute_symbol_exposure
 
 logger = logging.getLogger(__name__)
 
@@ -95,24 +96,10 @@ async def get_risk_assessment(
         begin = end - timedelta(days=7)
         trades = await _client.get_trades_date_range(begin, end)
 
-        # Filter to this symbol's approved trades
-        symbol_trades = [
-            t for t in trades
-            if t.get("symbol") == symbol and t.get("risk_approved") is True
-        ]
-
-        # Compute net exposure: BUY adds, SELL subtracts
-        current_exposure = 0.0
-        for t in symbol_trades:
-            sized_qty = float(t.get("sized_quantity", t.get("quantity", 0)))
-            side = t.get("side", "").upper()
-            if side == "BUY":
-                current_exposure += sized_qty
-            elif side == "SELL":
-                current_exposure -= sized_qty
-
         max_exposure = _config.RISK_MAX_SYMBOL_EXPOSURE
-        headroom = max_exposure - current_exposure
+        exposure = compute_symbol_exposure(trades, symbol, max_exposure)
+        current_exposure = exposure["current_exposure"]
+        headroom = exposure["headroom"]
 
         # Assess the proposed action
         proposed_delta = quantity if action.upper() == "BUY" else -quantity
@@ -123,9 +110,9 @@ async def get_risk_assessment(
             "symbol": symbol,
             "action": action,
             "quantity": quantity,
-            "current_exposure": round(current_exposure, 6),
+            "current_exposure": current_exposure,
             "max_exposure": max_exposure,
-            "headroom": round(headroom, 6),
+            "headroom": headroom,
             "post_trade_exposure": round(post_exposure, 6),
             "approved": approved,
             "assessment": "APPROVED" if approved else "REJECTED — exceeds max exposure",

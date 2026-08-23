@@ -34,6 +34,19 @@ tool_latency_seconds = Histogram(
     buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
 )
 
+resource_requests_total = Counter(
+    "marketmcp_resource_requests_total",
+    "Resource read requests",
+    ["resource"],
+)
+
+resource_latency_seconds = Histogram(
+    "marketmcp_resource_latency_seconds",
+    "Resource read latency",
+    ["resource"],
+    buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
+)
+
 
 def start_metrics_server(port: int = METRICS_PORT):
     start_http_server(port)

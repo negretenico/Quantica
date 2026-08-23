@@ -207,8 +207,7 @@ jobs:
       - name: Install and test
         run: |
           pip install -e shared/
-          pip install -e marketmcp/
-          pip install pytest
+          pip install -e "marketmcp/[test]"
           cd marketmcp && python -m pytest tests/ -v
 
   test-notify:

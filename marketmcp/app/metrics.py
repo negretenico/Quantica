@@ -54,5 +54,24 @@ prompt_requests_total = Counter(
 )
 
 
+stream_events_received_total = Counter(
+    "marketmcp_stream_events_received_total",
+    "Events received from RabbitMQ",
+    ["source"],
+)
+
+stream_events_deduplicated_total = Counter(
+    "marketmcp_stream_events_deduplicated_total",
+    "Duplicate events dropped",
+    ["source"],
+)
+
+stream_events_rate_limited_total = Counter(
+    "marketmcp_stream_events_rate_limited_total",
+    "Events dropped by rate limiter",
+    ["source"],
+)
+
+
 def start_metrics_server(port: int = METRICS_PORT):
     start_http_server(port)

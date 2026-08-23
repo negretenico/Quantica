@@ -18,6 +18,7 @@ from app.metrics import (
     resource_latency_seconds,
     resource_requests_total,
 )
+from app.stream import get_stream_instance
 from mcp_server.client import MarketServerClient
 from mcp_server.server import mcp
 from mcp_server.utils import compute_symbol_exposure
@@ -80,6 +81,12 @@ async def trades_latest() -> str:
     resource_requests_total.labels(resource=resource_name).inc()
     start = time.perf_counter()
     try:
+        # Prefer real-time stream cache when available
+        stream = get_stream_instance()
+        if stream and stream.has_data():
+            result = json.dumps(stream.get_all_latest(), default=str)
+            return result
+
         cached = _cache_get("quantica://trades/latest")
         if cached is not None:
             return cached
@@ -109,6 +116,14 @@ async def trade_history(symbol: str) -> str:
     resource_requests_total.labels(resource=resource_name).inc()
     start = time.perf_counter()
     try:
+        # Prefer real-time stream cache when available
+        stream = get_stream_instance()
+        if stream and stream.has_data():
+            events = stream.get_latest(symbol)
+            if events:
+                result = json.dumps(events, default=str)
+                return result
+
         cache_key = f"quantica://trades/{symbol}/history"
         cached = _cache_get(cache_key)
         if cached is not None:

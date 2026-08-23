@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      extra_pip_packages:
+        description: 'Additional pip packages to install for testing'
+        required: false
+        type: string
+        default: ''
       create_release:
         required: false
         type: boolean
@@ -50,7 +55,7 @@ jobs:
         run: |
           python -m pip install -U pip
           pip install .
-          pip install build pytest
+          pip install build pytest ${{ inputs.extra_pip_packages }}
 
       - name: Run tests
         if: ${{ !inputs.skip_tests }}

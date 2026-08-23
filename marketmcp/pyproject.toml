@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marketmcp"
-version = "4.21.6.dev0"
+version = "4.21.7.dev0"
 description = "MCP server — LLM tool interface to Quantica pipeline data"
 authors = [{name = "Nicholas Negrete", email = "negretenico0@gmail.com"}]
 dependencies = [
@@ -17,5 +17,15 @@ dependencies = [
 [tool.hatch.build.targets.wheel]
 packages = ["."]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
+asyncio_mode = "auto"
+markers = [
+    "integration: marks tests requiring a running marketserver instance",
+]

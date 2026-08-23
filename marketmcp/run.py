@@ -1,18 +1,16 @@
 import logging
 import threading
 
-from mcp.server import MCPServer
-
 from app.config import Config
 from app.metrics import start_metrics_server
+from mcp_server.server import mcp
+import mcp_server.tools  # noqa: F401 — registers tool decorators
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-mcp = MCPServer("marketmcp")
 
 
 def main():

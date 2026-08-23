@@ -18,7 +18,20 @@ mcp_request_seconds = Histogram(
 mcp_errors_total = Counter(
     "marketmcp_errors_total",
     "MCP request errors",
-    ["type"],
+    ["tool"],
+)
+
+tool_requests_total = Counter(
+    "marketmcp_tool_requests_total",
+    "Tool invocations",
+    ["tool"],
+)
+
+tool_latency_seconds = Histogram(
+    "marketmcp_tool_latency_seconds",
+    "Tool execution latency",
+    ["tool"],
+    buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
 )
 
 

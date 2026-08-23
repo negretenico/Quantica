@@ -1,6 +1,6 @@
 from mcp.server import MCPServer
 
-from run import mcp
+from mcp_server.server import mcp
 
 
 class TestMcpServer:

@@ -80,6 +80,42 @@ class TestHealthIntegration:
         assert "status" in result
 
 
+class TestMarketBriefingPromptIntegration:
+    @pytest.mark.asyncio
+    async def test_market_briefing_returns_messages(self):
+        from mcp_server.prompts import market_briefing
+        from mcp.server.mcpserver.prompts.base import UserMessage
+
+        result = await market_briefing(hours_back=1)
+        assert isinstance(result, list)
+        assert len(result) == 4
+        assert all(isinstance(m, UserMessage) for m in result)
+
+
+class TestRiskReportPromptIntegration:
+    @pytest.mark.asyncio
+    async def test_risk_report_returns_messages(self):
+        from mcp_server.prompts import risk_report
+        from mcp.server.mcpserver.prompts.base import UserMessage
+
+        result = await risk_report()
+        assert isinstance(result, list)
+        assert len(result) == 3
+        assert all(isinstance(m, UserMessage) for m in result)
+
+
+class TestAnomalyInvestigationPromptIntegration:
+    @pytest.mark.asyncio
+    async def test_anomaly_investigation_returns_messages(self):
+        from mcp_server.prompts import anomaly_investigation
+        from mcp.server.mcpserver.prompts.base import UserMessage
+
+        result = await anomaly_investigation(symbol="BTCUSDT")
+        assert isinstance(result, list)
+        assert len(result) == 3
+        assert all(isinstance(m, UserMessage) for m in result)
+
+
 # ---------------------------------------------------------------------------
 # SSE / Streaming integration tests
 # ---------------------------------------------------------------------------

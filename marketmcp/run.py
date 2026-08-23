@@ -7,6 +7,7 @@ from app.stream import SignalStream, set_stream_instance
 from mcp_server.server import mcp
 import mcp_server.tools  # noqa: F401 — registers tool decorators
 import mcp_server.resources  # noqa: F401 — registers resource decorators
+import mcp_server.prompts  # noqa: F401 — registers prompt decorators
 
 logging.basicConfig(
     level=logging.INFO,

@@ -47,6 +47,12 @@ resource_latency_seconds = Histogram(
     buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
 )
 
+prompt_requests_total = Counter(
+    "marketmcp_prompt_requests_total",
+    "Prompt invocations",
+    ["prompt"],
+)
+
 
 stream_events_received_total = Counter(
     "marketmcp_stream_events_received_total",

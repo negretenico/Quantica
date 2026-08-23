@@ -48,6 +48,24 @@ class MarketServerClient:
             current += timedelta(days=1)
         return results
 
+    async def get_blobs_date_range(self, start: date, end: date) -> list[dict]:
+        """Fetch blobs across a date range. Max 30-day guard."""
+        days = (end - start).days + 1
+        if days > self._max_query_days:
+            raise ValueError(
+                f"Date range {days} days exceeds maximum of {self._max_query_days}"
+            )
+        if days < 1:
+            return []
+
+        results: list[dict] = []
+        current = start
+        while current <= end:
+            blobs = await self.get_blobs_for_date(current)
+            results.extend(blobs)
+            current += timedelta(days=1)
+        return results
+
     async def health(self) -> bool:
         """Check if marketserver is reachable."""
         try:
@@ -55,6 +73,19 @@ class MarketServerClient:
             return resp.status_code == 200
         except httpx.HTTPError:
             return False
+
+    async def get_health_details(self) -> dict:
+        """Get health details from marketserver. Returns dict with status info."""
+        try:
+            resp = await self._client.get("/health")
+            if resp.status_code == 200:
+                try:
+                    return resp.json()
+                except Exception:
+                    return {"status": "healthy", "status_code": resp.status_code}
+            return {"status": "unhealthy", "status_code": resp.status_code}
+        except httpx.HTTPError as e:
+            return {"status": "unreachable", "error": str(e)}
 
     async def _fetch_jsonl(self, path: str) -> list[dict]:
         """Fetch a JSONL endpoint and parse each line as JSON."""

@@ -5,6 +5,7 @@ from app.config import Config
 from app.metrics import start_metrics_server
 from mcp_server.server import mcp
 import mcp_server.tools  # noqa: F401 — registers tool decorators
+import mcp_server.resources  # noqa: F401 — registers resource decorators
 
 logging.basicConfig(
     level=logging.INFO,

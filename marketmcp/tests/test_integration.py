@@ -60,3 +60,21 @@ class TestGetDashboardSummaryIntegration:
         assert "signals_processed" in result
         assert "trades_executed" in result
         assert "symbols_active" in result
+
+
+class TestTradesLatestIntegration:
+    @pytest.mark.asyncio
+    async def test_trades_latest_returns_json(self):
+        from mcp_server.resources import trades_latest
+
+        result = json.loads(await trades_latest())
+        assert isinstance(result, list)
+
+
+class TestHealthIntegration:
+    @pytest.mark.asyncio
+    async def test_health_returns_status(self):
+        from mcp_server.resources import health
+
+        result = json.loads(await health())
+        assert "status" in result

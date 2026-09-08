@@ -18,7 +18,7 @@ from app.metrics import (
 from model.mini_batch import mini_batch, InvalidFeaturesError
 from analysis.outbound import send_msg
 from analysis.alerter import PipelineAlerter
-from rabbitmq.publisher import RabbitPublisher
+from shared.rabbitmq.publisher import RabbitPublisher
 from shared.dedup import DedupFilter
 
 logging.basicConfig(

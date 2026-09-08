@@ -22,8 +22,22 @@ services:
   marketlistener:
     environment:
       BINANCE_SYMBOLS: btcusdt@trade
+    healthcheck:
+      interval: 5s
+      start_period: 30s
+      retries: 5
+
+  markettransformer:
+    healthcheck:
+      interval: 5s
+      start_period: 30s
+      retries: 5
 
   marketanalysis:
+    healthcheck:
+      interval: 5s
+      start_period: 10s
+      retries: 3
     environment:
       WARMUP_SAMPLES: "10"
       RETRAIN_BUFFER_SIZE: "20"
@@ -73,6 +87,12 @@ services:
     volumes:
       - test-bard-decisions:/data/bard
       - test-trade-decisions:/data/trade
+
+  marketui:
+    healthcheck:
+      interval: 5s
+      start_period: 10s
+      retries: 3
 
   prometheus:
     profiles:

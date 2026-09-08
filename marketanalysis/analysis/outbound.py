@@ -1,6 +1,6 @@
 import logging
 from app.config import Config
-from rabbitmq.publisher import RabbitPublisher
+from shared.rabbitmq.publisher import RabbitPublisher
 
 logger = logging.getLogger(__name__)
 

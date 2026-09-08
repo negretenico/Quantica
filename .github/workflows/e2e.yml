@@ -41,16 +41,19 @@ jobs:
       - name: Wait for services healthy
         run: |
           echo "Waiting for containers to become healthy..."
-          timeout 180 bash -c '
+          timeout 240 bash -c '
             until docker compose -f docker-compose.yaml -f docker-compose.test.yaml ps --format json \
               | python3 -c "
           import sys, json
           lines = sys.stdin.read().strip().split(\"\n\")
           services = [json.loads(l) for l in lines if l.strip()]
-          unhealthy = [s[\"Service\"] for s in services if \"health\" in s.get(\"Health\", \"\").lower() or s.get(\"State\") != \"running\"]
-          healthy_count = sum(1 for s in services if s.get(\"Health\", \"\") == \"healthy\" or (\"Health\" not in s and s.get(\"State\") == \"running\"))
-          print(f\"{healthy_count}/{len(services)} services ready\")
-          sys.exit(0 if not unhealthy or healthy_count >= len(services) - 2 else 1)
+          not_ready = [s[\"Service\"] for s in services if not (s.get(\"Health\", \"\") == \"healthy\" or (\"Health\" not in s and s.get(\"State\") == \"running\"))]
+          healthy_count = len(services) - len(not_ready)
+          if not_ready:
+              print(f\"{healthy_count}/{len(services)} services ready (waiting: {', '.join(not_ready)})\")
+          else:
+              print(f\"{healthy_count}/{len(services)} services ready\")
+          sys.exit(0 if healthy_count >= len(services) - 1 else 1)
           "; do
               sleep 5
             done

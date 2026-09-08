@@ -5,7 +5,7 @@ import time
 
 from app.config import Config
 from app.metrics import alerts_published_total, alerts_throttled_total
-from rabbitmq.publisher import RabbitPublisher
+from shared.rabbitmq.publisher import RabbitPublisher
 
 logger = logging.getLogger(__name__)
 

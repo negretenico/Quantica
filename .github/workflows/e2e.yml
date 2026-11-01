@@ -23,17 +23,19 @@ jobs:
 
       - name: Create .env for docker compose
         run: |
-          cat <<'EOF' > .env
+          cat > .env <<'EOF'
           RABBITMQ_USER=quantica
           RABBITMQ_PASS=quantica
           KAFKA_CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qg
           BINANCE_SYMBOLS=btcusdt@trade
-          GITHUB_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}
           OPEN_AI_TOKEN=unused
           GH_TOKEN=unused
           GITHUB_REPO=negretenico/Quantica
           DISCORD_WEBHOOK_URL=
           EOF
+          echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> .env
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Start e2e stack
         run: docker compose -f docker-compose.yaml -f docker-compose.test.yaml up -d --build --remove-orphans

@@ -44,6 +44,7 @@ services:
       DEDUP_SET_SIZE: "1000"
 
   marketbard:
+    user: root
     environment:
       WINDOW_MINUTES: "1"
       MAX_SUMMARY_BUFFER: "5"
@@ -58,6 +59,7 @@ services:
       - ./decisions/bard:/app/decisions/bard
 
   markettrade:
+    user: root
     environment:
       ANOMALY_SCORE_THRESHOLD: "0.3"
       MAX_TRADE_QUANTITY: "100.0"

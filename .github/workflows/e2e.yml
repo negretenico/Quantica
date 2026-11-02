@@ -60,7 +60,7 @@ jobs:
 
       - name: Run e2e tests
         timeout-minutes: 5
-        run: cd markete2e && python -m pytest tests/ -v -m e2e --timeout=300
+        run: python -m pytest markete2e/tests/ -v -m e2e --timeout=300
 
       - name: Dump logs on failure
         if: failure()

@@ -37,6 +37,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create blob directories for bind mounts
+        run: mkdir -p decisions/bard decisions/trade
+
       - name: Start e2e stack
         run: docker compose -f docker-compose.yaml -f docker-compose.test.yaml up -d --build --remove-orphans
 

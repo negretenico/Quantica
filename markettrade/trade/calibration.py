@@ -18,7 +18,9 @@ def _bucket_label(bucket: tuple[float, float]) -> str:
     return f"[{low}, {high}{close}"
 
 
-def _bucket_for(anomaly_score: float) -> tuple[float, float] | None:
+def _bucket_for(anomaly_score: float | None) -> tuple[float, float] | None:
+    if anomaly_score is None:
+        return None
     for low, high in BUCKETS:
         if high == 1.0:
             if low <= anomaly_score <= high:

@@ -56,7 +56,9 @@ def test_publish_and_consume():
     while time.monotonic() < end:
         batch = consumer.poll(timeout_ms=2000)
         for tp, records in batch.items():
-            consumed.extend(records)
+            for r in records:
+                if r.value.get("s") == "ETHUSDT":
+                    consumed.append(r)
         if consumed:
             break
 

@@ -21,7 +21,8 @@ RUN pip install --no-cache-dir .
 
 COPY . .
 
-RUN useradd --create-home --shell /bin/bash app && \
+RUN mkdir -p /app/decisions/outcomes && \
+    useradd --create-home --shell /bin/bash app && \
     chown -R app:app /app
 USER app
 

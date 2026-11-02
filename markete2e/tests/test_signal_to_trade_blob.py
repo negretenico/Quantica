@@ -1,7 +1,7 @@
-"""E2E test: analytics exchange -> markettrade -> trade decision blob.
+"""E2E test: signal exchange -> markettrade -> trade decision blob.
 
-Publishes an ML-enriched SignalEvent to the ``analytics`` topic exchange
-with a unique symbol.  markettrade consumes it from the ``analytics.trade``
+Publishes an enriched SignalEvent to the ``signal`` fanout exchange
+with a unique symbol.  markettrade consumes it from the ``signal.trade``
 queue, runs decision + risk evaluation, and writes an approved decision
 to ``decisions/trade/decisions_YYYY-MM-DD.jsonl``.
 
@@ -12,7 +12,8 @@ import uuid
 
 import pytest
 
-from e2e.trade_helpers import poll_trade_blob, publish_analytics_event
+from e2e.bard_helpers import publish_signal_event
+from e2e.trade_helpers import poll_trade_blob
 
 
 @pytest.mark.e2e
@@ -21,29 +22,29 @@ def test_enriched_signal_produces_trade_blob(
     rabbitmq_url,
     trade_blob_dir,
 ):
-    """An enriched signal published to the analytics exchange should produce a trade decision blob."""
+    """An enriched signal published to the signal exchange should produce a trade decision blob."""
 
     symbol = f"E2E{uuid.uuid4().hex[:8].upper()}"
 
     # Build a payload that will pass validation, decision (BUY), and risk checks.
-    # - anomaly_score > 0.7 (ANOMALY_SCORE_THRESHOLD) → not HOLD
+    # - anomaly_score > ANOMALY_SCORE_THRESHOLD (0.3) → not HOLD
     # - type LARGE_TRADE → BUY action
-    # - quantity 500 < MAX_TRADE_QUANTITY (1000) → risk approved
+    # - quantity 50 < MAX_TRADE_QUANTITY (100) → risk approved
     payload = {
         "symbol": symbol,
         "type": "LARGE_TRADE",
         "eventTime": int(__import__("time").time() * 1000),
         "reason": "E2E test large trade signal",
         "price": 50000.00,
-        "quantity": 500.0,
+        "quantity": 50.0,
         "side": "BUY",
         "cluster_id": 2,
         "anomaly_score": 0.9,
         "metadata": {},
     }
 
-    # Publish to the analytics topic exchange.
-    publish_analytics_event(rabbitmq_url, payload)
+    # Publish to the signal fanout exchange (where markettrade consumes from).
+    publish_signal_event(rabbitmq_url, payload)
 
     # Poll the host-mapped blob directory for the decision record.
     record = poll_trade_blob(trade_blob_dir, symbol, timeout_seconds=30)

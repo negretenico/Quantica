@@ -44,20 +44,22 @@ services:
       DEDUP_SET_SIZE: "1000"
 
   marketbard:
+    user: root
     environment:
       WINDOW_MINUTES: "1"
       MAX_SUMMARY_BUFFER: "5"
       MAX_EVENTS_PER_WINDOW: "50"
       MODEL_BACKEND: "fake"
-      SYNTHESIS_DELAY_SECONDS: "90"
+      SYNTHESIS_DELAY_SECONDS: "30"
     healthcheck:
       interval: 5s
       start_period: 10s
       retries: 2
     volumes:
-      - test-bard-decisions:/app/decisions/bard
+      - ./decisions/bard:/app/decisions/bard
 
   markettrade:
+    user: root
     environment:
       ANOMALY_SCORE_THRESHOLD: "0.3"
       MAX_TRADE_QUANTITY: "100.0"
@@ -68,7 +70,7 @@ services:
       start_period: 10s
       retries: 2
     volumes:
-      - test-trade-decisions:/app/decisions
+      - ./decisions/trade:/app/decisions
 
   marketnotify:
     environment:
@@ -85,8 +87,8 @@ services:
       start_period: 10s
       retries: 2
     volumes:
-      - test-bard-decisions:/data/bard
-      - test-trade-decisions:/data/trade
+      - ./decisions/bard:/data/bard
+      - ./decisions/trade:/data/trade
 
   marketui:
     healthcheck:
@@ -102,6 +104,3 @@ services:
     profiles:
       - monitoring
 
-volumes:
-  test-bard-decisions:
-  test-trade-decisions:

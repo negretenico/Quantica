@@ -7,7 +7,7 @@ writes the narrative to ``decisions/bard/decisions_YYYY-MM-DD.jsonl``.
 
 The test polls the host-mapped blob directory until the record appears.
 
-Requires ``MODEL_BACKEND=fake`` and ``SYNTHESIS_DELAY_SECONDS=90`` in
+Requires ``MODEL_BACKEND=fake`` and ``SYNTHESIS_DELAY_SECONDS=30`` in
 the marketbard container (set via docker-compose.test.yaml).
 """
 

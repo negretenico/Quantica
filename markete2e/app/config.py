@@ -10,3 +10,4 @@ class Config:
     RABBITMQ_URL: str = os.environ.get("RABBITMQ_URL", "amqp://quantica:quantica@localhost:5672/")
     TRADE_BLOB_DIR: str = os.environ.get("TRADE_BLOB_DIR", "./decisions/trade")
     BARD_BLOB_DIR: str = os.environ.get("BARD_BLOB_DIR", "./decisions/bard")
+    PORTFOLIO_STATE_PATH: str = os.environ.get("PORTFOLIO_STATE_PATH", "./decisions/portfolio_state.json")

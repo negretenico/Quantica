@@ -24,7 +24,8 @@ from trade.calibration import CalibrationEngine, BUCKETS, _bucket_label, _bucket
 from shared.monitor import metric_monitor
 from trade.outcome_tracker import OutcomeTracker
 from trade.outcome_writer import OutcomeWriter
-from trade.price_lookback import create_lookback
+from trade.portfolio import Portfolio, PositionTimeoutScheduler
+from trade.price_lookback import BinancePriceSource, create_lookback, make_price_fn
 from trade.rate_limiter import TradeRateLimiter
 from trade.validation import ValidationPipeline, validate_schema, validate_price_sanity
 from trade.pipeline.chain import Pipeline
@@ -35,6 +36,7 @@ from trade.pipeline.steps.decide import DecideStep
 from trade.pipeline.steps.risk_evaluate import RiskEvaluateStep
 from trade.pipeline.steps.near_limit import NearLimitStep
 from trade.pipeline.steps.risk_gate import RiskGateStep
+from trade.pipeline.steps.portfolio_update import PortfolioUpdateStep
 from trade.pipeline.steps.record_outcome import RecordOutcomeStep
 from trade.pipeline.steps.persist_and_notify import PersistAndNotifyStep
 
@@ -120,6 +122,24 @@ def main():
         return metrics
 
     outcome_tracker.add_on_outcome(record_and_monitor)
+    portfolio = Portfolio.load(config.portfolio.STATE_PATH, config.portfolio.STARTING_CASH_BALANCE)
+    price_source = BinancePriceSource(config.lookback.BINANCE_BASE_URL, config.lookback.BINANCE_TIMEOUT)
+    price_fn = make_price_fn(price_source, portfolio)
+
+    def on_timeout_close(symbol, realized):
+        from app.metrics import portfolio_value, positions_open, realized_pnl_total
+        portfolio_value.set(portfolio.total_value(price_fn))
+        positions_open.set(len(portfolio.positions))
+        realized_pnl_total.set(portfolio.realized_pnl)
+        portfolio.save(config.portfolio.STATE_PATH)
+
+    timeout_scheduler = PositionTimeoutScheduler(
+        portfolio=portfolio,
+        timeout_seconds=config.portfolio.POSITION_TIMEOUT_SECONDS,
+        price_source=lambda sym: price_source.get_current_price(sym),
+        on_close=on_timeout_close,
+    )
+
     dedup = DedupFilter()
     lookback, price_cache = create_lookback(config, outcome_tracker=outcome_tracker)
 
@@ -145,6 +165,11 @@ def main():
             config.rate_limiter.WINDOW_SECONDS,
         )
 
+    logger.info(
+        "Portfolio loaded — cash=%.2f positions=%d realized_pnl=%.4f",
+        portfolio.cash, len(portfolio.positions), portfolio.realized_pnl,
+    )
+
     start_metrics_server()
     logger.info("Prometheus metrics server started on :8000")
 
@@ -152,9 +177,10 @@ def main():
         DedupStep(dedup),
         ValidateStep(validation_pipeline, price_cache),
         DecideStep(config, rate_limiter),
-        RiskEvaluateStep(risk_engine, config),
+        RiskEvaluateStep(risk_engine, config, portfolio, price_fn),
         NearLimitStep(risk_observer_pipeline, near_limit_observer, risk_alert_store, config, risk_engine),
         RiskGateStep(),
+        PortfolioUpdateStep(portfolio, timeout_scheduler, price_fn, config.portfolio.STATE_PATH),
         RecordOutcomeStep(decision_log, lookback),
         PersistAndNotifyStep(store, notify_publisher),
     ])

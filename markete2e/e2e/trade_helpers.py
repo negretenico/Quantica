@@ -72,6 +72,32 @@ def poll_trade_blob(
     )
 
 
+def poll_portfolio_state(
+    state_path: str,
+    symbol: str,
+    timeout_seconds: int = 30,
+    poll_interval: float = 1.0,
+) -> dict:
+    """Poll the portfolio state JSON file until it contains a position for *symbol*.
+
+    Returns the full portfolio state dict or raises ``TimeoutError``.
+    """
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if os.path.isfile(state_path):
+            try:
+                with open(state_path) as f:
+                    data = json.load(f)
+                if symbol in data.get("positions", {}):
+                    return data
+            except (json.JSONDecodeError, OSError):
+                pass
+        time.sleep(poll_interval)
+    raise TimeoutError(
+        f"No portfolio position for '{symbol}' in {state_path} within {timeout_seconds}s"
+    )
+
+
 def wait_for_container(
     container_name: str = "quantica-markettrade",
     timeout_seconds: int = 30,

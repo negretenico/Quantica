@@ -62,6 +62,13 @@ class RateLimiterConfig:
 
 
 @dataclass
+class PortfolioConfig:
+    STARTING_CASH_BALANCE: float = float(os.environ.get('STARTING_CASH_BALANCE', '100.0'))
+    POSITION_TIMEOUT_SECONDS: float = float(os.environ.get('POSITION_TIMEOUT_SECONDS', '900.0'))
+    STATE_PATH: str = os.environ.get('PORTFOLIO_STATE_PATH', './decisions/portfolio_state.json')
+
+
+@dataclass
 class CalibrationConfig:
     WINDOW_SIZE: int = int(os.environ.get('CALIBRATION_WINDOW_SIZE', '200'))
     DRIFT_THRESHOLD: float = float(os.environ.get('CALIBRATION_DRIFT_THRESHOLD', '0.40'))
@@ -77,6 +84,7 @@ class Config:
     lookback: LookbackConfig = None
     price_sanity: PriceSanityConfig = None
     rate_limiter: RateLimiterConfig = None
+    portfolio: PortfolioConfig = None
     calibration: CalibrationConfig = None
     ANOMALY_SCORE_THRESHOLD: float = float(os.environ.get('ANOMALY_SCORE_THRESHOLD', '0.7'))
     DECISION_LOG_MAX_SIZE: int = int(os.environ.get('DECISION_LOG_MAX_SIZE', '1000'))
@@ -98,6 +106,8 @@ class Config:
             self.price_sanity = PriceSanityConfig()
         if self.rate_limiter is None:
             self.rate_limiter = RateLimiterConfig()
+        if self.portfolio is None:
+            self.portfolio = PortfolioConfig()
         if self.calibration is None:
             self.calibration = CalibrationConfig()
 

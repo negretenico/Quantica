@@ -9,6 +9,7 @@ from marketrisk.risk.models import ProposedAction
 from shared.blob import get_store
 from trade.decision import decide
 from trade.models import SignalEvent
+from trade.portfolio import Portfolio
 from trade.validation import ValidationPipeline, validate_price_sanity, validate_schema
 
 
@@ -35,22 +36,29 @@ def _event(**overrides):
     return SignalEvent(**base)
 
 
-def _run_pipeline(event, config, risk_engine, store):
+def _run_pipeline(event, config, risk_engine, store, portfolio=None):
     """Mirrors the handle_message flow in run.py."""
     decision = decide(event, config)
 
     if decision["action"] == "HOLD":
         return None
 
+    portfolio_value = 0.0
+    portfolio_pnl = 0.0
+    if portfolio is not None:
+        price_fn = lambda sym: decision["entry_price"]
+        portfolio_value = portfolio.total_value(price_fn)
+        portfolio_pnl = portfolio.portfolio_pnl(price_fn)
+
     proposed = ProposedAction(
         symbol=decision["symbol"],
         action=decision["action"],
         entry_price=decision["entry_price"],
         raw_quantity=decision["raw_quantity"],
-        portfolio_value=0.0,
+        portfolio_value=portfolio_value,
     )
 
-    risk_decision = risk_engine.evaluate(proposed)
+    risk_decision = risk_engine.evaluate(proposed, portfolio_pnl=portfolio_pnl)
 
     if not risk_decision.approved:
         return {"rejected": True, "reason": risk_decision.rejection_reason}

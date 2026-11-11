@@ -62,6 +62,31 @@ class BinancePriceSource:
         return None
 
 
+    def get_current_price(self, symbol: str) -> float | None:
+        url = f"{self._base_url}/api/v3/ticker/price?symbol={symbol}"
+        try:
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+                data = json.loads(resp.read())
+            return float(data["price"])
+        except Exception as e:
+            logger.debug("Binance current price fetch failed for %s: %s", symbol, e)
+        return None
+
+
+def make_price_fn(price_source: BinancePriceSource, portfolio):
+    """Returns a callable (symbol) -> float that tries Binance, falls back to entry price."""
+    def _get_price(symbol: str) -> float:
+        price = price_source.get_current_price(symbol)
+        if price is not None:
+            return price
+        pos = portfolio.get_position(symbol)
+        if pos is not None:
+            return pos.avg_entry_price
+        return 0.0
+    return _get_price
+
+
 class InMemoryPriceCache:
     def __init__(self, maxlen_per_symbol: int = 500):
         self._data: dict[str, deque[tuple[float, float]]] = {}

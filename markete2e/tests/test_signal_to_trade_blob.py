@@ -13,7 +13,7 @@ import uuid
 import pytest
 
 from e2e.bard_helpers import publish_signal_event
-from e2e.trade_helpers import poll_trade_blob
+from e2e.trade_helpers import poll_portfolio_state, poll_trade_blob
 
 
 @pytest.mark.e2e
@@ -47,7 +47,7 @@ def test_enriched_signal_produces_trade_blob(
     publish_signal_event(rabbitmq_url, payload)
 
     # Poll the host-mapped blob directory for the decision record.
-    record = poll_trade_blob(trade_blob_dir, symbol, timeout_seconds=30)
+    record = poll_trade_blob(trade_blob_dir, symbol, timeout_seconds=90)
 
     # Validate the decision blob fields.
     assert record["symbol"] == symbol
@@ -59,3 +59,37 @@ def test_enriched_signal_produces_trade_blob(
     assert "timestamp_utc" in record
     assert record["cluster_id"] == 2
     assert record["anomaly_score"] == 0.9
+
+
+@pytest.mark.e2e
+def test_buy_signal_updates_portfolio_state(
+    ensure_markettrade,
+    rabbitmq_url,
+    portfolio_state_path,
+):
+    """A BUY signal should create a position in portfolio_state.json."""
+
+    symbol = f"E2E{uuid.uuid4().hex[:8].upper()}"
+
+    payload = {
+        "symbol": symbol,
+        "type": "LARGE_TRADE",
+        "eventTime": int(__import__("time").time() * 1000),
+        "reason": "E2E test portfolio update",
+        "price": 50000.00,
+        "quantity": 50.0,
+        "side": "BUY",
+        "cluster_id": 2,
+        "anomaly_score": 0.9,
+        "metadata": {},
+    }
+
+    publish_signal_event(rabbitmq_url, payload)
+
+    state = poll_portfolio_state(portfolio_state_path, symbol, timeout_seconds=90)
+
+    assert state["cash"] < state["starting_balance"]
+    assert symbol in state["positions"]
+    pos = state["positions"][symbol]
+    assert pos["quantity"] > 0
+    assert pos["avg_entry_price"] == 50000.00

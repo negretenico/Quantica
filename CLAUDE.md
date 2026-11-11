@@ -78,6 +78,20 @@ cd marketnotify     && py run.py
 
 **`SignalEvent`** (markettransformer) — `symbol, eventTime, type (SignalEventType), reason, price, quantity, side, metadata`
 
+### Portfolio State (`decisions/portfolio_state.json`)
+
+Shared contract between `markettrade` (writer) and `marketserver` (reader).
+
+| Field | Type | Description |
+|---|---|---|
+| `cash` | float | Available cash balance |
+| `starting_balance` | float | Initial cash (env `STARTING_CASH_BALANCE`, default `100.0`) |
+| `positions` | object | Map of symbol → `{quantity, avg_entry_price, opened_at}` |
+| `realized_pnl` | float | Cumulative realized profit/loss |
+| `updated_at` | string | ISO 8601 timestamp of last update |
+
+**Env vars**: `STARTING_CASH_BALANCE` (default `100.0`), `POSITION_TIMEOUT_SECONDS` (default `900`), `PORTFOLIO_STATE_PATH` (default `./decisions/portfolio_state.json`).
+
 ---
 
 ## Git Workflow

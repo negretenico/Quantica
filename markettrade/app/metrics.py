@@ -2,6 +2,27 @@ import time
 
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
+portfolio_value = Gauge(
+    "markettrade_portfolio_value",
+    "Current total portfolio value (cash + unrealized positions)",
+)
+
+positions_open = Gauge(
+    "markettrade_positions_open",
+    "Number of currently open positions",
+)
+
+trades_executed = Counter(
+    "markettrade_trades_executed",
+    "Total trades executed",
+    ["action"],
+)
+
+realized_pnl_total = Gauge(
+    "markettrade_realized_pnl",
+    "Cumulative realized P&L",
+)
+
 METRICS_PORT = 8000
 
 tick_to_trade_latency = Histogram(

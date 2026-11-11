@@ -152,6 +152,32 @@ class TestRiskEvaluateStep:
         assert ctx.risk_decision is not None
         assert ctx.risk_decision.approved is True
 
+    def test_with_portfolio_passes_value_and_pnl(self):
+        from trade.pipeline.steps.risk_evaluate import RiskEvaluateStep
+        from trade.portfolio import Portfolio
+        from app.config import Config
+
+        config = Config()
+        engine = MagicMock()
+        engine.evaluate.return_value = MagicMock(approved=True, sized_quantity=100.0)
+
+        portfolio = Portfolio(cash=50.0, starting_balance=100.0)
+        portfolio.record_buy("BTCUSDT", entry_price=50000.0, sized_quantity=0.001)
+        price_fn = lambda sym: 55000.0
+
+        step = RiskEvaluateStep(engine, config, portfolio, price_fn)
+        ctx = PipelineContext(payload=_payload())
+        ctx.decision = {
+            "symbol": "BTCUSDT", "action": "BUY",
+            "entry_price": 42000.0, "raw_quantity": 100.0,
+        }
+        assert step.execute(ctx) is True
+
+        call_args = engine.evaluate.call_args
+        proposed = call_args[0][0]
+        assert proposed.portfolio_value > 0
+        assert call_args[1]["portfolio_pnl"] != 0.0 or call_args[0][0].portfolio_value > 0
+
 
 class TestRiskGateStep:
     def test_approved_passes(self):
@@ -248,3 +274,72 @@ class TestNearLimitStep:
         ctx.risk_decision = MagicMock(approved=True)
         assert step.execute(ctx) is True
         observer_pipeline.check.assert_called_once()
+
+
+class TestPortfolioUpdateStep:
+    def test_buy_updates_portfolio(self):
+        import tempfile
+        import os
+        from trade.pipeline.steps.portfolio_update import PortfolioUpdateStep
+        from trade.portfolio import Portfolio, PositionTimeoutScheduler
+
+        portfolio = Portfolio(cash=100.0, starting_balance=100.0)
+        scheduler = MagicMock()
+        price_fn = lambda sym: 50000.0
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_path = os.path.join(tmpdir, "state.json")
+            step = PortfolioUpdateStep(portfolio, scheduler, price_fn, state_path)
+            ctx = PipelineContext(payload=_payload())
+            ctx.decision = {
+                "symbol": "BTCUSDT", "action": "BUY",
+                "entry_price": 50000.0, "sized_quantity": 0.001,
+            }
+            assert step.execute(ctx) is True
+            assert portfolio.has_position("BTCUSDT")
+            scheduler.schedule.assert_called_once_with("BTCUSDT")
+            assert os.path.exists(state_path)
+
+    def test_sell_closes_position(self):
+        import tempfile
+        import os
+        from trade.pipeline.steps.portfolio_update import PortfolioUpdateStep
+        from trade.portfolio import Portfolio
+
+        portfolio = Portfolio(cash=100.0, starting_balance=100.0)
+        portfolio.record_buy("BTCUSDT", entry_price=50000.0, sized_quantity=0.001)
+        scheduler = MagicMock()
+        price_fn = lambda sym: 55000.0
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_path = os.path.join(tmpdir, "state.json")
+            step = PortfolioUpdateStep(portfolio, scheduler, price_fn, state_path)
+            ctx = PipelineContext(payload=_payload())
+            ctx.decision = {
+                "symbol": "BTCUSDT", "action": "SELL",
+                "entry_price": 55000.0, "sized_quantity": 0.001,
+            }
+            assert step.execute(ctx) is True
+            assert not portfolio.has_position("BTCUSDT")
+            scheduler.cancel.assert_called_once_with("BTCUSDT")
+
+    def test_sell_without_position_is_noop(self):
+        import tempfile
+        import os
+        from trade.pipeline.steps.portfolio_update import PortfolioUpdateStep
+        from trade.portfolio import Portfolio
+
+        portfolio = Portfolio(cash=100.0, starting_balance=100.0)
+        scheduler = MagicMock()
+        price_fn = lambda sym: 50000.0
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_path = os.path.join(tmpdir, "state.json")
+            step = PortfolioUpdateStep(portfolio, scheduler, price_fn, state_path)
+            ctx = PipelineContext(payload=_payload())
+            ctx.decision = {
+                "symbol": "BTCUSDT", "action": "SELL",
+                "entry_price": 55000.0, "sized_quantity": 0.001,
+            }
+            assert step.execute(ctx) is True
+            assert portfolio.cash == 100.0

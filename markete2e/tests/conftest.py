@@ -60,6 +60,12 @@ def bard_blob_dir() -> str:
 
 
 @pytest.fixture(scope="session")
+def portfolio_state_path() -> str:
+    """Host-side path where markettrade writes portfolio state (volume mount)."""
+    return _config.PORTFOLIO_STATE_PATH
+
+
+@pytest.fixture(scope="session")
 def ensure_infra(ensure_kafka, ensure_rabbitmq, ensure_markettransformer):
     """Session-scoped: waits for Kafka, RabbitMQ, and markettransformer."""
     pass

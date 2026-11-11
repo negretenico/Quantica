@@ -66,6 +66,17 @@ def portfolio_state_path() -> str:
 
 
 @pytest.fixture(scope="session")
+def marketserver_url() -> str:
+    return _config.MARKETSERVER_BASE_URL
+
+
+@pytest.fixture(scope="session")
+def ensure_marketserver():
+    """Session-scoped: blocks until the marketserver container is running."""
+    wait_for_container("quantica-marketserver", timeout_seconds=60)
+
+
+@pytest.fixture(scope="session")
 def ensure_infra(ensure_kafka, ensure_rabbitmq, ensure_markettransformer):
     """Session-scoped: waits for Kafka, RabbitMQ, and markettransformer."""
     pass

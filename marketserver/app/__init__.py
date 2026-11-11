@@ -1,4 +1,7 @@
+import json
+import os
 import re
+import time
 
 from flask import Flask, jsonify, Response, request
 
@@ -65,5 +68,45 @@ def create_app(config=None):
     @app.route('/trades/<date>', methods=["GET"])
     def get_trade(date):
         return _get_blob(trade_store, date)
+
+    # --- Portfolio ---
+
+    portfolio_path = cfg.PORTFOLIO_STATE_PATH
+    poll_interval = cfg.PORTFOLIO_POLL_INTERVAL
+
+    def _read_portfolio():
+        try:
+            with open(portfolio_path, "r") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+
+    @app.route('/portfolio', methods=["GET"])
+    def get_portfolio():
+        data = _read_portfolio()
+        if data is None:
+            return jsonify(ErrorResponse(error="portfolio state not found").to_dict()), 404
+        return jsonify(data), 200
+
+    @app.route('/portfolio/stream', methods=["GET"])
+    def portfolio_stream():
+        def _generate():
+            last_mtime = 0.0
+            while True:
+                try:
+                    mtime = os.path.getmtime(portfolio_path)
+                except OSError:
+                    time.sleep(poll_interval)
+                    continue
+                if mtime > last_mtime:
+                    last_mtime = mtime
+                    data = _read_portfolio()
+                    if data is not None:
+                        yield f"data: {json.dumps(data)}\n\n"
+                time.sleep(poll_interval)
+
+        return Response(_generate(), mimetype="text/event-stream",
+                        headers={"Cache-Control": "no-cache",
+                                 "X-Accel-Buffering": "no"})
 
     return app

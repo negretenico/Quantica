@@ -13,6 +13,8 @@ class _TestConfig:
     BLOB_BACKEND = "disk"
     BLOB_STORE_PATH = ""
     TRADE_BLOB_STORE_PATH = ""
+    PORTFOLIO_STATE_PATH = ""
+    PORTFOLIO_POLL_INTERVAL = 0.1
     BLOB_SERVER_PORT = 5001
 
 
@@ -21,6 +23,7 @@ def client(tmp_path):
     cfg = _TestConfig()
     cfg.BLOB_STORE_PATH = str(tmp_path)
     cfg.TRADE_BLOB_STORE_PATH = str(tmp_path / "trades")
+    cfg.PORTFOLIO_STATE_PATH = str(tmp_path / "portfolio_state.json")
     os.makedirs(cfg.TRADE_BLOB_STORE_PATH, exist_ok=True)
     flask_app = create_app(config=cfg)
     flask_app.config["TESTING"] = True
@@ -192,3 +195,90 @@ class TestGetTrade:
     def test_trade_rejects_non_date(self, client):
         resp = client.get("/trades/baddate")
         assert resp.status_code == 400
+
+
+SAMPLE_PORTFOLIO = {
+    "cash": 85.50,
+    "starting_balance": 100.0,
+    "positions": {
+        "BTCUSDT": {"quantity": 0.0002, "avg_entry_price": 72500.0, "opened_at": "2026-11-10T12:00:00+00:00"}
+    },
+    "realized_pnl": 1.25,
+    "updated_at": "2026-11-10T14:30:00+00:00",
+}
+
+
+def _write_portfolio(tmp_path, data):
+    path = tmp_path / "portfolio_state.json"
+    path.write_text(json.dumps(data))
+
+
+class TestGetPortfolio:
+    def test_returns_portfolio_state(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["cash"] == 85.50
+        assert data["starting_balance"] == 100.0
+        assert "BTCUSDT" in data["positions"]
+        assert data["realized_pnl"] == 1.25
+
+    def test_404_when_no_state_file(self, client):
+        resp = client.get("/portfolio")
+        assert resp.status_code == 404
+        assert resp.get_json()["error"] == "portfolio state not found"
+
+    def test_cors_header_on_portfolio(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio")
+        assert resp.headers["Access-Control-Allow-Origin"] == "*"
+
+
+class TestPortfolioStream:
+    def test_stream_returns_event_stream(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio/stream")
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp.content_type
+
+    def test_stream_emits_initial_state(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio/stream")
+        chunk = next(resp.response).decode()
+        assert chunk.startswith("data: ")
+        payload = json.loads(chunk[len("data: "):].strip())
+        assert payload["cash"] == 85.50
+        assert "BTCUSDT" in payload["positions"]
+
+    def test_stream_cors_header(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio/stream")
+        assert resp.headers["Access-Control-Allow-Origin"] == "*"
+
+    def test_stream_no_cache_header(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio/stream")
+        assert resp.headers["Cache-Control"] == "no-cache"
+
+
+class TestPortfolioContract:
+    """Verify marketserver faithfully serves the schema produced by markettrade."""
+
+    REQUIRED_FIELDS = ["cash", "starting_balance", "positions", "realized_pnl", "updated_at"]
+
+    def test_all_required_fields_present(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio")
+        data = resp.get_json()
+        for field in self.REQUIRED_FIELDS:
+            assert field in data, f"missing required field: {field}"
+
+    def test_positions_structure(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio")
+        positions = resp.get_json()["positions"]
+        for symbol, pos in positions.items():
+            assert "quantity" in pos
+            assert "avg_entry_price" in pos
+            assert "opened_at" in pos

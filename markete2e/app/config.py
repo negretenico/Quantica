@@ -11,3 +11,4 @@ class Config:
     TRADE_BLOB_DIR: str = os.environ.get("TRADE_BLOB_DIR", "../decisions/trade")
     BARD_BLOB_DIR: str = os.environ.get("BARD_BLOB_DIR", "../decisions/bard")
     PORTFOLIO_STATE_PATH: str = os.environ.get("PORTFOLIO_STATE_PATH", "../decisions/trade/portfolio_state.json")
+    MARKETSERVER_BASE_URL: str = os.environ.get("MARKETSERVER_BASE_URL", "http://localhost:5001")

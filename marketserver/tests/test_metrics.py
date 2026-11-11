@@ -13,6 +13,8 @@ class _TestConfig:
     BLOB_BACKEND = "disk"
     BLOB_STORE_PATH = ""
     TRADE_BLOB_STORE_PATH = ""
+    PORTFOLIO_STATE_PATH = ""
+    PORTFOLIO_POLL_INTERVAL = 0.1
     BLOB_SERVER_PORT = 5001
 
 

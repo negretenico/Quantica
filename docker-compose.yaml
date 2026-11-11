@@ -269,6 +269,7 @@ services:
     environment:
       BLOB_STORE_PATH: /data/bard
       TRADE_BLOB_STORE_PATH: /data/trade
+      PORTFOLIO_STATE_PATH: /data/trade/portfolio_state.json
     volumes:
       - ./decisions/bard:/data/bard
       - ./decisions/trade:/data/trade

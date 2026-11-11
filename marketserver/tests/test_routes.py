@@ -235,31 +235,84 @@ class TestGetPortfolio:
         assert resp.headers["Access-Control-Allow-Origin"] == "*"
 
 
-class TestPortfolioStream:
-    def test_stream_returns_event_stream(self, client, tmp_path):
+def _collect_sse_frames(response, max_frames=2):
+    """Collect SSE frames from a streaming response generator.
+
+    Reads chunks from the generator incrementally, parsing complete
+    frames (delimited by blank lines) without exhausting the infinite stream.
+    """
+    frames = []
+    buf = ""
+    for chunk in response.response:
+        buf += chunk if isinstance(chunk, str) else chunk.decode()
+        while "\n\n" in buf:
+            block, buf = buf.split("\n\n", 1)
+            block = block.strip()
+            if not block:
+                continue
+            frame = {}
+            for line in block.split("\n"):
+                if line.startswith(": "):
+                    frame["comment"] = line[2:]
+                elif line.startswith("id: "):
+                    frame["id"] = line[4:]
+                elif line.startswith("event: "):
+                    frame["event"] = line[7:]
+                elif line.startswith("data: "):
+                    frame["data"] = json.loads(line[6:])
+                elif line.startswith("retry: "):
+                    frame["retry"] = int(line[7:])
+            frames.append(frame)
+            if len(frames) >= max_frames:
+                return frames
+    return frames
+
+
+class TestPortfolioSubscribe:
+    def test_returns_event_stream(self, client, tmp_path):
         _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
-        resp = client.get("/portfolio/stream")
+        resp = client.get("/portfolio/subscribe")
         assert resp.status_code == 200
         assert "text/event-stream" in resp.content_type
 
-    def test_stream_emits_initial_state(self, client, tmp_path):
+    def test_first_frame_is_retry_hint(self, client, tmp_path):
         _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
-        resp = client.get("/portfolio/stream")
-        chunk = next(resp.response).decode()
-        assert chunk.startswith("data: ")
-        payload = json.loads(chunk[len("data: "):].strip())
-        assert payload["cash"] == 85.50
-        assert "BTCUSDT" in payload["positions"]
+        resp = client.get("/portfolio/subscribe")
+        frames = _collect_sse_frames(resp)
+        assert frames[0].get("retry") is not None
 
-    def test_stream_cors_header(self, client, tmp_path):
+    def test_snapshot_event_on_connect(self, client, tmp_path):
         _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
-        resp = client.get("/portfolio/stream")
+        resp = client.get("/portfolio/subscribe")
+        frames = _collect_sse_frames(resp)
+        # First data frame (after retry) should be a snapshot.
+        data_frames = [f for f in frames if "event" in f]
+        assert len(data_frames) >= 1
+        assert data_frames[0]["event"] == "snapshot"
+        assert data_frames[0]["data"]["cash"] == 85.50
+        assert "BTCUSDT" in data_frames[0]["data"]["positions"]
+
+    def test_snapshot_has_event_id(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio/subscribe")
+        frames = _collect_sse_frames(resp)
+        data_frames = [f for f in frames if "id" in f]
+        assert len(data_frames) >= 1
+        assert len(data_frames[0]["id"]) == 12  # sha1 truncated to 12 hex chars
+
+    def test_cors_header(self, client, tmp_path):
+        _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
+        resp = client.get("/portfolio/subscribe")
         assert resp.headers["Access-Control-Allow-Origin"] == "*"
 
-    def test_stream_no_cache_header(self, client, tmp_path):
+    def test_no_cache_header(self, client, tmp_path):
         _write_portfolio(tmp_path, SAMPLE_PORTFOLIO)
-        resp = client.get("/portfolio/stream")
+        resp = client.get("/portfolio/subscribe")
         assert resp.headers["Cache-Control"] == "no-cache"
+
+    def test_old_stream_route_gone(self, client):
+        resp = client.get("/portfolio/stream")
+        assert resp.status_code == 404
 
 
 class TestPortfolioContract:

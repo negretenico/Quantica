@@ -4,7 +4,7 @@ Publishes a BUY signal to the ``signal`` fanout exchange so markettrade
 creates a position in ``portfolio_state.json``.  Then verifies:
 
 1. ``GET /portfolio`` on marketserver returns the updated state.
-2. ``GET /portfolio/stream`` emits an SSE event containing the position.
+2. ``GET /portfolio/subscribe`` emits a spec-compliant SSE snapshot event.
 """
 
 import uuid
@@ -12,7 +12,7 @@ import uuid
 import pytest
 
 from e2e.bard_helpers import publish_signal_event
-from e2e.server_helpers import consume_sse_events, poll_portfolio_via_server
+from e2e.server_helpers import poll_portfolio_via_server, subscribe_portfolio
 from e2e.trade_helpers import poll_portfolio_state
 
 
@@ -58,14 +58,14 @@ def test_portfolio_rest_endpoint(
 
 
 @pytest.mark.e2e
-def test_portfolio_sse_emits_state(
+def test_portfolio_subscribe_snapshot(
     ensure_markettrade,
     ensure_marketserver,
     rabbitmq_url,
     portfolio_state_path,
     marketserver_url,
 ):
-    """The SSE stream should emit an event containing the portfolio state."""
+    """The SSE subscribe endpoint should emit a snapshot event with full portfolio state."""
 
     symbol = f"E2E{uuid.uuid4().hex[:8].upper()}"
 
@@ -73,7 +73,7 @@ def test_portfolio_sse_emits_state(
         "symbol": symbol,
         "type": "LARGE_TRADE",
         "eventTime": int(__import__("time").time() * 1000),
-        "reason": "E2E test portfolio SSE stream",
+        "reason": "E2E test portfolio SSE subscribe",
         "price": 38000.00,
         "quantity": 30.0,
         "side": "BUY",
@@ -87,19 +87,22 @@ def test_portfolio_sse_emits_state(
     # Wait for markettrade to write portfolio_state.json with our symbol.
     poll_portfolio_state(portfolio_state_path, symbol, timeout_seconds=90)
 
-    # Connect to the SSE stream and collect the first event.
-    events = consume_sse_events(marketserver_url, count=1, timeout_seconds=30)
+    # Connect to the SSE subscribe endpoint and collect the first data event.
+    events = subscribe_portfolio(marketserver_url, count=1, timeout_seconds=30)
 
     assert len(events) >= 1
-    state = events[0]
-    assert "cash" in state
-    assert "positions" in state
-    assert "starting_balance" in state
-    assert "updated_at" in state
+    evt = events[0]
+    assert evt.event == "snapshot"
+    assert evt.id is not None and len(evt.id) == 12
+    assert evt.data is not None
+    assert "cash" in evt.data
+    assert "positions" in evt.data
+    assert "starting_balance" in evt.data
+    assert "updated_at" in evt.data
 
 
 @pytest.mark.e2e
-def test_portfolio_sse_content_type(
+def test_portfolio_subscribe_content_type(
     ensure_marketserver,
     marketserver_url,
 ):
@@ -107,7 +110,7 @@ def test_portfolio_sse_content_type(
     import requests
 
     resp = requests.get(
-        f"{marketserver_url}/portfolio/stream",
+        f"{marketserver_url}/portfolio/subscribe",
         stream=True,
         timeout=(5, 10),
     )

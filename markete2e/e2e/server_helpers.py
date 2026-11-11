@@ -2,6 +2,7 @@
 
 import json
 import time
+from dataclasses import dataclass
 
 import requests
 
@@ -40,21 +41,32 @@ def poll_portfolio_via_server(
     )
 
 
-def consume_sse_events(
+@dataclass
+class SSEEvent:
+    """A parsed Server-Sent Event."""
+    event: str | None = None
+    data: dict | None = None
+    id: str | None = None
+    retry: int | None = None
+
+
+def subscribe_portfolio(
     base_url: str,
     count: int = 1,
     timeout_seconds: int = 30,
-) -> list[dict]:
-    """Connect to the ``GET /portfolio/stream`` SSE endpoint and collect *count* events.
+) -> list[SSEEvent]:
+    """Connect to ``GET /portfolio/subscribe`` and collect *count* data events.
 
-    Returns a list of parsed JSON payloads or raises ``TimeoutError``
-    if fewer than *count* events arrive within the timeout.
+    Skips retry-only and keepalive frames.  Returns parsed ``SSEEvent``
+    objects or raises ``TimeoutError``.
     """
-    events = []
+    events: list[SSEEvent] = []
     deadline = time.monotonic() + timeout_seconds
 
+    current = SSEEvent()
+
     with requests.get(
-        f"{base_url}/portfolio/stream",
+        f"{base_url}/portfolio/subscribe",
         stream=True,
         timeout=(5, timeout_seconds),
     ) as resp:
@@ -62,11 +74,25 @@ def consume_sse_events(
         for line in resp.iter_lines(decode_unicode=True):
             if time.monotonic() > deadline:
                 break
-            if line and line.startswith("data: "):
-                payload = json.loads(line[len("data: "):])
-                events.append(payload)
-                if len(events) >= count:
-                    break
+
+            # Empty line = end of frame
+            if line == "":
+                if current.data is not None:
+                    events.append(current)
+                    if len(events) >= count:
+                        break
+                current = SSEEvent()
+                continue
+
+            if line.startswith("id: "):
+                current.id = line[4:]
+            elif line.startswith("event: "):
+                current.event = line[7:]
+            elif line.startswith("data: "):
+                current.data = json.loads(line[6:])
+            elif line.startswith("retry: "):
+                current.retry = int(line[7:])
+            # Lines starting with ':' are comments (keepalives) — skip.
 
     if len(events) < count:
         raise TimeoutError(

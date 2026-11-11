@@ -107,8 +107,11 @@ test-e2e:
 	$(MAKE) e2e-up
 	cd markete2e && py -m pip install -e . --quiet && py -m pytest tests/ -v -m e2e --timeout=300; \
 	status=$$?; \
+	cd ../marketui && PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test; \
+	pw_status=$$?; \
 	$(MAKE) e2e-down; \
-	exit $$status
+	if [ $$status -ne 0 ]; then exit $$status; fi; \
+	exit $$pw_status
 
 test-backtest:
 	py -m pytest scripts/backtest/tests/ -v

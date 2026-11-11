@@ -62,6 +62,23 @@ jobs:
         timeout-minutes: 5
         run: python -m pytest markete2e/tests/ -v -m e2e --timeout=300
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright
+        working-directory: marketui
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright e2e tests
+        working-directory: marketui
+        timeout-minutes: 3
+        run: npx playwright test
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3001
+
       - name: Dump logs on failure
         if: failure()
         run: docker compose -f docker-compose.yaml -f docker-compose.test.yaml logs --tail=200

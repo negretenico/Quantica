@@ -30,6 +30,22 @@ export interface TradeRecord {
   sized_quantity: number;
 }
 
+/** Position within the paper trading portfolio */
+export interface PortfolioPosition {
+  quantity: number;
+  avg_entry_price: number;
+  opened_at: string;
+}
+
+/** Portfolio state written by markettrade */
+export interface PortfolioState {
+  cash: number;
+  starting_balance: number;
+  positions: Record<string, PortfolioPosition>;
+  realized_pnl: number;
+  updated_at: string;
+}
+
 /** Error response from the server */
 export interface ErrorResponse {
   error: string;

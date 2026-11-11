@@ -1,5 +1,5 @@
 import { DATA_BASE_URL } from "../app/config";
-import type { HealthResponse, IndexResponse, NarrativeRecord, TradeRecord } from "./types";
+import type { HealthResponse, IndexResponse, NarrativeRecord, PortfolioState, TradeRecord } from "./types";
 
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(`${DATA_BASE_URL}${path}`);
@@ -45,6 +45,11 @@ export async function fetchTradeIndex(): Promise<IndexResponse> {
 /** GET /trades/:date — fetch trade records for a date */
 export async function fetchTradeBlob(date: string): Promise<TradeRecord[]> {
   return fetchNdjson<TradeRecord>(`/trades/${date}`);
+}
+
+/** GET /portfolio — fetch current portfolio state */
+export async function fetchPortfolio(): Promise<PortfolioState> {
+  return fetchJson<PortfolioState>("/portfolio");
 }
 
 /** Extract date string (YYYY-MM-DD) from a blob filename like decisions_2026-07-28.jsonl */

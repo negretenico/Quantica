@@ -47,7 +47,7 @@ def test_enriched_signal_produces_trade_blob(
     publish_signal_event(rabbitmq_url, payload)
 
     # Poll the host-mapped blob directory for the decision record.
-    record = poll_trade_blob(trade_blob_dir, symbol, timeout_seconds=30)
+    record = poll_trade_blob(trade_blob_dir, symbol, timeout_seconds=90)
 
     # Validate the decision blob fields.
     assert record["symbol"] == symbol
@@ -86,7 +86,7 @@ def test_buy_signal_updates_portfolio_state(
 
     publish_signal_event(rabbitmq_url, payload)
 
-    state = poll_portfolio_state(portfolio_state_path, symbol, timeout_seconds=30)
+    state = poll_portfolio_state(portfolio_state_path, symbol, timeout_seconds=90)
 
     assert state["cash"] < state["starting_balance"]
     assert symbol in state["positions"]

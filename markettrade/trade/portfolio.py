@@ -28,7 +28,7 @@ class Portfolio:
         self.positions: dict[str, Position] = {}
         self.realized_pnl: float = 0.0
         self.updated_at: str = datetime.now(timezone.utc).isoformat()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def record_buy(self, symbol: str, entry_price: float, sized_quantity: float) -> None:
         with self._lock:

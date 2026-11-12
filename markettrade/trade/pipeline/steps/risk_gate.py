@@ -21,10 +21,11 @@ class RiskGateStep:
             key = (ctx.decision["symbol"], ctx.risk_decision.rejection_reason)
             if key not in self._rejection_logged:
                 logger.warning(
-                    "Risk REJECTED — symbol=%s action=%s reason=%s (further duplicates suppressed)",
+                    "Risk REJECTED — symbol=%s action=%s reason=%s raw_quantity=%.6f (further duplicates suppressed)",
                     ctx.decision["symbol"],
                     ctx.decision["action"],
                     ctx.risk_decision.rejection_reason,
+                    ctx.decision.get("raw_quantity", -1),
                 )
                 self._rejection_logged.add(key)
             return False

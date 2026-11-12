@@ -166,6 +166,10 @@ def main():
         )
 
     logger.info(
+        "Risk config — MAX_TRADE_QUANTITY=%.2f MAX_SYMBOL_EXPOSURE=%.2f MAX_DRAWDOWN_PCT=%.2f",
+        config.risk.MAX_TRADE_QUANTITY, config.risk.MAX_SYMBOL_EXPOSURE, config.risk.MAX_DRAWDOWN_PCT,
+    )
+    logger.info(
         "Portfolio loaded — cash=%.2f positions=%d realized_pnl=%.4f",
         portfolio.cash, len(portfolio.positions), portfolio.realized_pnl,
     )

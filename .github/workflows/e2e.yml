@@ -59,8 +59,9 @@ jobs:
           pip install pytest pytest-timeout
 
       - name: Run e2e tests
+        working-directory: markete2e
         timeout-minutes: 5
-        run: python -m pytest markete2e/tests/ -v -m e2e --timeout=300
+        run: python -m pytest tests/ -v -m e2e --timeout=300
 
       - uses: actions/setup-node@v4
         with:

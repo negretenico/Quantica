@@ -190,6 +190,9 @@ def main():
     ])
 
     def handle_message(payload):
+        sym = payload.get("symbol", "")
+        if sym.startswith("E2E"):
+            logger.info("E2E signal received — symbol=%s quantity=%s payload=%s", sym, payload.get("quantity"), payload)
         ctx = PipelineContext(payload=payload)
         pipeline.execute(ctx)
 

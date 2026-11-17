@@ -166,10 +166,6 @@ def main():
         )
 
     logger.info(
-        "Risk config — MAX_TRADE_QUANTITY=%.2f MAX_SYMBOL_EXPOSURE=%.2f MAX_DRAWDOWN_PCT=%.2f",
-        config.risk.MAX_TRADE_QUANTITY, config.risk.MAX_SYMBOL_EXPOSURE, config.risk.MAX_DRAWDOWN_PCT,
-    )
-    logger.info(
         "Portfolio loaded — cash=%.2f positions=%d realized_pnl=%.4f",
         portfolio.cash, len(portfolio.positions), portfolio.realized_pnl,
     )
@@ -190,9 +186,6 @@ def main():
     ])
 
     def handle_message(payload):
-        sym = payload.get("symbol", "")
-        if sym.startswith("E2E"):
-            logger.info("E2E signal received — symbol=%s quantity=%s payload=%s", sym, payload.get("quantity"), payload)
         ctx = PipelineContext(payload=payload)
         pipeline.execute(ctx)
 

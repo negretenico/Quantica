@@ -30,11 +30,6 @@ class PortfolioUpdateStep:
         entry_price = ctx.decision["entry_price"]
         sized_quantity = ctx.decision["sized_quantity"]
 
-        logger.info(
-            "PortfolioUpdate — symbol=%s action=%s entry_price=%.2f sized_quantity=%.6f",
-            symbol, action, entry_price, sized_quantity,
-        )
-
         if action == "BUY":
             self._portfolio.record_buy(symbol, entry_price, sized_quantity)
             self._timeout_scheduler.schedule(symbol)
@@ -49,8 +44,4 @@ class PortfolioUpdateStep:
         realized_pnl_total.set(self._portfolio.realized_pnl)
 
         self._portfolio.save(self._state_path)
-        logger.info(
-            "Portfolio saved — path=%s positions=%d cash=%.2f",
-            self._state_path, len(self._portfolio.positions), self._portfolio.cash,
-        )
         return True

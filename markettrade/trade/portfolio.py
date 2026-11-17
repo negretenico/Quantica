@@ -121,6 +121,7 @@ class Portfolio:
         try:
             with os.fdopen(fd, "w") as f:
                 json.dump(data, f, indent=2)
+            os.chmod(tmp_path, 0o644)
             os.replace(tmp_path, path)
         except Exception:
             try:

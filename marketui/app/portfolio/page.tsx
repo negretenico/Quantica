@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPortfolio } from "../../lib/api";
 import type { PortfolioState } from "../../lib/types";
 
-function fmt(n: number, decimals = 2): string {
+function fmt(n: number | null | undefined, decimals = 2): string {
+  if (n == null) return "—";
   return n.toLocaleString(undefined, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,

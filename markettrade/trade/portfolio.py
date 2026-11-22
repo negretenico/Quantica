@@ -148,7 +148,7 @@ class Portfolio:
                     opened_at=pos_data.get("opened_at", ""),
                 )
             return portfolio
-        except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        except (FileNotFoundError, PermissionError, json.JSONDecodeError, KeyError, ValueError) as exc:
             logger.info("Portfolio state not loaded from %s (%s), starting fresh", path, exc)
             return cls(cash=starting_balance, starting_balance=starting_balance)
 

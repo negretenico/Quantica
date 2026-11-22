@@ -59,10 +59,10 @@ function TradeTable({ date }: { date: string }) {
                 })}
               </td>
               <td className="px-4 py-2 text-right font-mono">
-                {t.sized_quantity.toFixed(4)}
+                {t.sized_quantity?.toFixed(4) ?? "—"}
               </td>
               <td className="px-4 py-2 text-right font-mono text-xs">
-                {t.anomaly_score.toFixed(2)}
+                {t.anomaly_score?.toFixed(2) ?? "—"}
               </td>
             </tr>
           ))}

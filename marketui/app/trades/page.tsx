@@ -54,15 +54,15 @@ function TradeTable({ date }: { date: string }) {
                 {t.signal_type.replace(/_/g, " ")}
               </td>
               <td className="px-4 py-2 text-right font-mono">
-                {t.entry_price.toLocaleString(undefined, {
+                {t.entry_price?.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
-                })}
+                }) ?? "—"}
               </td>
               <td className="px-4 py-2 text-right font-mono">
-                {t.sized_quantity.toFixed(4)}
+                {t.sized_quantity?.toFixed(4) ?? "—"}
               </td>
               <td className="px-4 py-2 text-right font-mono text-xs">
-                {t.anomaly_score.toFixed(2)}
+                {t.anomaly_score?.toFixed(2) ?? "—"}
               </td>
             </tr>
           ))}

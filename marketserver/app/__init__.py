@@ -79,7 +79,7 @@ def create_app(config=None):
         try:
             with open(portfolio_path, "r") as f:
                 return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, PermissionError, json.JSONDecodeError):
             return None
 
     def _portfolio_event_id(data: dict) -> str:

@@ -21,7 +21,12 @@ class RiskEngine:
             return 0.0
         return (self._peak_pnl - portfolio_pnl) / abs(self._peak_pnl)
 
-    def evaluate(self, action: ProposedAction, portfolio_pnl: float = 0.0) -> RiskDecision:
+    def evaluate(
+        self,
+        action: ProposedAction,
+        portfolio_pnl: float = 0.0,
+        available_cash: float | None = None,
+    ) -> RiskDecision:
         self._peak_pnl = max(self._peak_pnl, portfolio_pnl)
 
         if self._drawdown(portfolio_pnl) > self._config.MAX_DRAWDOWN_PCT:
@@ -49,6 +54,18 @@ class RiskEngine:
             )
 
         sized_quantity = min(action.raw_quantity, headroom)
+
+        # Cap to affordable quantity when cash balance is known
+        if available_cash is not None and action.entry_price > 0:
+            affordable = available_cash / action.entry_price
+            if affordable <= 0:
+                return RiskDecision(
+                    approved=False,
+                    sized_quantity=None,
+                    rejection_reason="INSUFFICIENT_CASH",
+                )
+            sized_quantity = min(sized_quantity, affordable)
+
         self._symbol_exposure[action.symbol] = current_exposure + sized_quantity
 
         return RiskDecision(

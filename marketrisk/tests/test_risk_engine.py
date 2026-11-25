@@ -149,3 +149,56 @@ class TestRiskEngineRejections:
 
         engine.evaluate(_make_action(symbol="AAPL", raw_quantity=1.0))
         assert engine._symbol_exposure["AAPL"] == pytest.approx(before)
+
+
+class TestCashAwareGating:
+    def test_caps_quantity_to_affordable(self):
+        """Trade is sized down to what available cash allows."""
+        engine = _make_engine(max_trade=500.0, max_symbol=1000.0)
+        # 100 shares at $150 = $15,000 requested, but only $1,500 available → 10 shares
+        decision = engine.evaluate(
+            _make_action(raw_quantity=100.0), available_cash=1500.0,
+        )
+        assert decision.approved is True
+        assert decision.sized_quantity == pytest.approx(10.0)
+
+    def test_rejected_when_cash_zero(self):
+        engine = _make_engine(max_trade=500.0, max_symbol=1000.0)
+        decision = engine.evaluate(
+            _make_action(raw_quantity=10.0), available_cash=0.0,
+        )
+        assert decision.approved is False
+        assert decision.rejection_reason == "INSUFFICIENT_CASH"
+
+    def test_rejected_when_cash_negative(self):
+        engine = _make_engine(max_trade=500.0, max_symbol=1000.0)
+        decision = engine.evaluate(
+            _make_action(raw_quantity=10.0), available_cash=-500.0,
+        )
+        assert decision.approved is False
+        assert decision.rejection_reason == "INSUFFICIENT_CASH"
+
+    def test_no_cap_when_cash_not_provided(self):
+        """Backward compat: no cash arg → no cash gating."""
+        engine = _make_engine(max_trade=500.0, max_symbol=1000.0)
+        decision = engine.evaluate(_make_action(raw_quantity=100.0))
+        assert decision.approved is True
+        assert decision.sized_quantity == pytest.approx(100.0)
+
+    def test_full_quantity_when_cash_sufficient(self):
+        engine = _make_engine(max_trade=500.0, max_symbol=1000.0)
+        # 10 shares at $150 = $1,500, cash is $20,000 → full quantity
+        decision = engine.evaluate(
+            _make_action(raw_quantity=10.0), available_cash=20_000.0,
+        )
+        assert decision.approved is True
+        assert decision.sized_quantity == pytest.approx(10.0)
+
+    def test_cash_cap_does_not_consume_excess_exposure(self):
+        """Symbol exposure should reflect the capped quantity, not the requested one."""
+        engine = _make_engine(max_trade=500.0, max_symbol=1000.0)
+        engine.evaluate(
+            _make_action(symbol="AAPL", raw_quantity=100.0), available_cash=1500.0,
+        )
+        # Only 10 shares affordable, not 100
+        assert engine._symbol_exposure["AAPL"] == pytest.approx(10.0)

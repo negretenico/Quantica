@@ -41,7 +41,10 @@ class RiskEvaluateStep:
             portfolio_value=portfolio_value,
         )
 
-        ctx.risk_decision = self._risk_engine.evaluate(proposed, portfolio_pnl=portfolio_pnl)
+        available_cash = self._portfolio.cash if self._portfolio is not None else None
+        ctx.risk_decision = self._risk_engine.evaluate(
+            proposed, portfolio_pnl=portfolio_pnl, available_cash=available_cash,
+        )
         observe_risk_evaluation(
             ctx.risk_decision,
             ctx.decision["symbol"],

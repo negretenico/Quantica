@@ -73,8 +73,8 @@ groups:
                       - A
                   reducer:
                     type: last
-        for: 1m
-        noDataState: Alerting
+        for: 3m
+        noDataState: NoData
         execErrState: Alerting
         annotations:
           summary: "marketlistener is down — Prometheus scrape target unreachable"
@@ -115,8 +115,8 @@ groups:
                       - A
                   reducer:
                     type: last
-        for: 1m
-        noDataState: Alerting
+        for: 3m
+        noDataState: NoData
         execErrState: Alerting
         annotations:
           summary: "markettransformer is down — Prometheus scrape target unreachable"
@@ -157,8 +157,8 @@ groups:
                       - A
                   reducer:
                     type: last
-        for: 1m
-        noDataState: Alerting
+        for: 3m
+        noDataState: NoData
         execErrState: Alerting
         annotations:
           summary: "marketanalysis is down — Prometheus scrape target unreachable"
@@ -199,8 +199,8 @@ groups:
                       - A
                   reducer:
                     type: last
-        for: 1m
-        noDataState: Alerting
+        for: 3m
+        noDataState: NoData
         execErrState: Alerting
         annotations:
           summary: "marketbard is down — Prometheus scrape target unreachable"
@@ -241,8 +241,8 @@ groups:
                       - A
                   reducer:
                     type: last
-        for: 1m
-        noDataState: Alerting
+        for: 3m
+        noDataState: NoData
         execErrState: Alerting
         annotations:
           summary: "markettrade is down — Prometheus scrape target unreachable"
@@ -283,8 +283,8 @@ groups:
                       - A
                   reducer:
                     type: last
-        for: 1m
-        noDataState: Alerting
+        for: 3m
+        noDataState: NoData
         execErrState: Alerting
         annotations:
           summary: "marketnotify is down — Prometheus scrape target unreachable"
@@ -325,8 +325,8 @@ groups:
                       - A
                   reducer:
                     type: last
-        for: 1m
-        noDataState: Alerting
+        for: 3m
+        noDataState: NoData
         execErrState: Alerting
         annotations:
           summary: "marketserver is down — Prometheus scrape target unreachable"
